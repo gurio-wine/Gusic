@@ -17,8 +17,8 @@
 </p>
 
 <p align="center">
-  一款安卓音乐播放器，延续自 PixelPlayerOLX 代码库，并保留 PixelPlayerOSS 的历史基础与署名，
-  新增了与 <a href="https://github.com/lyswhut/lx-music-mobile">lx-music-mobile</a> 兼容的在线音源（自定义音源）与播放列表互通的导入/导出等功能。
+  一款由 Gurio Wine 独立维护的安卓音乐播放器，面向本地播放、自托管媒体库与离线使用，
+  并提供可选的在线音源（自定义音源）及与 <a href="https://github.com/lyswhut/lx-music-mobile">lx-music-mobile</a> 兼容的歌单导入/导出。
 </p>
 
 > **注意：** Gusic 是一个独立项目。它**不是** PixelPlayerOSS、lx-music-mobile、lx-lxwalnut-music-mobile 或任何音乐平台的官方版本，也未获得上述原作者的背书。
@@ -36,27 +36,19 @@
 
 ## 简介
 
-Gusic 保留 [PixelPlayerOSS](https://github.com/PixelPlayerHQ/PixelPlayerOSS) 的历史基础与署名，并在此基础上新增一套在线音源（自定义音源 / "Lx音乐"）系统，其设计参考了 [lx-music-mobile](https://github.com/lyswhut/lx-music-mobile) 和 [lx-lxwalnut-music-mobile](https://github.com/WalnutBai/lx-lxwalnut-music-mobile)。
+Gusic 由 Gurio Wine 独立维护，专注于本地音乐、自托管媒体库与离线播放。在线音源是可选功能；你可以导入兼容 lx-music-mobile 的音源脚本，并使用 `.lxmc` 歌单导入/导出。
 
-本地播放、自托管媒体库和离线使用默认可用。在线音源功能是可选的，只有在你导入并启用音源脚本（或登录支持的平台）后才会生效。
+本地播放、自托管媒体库和离线使用默认可用。在线音源功能仅在你主动导入并启用音源脚本（或登录支持的平台）后生效。
+
+项目仓库：[github.com/gurio-wine/Gusic](https://github.com/gurio-wine/Gusic)
 
 包名：`com.gurio.gusic`
 
-
-PixelPlayerOSS 坚持 FOSS（自由开源软件）方向，移除了不属于该方向的集成（Telegram、网易云、QQ 音乐、Google Drive、Gemini、投屏、Wear OS、Play 商店付费、Firebase、Crashlytics 以及 Google Play 服务的运行时依赖）。
-
-Gusic 在这套 FOSS 基础之上，加回了一套*可选的、由用户掌控的*在线音源系统，实现时参考了 [lx-music-mobile](https://github.com/lyswhut/lx-music-mobile) 和 [lx-lxwalnut-music-mobile](https://github.com/WalnutBai/lx-lxwalnut-music-mobile)：
-
-- 一个沙箱化的 **QuickJS** 脚本引擎，用于运行兼容 lx-music-mobile 的音源脚本。
-- 内置多个平台的官方 API 路径，与脚本配合使用，以选出可用的最佳音质。
-- 对需要登录的平台提供基本的登录。
-- 支持 `.lxmc` 歌单导入/导出，可与 lx-music-mobile 共享歌单。
-
-离线/自托管体验始终是本应用的核心。
+Gurio Wine 在此维护 Gusic 当前的代码、功能与发行；历史来源信息及第三方许可证/版权归属见下方「项目来源与署名」。
 
 ## 功能
 
-### 基于 PixelPlayerOSS 历史基础
+### 本地播放与媒体库
 
 | 方面 | 亮点 |
 | --- | --- |
@@ -69,7 +61,7 @@ Gusic 在这套 FOSS 基础之上，加回了一套*可选的、由用户掌控�
 | 界面 | Jetpack Compose、Material 3、动态取色、浅色/深色主题、Glance 小部件、带动画的播放界面 |
 | 备份 | 偏好设置、歌单、收藏、歌词、统计数据与应用状态的备份/恢复 |
 
-### Gusic 新增
+### 可选在线音源
 
 | 方面 | 亮点 |
 | --- | --- |
@@ -118,16 +110,16 @@ https://github.com/gurio-wine/Gusic/releases
 
 安装正式版时，下载适合你设备的 APK 并安装：`arm64-v8a` 适用于绝大多数现代设备，`armeabi-v7a` 适用于较老的 32 位设备。
 
-## 上游项目与署名
+## 项目来源与署名
 
-Gusic 是原 PixelPlayerOLX 项目的改名延续版本。原始源代码仓库为 [https://github.com/MiNoMinoaa/PixelPlayerOLX](https://github.com/MiNoMinoaa/PixelPlayerOLX)；保留此链接作为项目来源参考。Gusic 由独立维护者维护，并非 PixelPlayerOSS、lx-music-mobile 或任何平台的官方版本。
+Gusic 由 Gurio Wine 独立维护。当前项目主页、代码浏览、问题反馈和发行版请以 [Gusic 仓库](https://github.com/gurio-wine/Gusic) 为准。Gusic 延续自 PixelPlayerOLX 代码库；[原始源代码仓库](https://github.com/MiNoMinoaa/PixelPlayerOLX)仅作为来源与历史参考保留，并非当前 Gusic 项目的导航或发行入口。此项目来源说明不表示版权或其他权利已转让；各作品的版权与许可仍依适用条款归其各自权利人所有。Gusic 不是 PixelPlayerOSS、lx-music-mobile 或任何音乐平台的官方版本，也未获其原作者背书。
 
 PixelPlayerOSS 在本项目中仅作为历史基础与署名保留（GPL-3.0）。部分在线音源功能在实现时参考了 [lx-music-mobile](https://github.com/lyswhut/lx-music-mobile) 和 [lx-lxwalnut-music-mobile](https://github.com/WalnutBai/lx-lxwalnut-music-mobile)。相关许可证与版权均予以保留。
 
 | 项目 | 仓库 | 许可证 | 版权 / 署名 |
 | --- | --- | --- | --- |
 | PixelPlayerOSS | https://github.com/PixelPlayerHQ/PixelPlayerOSS | GPL-3.0 | 版权所有 © 2026 Duhan（lostf1sh） |
-| Pixel Player（PixelPlayerOSS 的上游） | https://github.com/PixelPlayerHQ/PixelPlayer | 专有（原 MIT） | 版权所有 © Theo Vilardo（theovilardo）；Logo 设计归 **Aureal** |
+| Pixel Player（PixelPlayerOSS 的历史上游） | https://github.com/PixelPlayerHQ/PixelPlayer | 专有（原 MIT） | 版权所有 © Theo Vilardo（theovilardo）；Logo 设计归 **Aureal** |
 | lx-music-mobile | https://github.com/lyswhut/lx-music-mobile | Apache-2.0 | 版权所有 © lyswhut |
 | lx-lxwalnut-music-mobile | https://github.com/WalnutBai/lx-lxwalnut-music-mobile | Apache-2.0 | 版权所有 © WalnutBai |
 

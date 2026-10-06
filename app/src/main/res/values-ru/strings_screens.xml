@@ -1,23 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="about_contributions_format">%1$d вклад.</string>
+    <string name="about_current_maintainer_title">Текущий сопровождающий</string>
+    <string name="about_current_maintainer_subtitle">Gurio Wine сопровождает Gusic.</string>
     <string name="about_link_fdroid_subtitle">Доступно в каталоге F-Droid</string>
     <string name="about_link_fdroid_title">F-Droid</string>
     <string name="about_link_source_title">Исходный код</string>
-    <string name="about_maintainer_subtitle">Сопровождение FOSS-версии и оригинальной (не-FOSS) версии.</string>
-    <string name="about_maintainer_title">Оригинальные сопровождающие</string>
+    <string name="about_link_source_subtitle">https://github.com/gurio-wine/Gusic</string>
     <string name="about_project_subtitle">Исходный код, выпуски и точки входа в сообщество.</string>
     <string name="about_project_title">Проект</string>
     <string name="about_signal_community_first">Ориентирован на сообщество</string>
     <string name="about_signal_material3">Material 3 Expressive</string>
     <string name="about_signal_open_source">Открытый исходный код</string>
-    <string name="about_support_body">Помогите поддерживать, проверять и тестировать FOSS-версию на реальных Android-устройствах.</string>
-    <string name="about_support_chip_ci">CI и выпуски</string>
-    <string name="about_support_chip_foss">Сопровождение FOSS</string>
-    <string name="about_support_chip_streaming">Музыка на своём сервере</string>
-    <string name="about_support_cta">Поддержать на GitHub</string>
-    <string name="about_support_eyebrow">GitHub Sponsors</string>
     <string name="about_tagline">Локальная музыка, стриминг со своего сервера и Material 3 в одном FOSS-плеере.</string>
+    <string name="about_upstream_credits_title">Благодарность авторам исходного проекта</string>
+    <string name="about_upstream_credits_subtitle">Авторы и сопровождающие оригинального PixelPlayer отмечены за работу над исходным проектом.</string>
     <string name="about_version_format">Версия v%1$s</string>
     <string name="accounts_unable_open_screen">Сейчас невозможно открыть этот экран.</string>
     <string name="action_copy">Копировать</string>

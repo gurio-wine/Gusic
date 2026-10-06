@@ -86,7 +86,7 @@ fun ChangelogBottomSheet(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val changelogUrl = "https://github.com/MiNoMinoaa/PixelPlayerOLX"
+    val changelogUrl = "https://github.com/gurio-wine/Gusic"
     val forkChangelog = forkVersions()
 
     val fabCornerRadius = 16.dp

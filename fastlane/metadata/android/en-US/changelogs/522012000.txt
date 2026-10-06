@@ -1,0 +1,6 @@
+Gusic 26.10.06:
+
+* Refreshed the About experience with Gusic artwork and the current Gurio Wine maintainer.
+* Replaced the sponsor section with clear upstream acknowledgements for the original PixelPlayer maintainers.
+* Updated in-app repository, release/update, issue-reporting, and MusicBrainz links to Gusic.
+* Updated the release baseline to 26.10.06 (522012000) with validated alpha version generation.

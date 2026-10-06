@@ -93,10 +93,10 @@ class AppUpdateChecker @Inject constructor(
     }
 
     private companion object {
-        const val RELEASE_API_URL = "https://api.github.com/repos/MiNoMinoaa/PixelPlayerOLX/releases/latest"
-        const val RELEASE_DIRECT_URL = "https://github.com/MiNoMinoaa/PixelPlayerOLX/releases/latest"
-        const val MIRROR_GHFAST_URL = "https://ghfast.top/https://github.com/MiNoMinoaa/PixelPlayerOLX/releases/latest"
-        const val MIRROR_GHPROXY_URL = "https://gh-proxy.com/https://github.com/MiNoMinoaa/PixelPlayerOLX/releases/latest"
-        const val RELEASE_PAGE_URL = "https://github.com/MiNoMinoaa/PixelPlayerOLX/releases/latest"
+        const val RELEASE_API_URL = "https://api.github.com/repos/gurio-wine/Gusic/releases/latest"
+        const val RELEASE_DIRECT_URL = "https://github.com/gurio-wine/Gusic/releases/latest"
+        const val MIRROR_GHFAST_URL = "https://ghfast.top/https://github.com/gurio-wine/Gusic/releases/latest"
+        const val MIRROR_GHPROXY_URL = "https://gh-proxy.com/https://github.com/gurio-wine/Gusic/releases/latest"
+        const val RELEASE_PAGE_URL = "https://github.com/gurio-wine/Gusic/releases/latest"
     }
 }

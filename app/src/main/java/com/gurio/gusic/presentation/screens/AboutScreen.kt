@@ -1,14 +1,9 @@
 package com.gurio.gusic.presentation.screens
 
 import android.content.ActivityNotFoundException
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.provider.MediaStore
-import android.widget.Toast
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
@@ -50,7 +45,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Public
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -85,7 +79,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
 import androidx.media3.common.util.UnstableApi
@@ -139,22 +132,33 @@ private val NonFossMaintainer = Contributor(
     githubUrl = "https://github.com/theovilardo",
 )
 
-private val AboutMaintainers = listOf(
-    CoreMaintainer,
-    NonFossMaintainer,
-)
-
-private val OlxMaintainer = Contributor(
-    id = "minominoaa",
-    displayName = "@MiNoMinoaa",
-    role = "",
-    detail = "Maintain PixelPlayerOLX. GitHub: MiNoMinoaa",
+private val OriginalProjectMaintainer = Contributor(
+    id = "pixelplayerolx-original-maintainer",
+    displayName = "MiNoMinoaa",
+    role = "Original project maintainer",
+    detail = "Original maintainer of PixelPlayerOLX. GitHub: MiNoMinoaa",
     avatarUrl = "https://github.com/MiNoMinoaa.png",
     iconRes = R.drawable.round_developer_board_24,
     githubUrl = "https://github.com/MiNoMinoaa",
 )
 
-private const val SourceRepoUrl = "https://github.com/MiNoMinoaa/PixelPlayerOLX"
+private val UpstreamMaintainers = listOf(
+    CoreMaintainer,
+    NonFossMaintainer,
+    OriginalProjectMaintainer,
+)
+
+private val GusicMaintainer = Contributor(
+    id = "gurio-wine",
+    displayName = "Gurio Wine",
+    role = "Gusic Maintainer",
+    detail = "Maintains Gusic. GitHub: gurio-wine",
+    avatarUrl = "https://github.com/gurio-wine.png",
+    iconRes = R.drawable.round_developer_board_24,
+    githubUrl = "https://github.com/gurio-wine",
+)
+
+private const val SourceRepoUrl = "https://github.com/gurio-wine/Gusic"
 
 private data class ProjectLink(
     val id: String,
@@ -307,15 +311,6 @@ fun AboutScreen(
                 )
             }
 
-            item(key = "support_card") {
-                AboutSupportCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 12.dp),
-                )
-            }
-
             item(key = "project_title") {
                 AboutSectionHeader(
                     title = stringResource(R.string.about_project_title),
@@ -339,41 +334,41 @@ fun AboutScreen(
                 )
             }
 
-            item(key = "olx_maintainer_title") {
+            item(key = "maintainer_title") {
                 AboutSectionHeader(
-                    title = stringResource(R.string.about_olx_maintainer_title),
-                    subtitle = stringResource(R.string.about_olx_maintainer_subtitle),
+                    title = stringResource(R.string.about_current_maintainer_title),
+                    subtitle = stringResource(R.string.about_current_maintainer_subtitle),
                     modifier = Modifier.padding(top = 24.dp),
                 )
             }
 
-            item(key = "olx_maintainer_card") {
+            item(key = "maintainer_card") {
                 ContributorCard(
-                    contributor = OlxMaintainer,
+                    contributor = GusicMaintainer,
                     shape = expressiveListShape(index = 0, count = 1),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                     showContributionCount = false,
-                    onCardClick = OlxMaintainer.githubUrl?.let { url -> { openUrl(context, url) } },
+                    onCardClick = GusicMaintainer.githubUrl?.let { url -> { openUrl(context, url) } },
                 )
             }
 
-            item(key = "maintainer_title") {
+            item(key = "upstream_credits_title") {
                 AboutSectionHeader(
-                    title = stringResource(R.string.about_maintainer_title),
-                    subtitle = stringResource(R.string.about_maintainer_subtitle),
+                    title = stringResource(R.string.about_upstream_credits_title),
+                    subtitle = stringResource(R.string.about_upstream_credits_subtitle),
                     modifier = Modifier.padding(top = 24.dp),
                 )
             }
 
             itemsIndexed(
-                items = AboutMaintainers,
-                key = { _, contributor -> "maintainer_${contributor.id}" },
+                items = UpstreamMaintainers,
+                key = { _, contributor -> "upstream_${contributor.id}" },
             ) { index, contributor ->
                 ContributorCard(
                     contributor = contributor,
-                    shape = expressiveListShape(index = index, count = AboutMaintainers.size),
+                    shape = expressiveListShape(index = index, count = UpstreamMaintainers.size),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
@@ -430,11 +425,11 @@ private fun AboutHeroCard(
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.primaryContainer,
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.pixelplayer_base_monochrome_lx),
+                        Image(
+                            painter = painterResource(R.drawable.gusic_about_icon),
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.padding(10.dp).size(28.dp),
+                            contentScale = ContentScale.Fit,
                         )
                     }
 
@@ -530,135 +525,6 @@ private fun CommunitySignalsRow() {
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun AboutSupportCard(
-    modifier: Modifier = Modifier,
-) {
-    val shape = AbsoluteSmoothCornerShape(30.dp, 60)
-    var expanded by remember { mutableStateOf(false) }
-
-    Surface(
-        modifier = modifier,
-        shape = shape,
-        color = MaterialTheme.colorScheme.primaryContainer,
-        tonalElevation = 4.dp,
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.rounded_favorite_24),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.padding(12.dp).size(24.dp),
-                    )
-                }
-
-                Spacer(Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.about_support_eyebrow),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringResource(R.string.about_support_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-
-            Text(
-                text = stringResource(R.string.about_support_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.86f),
-            )
-
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                listOf(
-                    stringResource(R.string.about_support_chip_foss),
-                    stringResource(R.string.about_support_chip_ci),
-                    stringResource(R.string.about_support_chip_streaming),
-                ).forEach { label ->
-                    Surface(
-                        shape = AbsoluteSmoothCornerShape(16.dp, 60),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.10f),
-                    ) {
-                        Text(
-                            text = label,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
-
-            FilledTonalButton(
-                onClick = { expanded = !expanded },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = stringResource(
-                        if (expanded) R.string.about_support_cta_collapse else R.string.about_support_cta
-                    ),
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            AnimatedVisibility(visible = expanded) {
-                val context = LocalContext.current
-                val haptic = LocalHapticFeedback.current
-                Image(
-                    painter = painterResource(R.drawable.sponsor_qr),
-                    contentDescription = stringResource(R.string.about_support_title),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(AbsoluteSmoothCornerShape(18.dp, 60))
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    val messageRes = if (saveSponsorQrToGallery(context)) {
-                                        R.string.about_support_qr_saved
-                                    } else {
-                                        R.string.about_support_qr_save_failed
-                                    }
-                                    Toast.makeText(context, messageRes, Toast.LENGTH_SHORT).show()
-                                },
-                            )
-                        },
-                    contentScale = ContentScale.FillWidth,
-                )
             }
         }
     }
@@ -1020,36 +886,6 @@ private fun expressiveListShape(index: Int, count: Int): AbsoluteSmoothCornerSha
             smoothnessAsPercentBR = 60,
         )
         else -> AbsoluteSmoothCornerShape(inner, 60)
-    }
-}
-
-private fun saveSponsorQrToGallery(context: Context): Boolean {
-    val drawable = ContextCompat.getDrawable(context, R.drawable.sponsor_qr) ?: return false
-    val bitmap = drawable.toBitmap()
-    val resolver = context.contentResolver
-    val values = ContentValues().apply {
-        put(MediaStore.Images.Media.DISPLAY_NAME, "Gusic_sponsor_qr.png")
-        put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Gusic")
-        put(MediaStore.Images.Media.IS_PENDING, 1)
-    }
-    val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return false
-
-    return try {
-        val written = resolver.openOutputStream(uri)?.use { out ->
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-        } ?: false
-        if (!written) {
-            resolver.delete(uri, null, null)
-            return false
-        }
-        values.clear()
-        values.put(MediaStore.Images.Media.IS_PENDING, 0)
-        resolver.update(uri, values, null, null)
-        true
-    } catch (_: Exception) {
-        resolver.delete(uri, null, null)
-        false
     }
 }
 

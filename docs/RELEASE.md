@@ -4,27 +4,27 @@ Gusic releases are shipped from `main` after the release candidate passes local 
 
 ## Project Origin and Upstream Intent
 
-Gusic is the renamed continuation of the former PixelPlayerOLX project. The original source repository is https://github.com/MiNoMinoaa/PixelPlayerOLX; this URL is retained as an origin reference. Gusic is independently maintained and is not an official PixelPlayerOSS, lx-music-mobile, or platform release; PixelPlayerOSS references are historical attribution only, not a Git upstream. Upstream licenses, notices, and attribution remain in force.
+Gurio Wine maintains Gusic’s current code, features, and releases in the Gusic repository (https://github.com/gurio-wine/Gusic). Gusic continues the PixelPlayerOLX codebase; https://github.com/MiNoMinoaa/PixelPlayerOLX is retained only as an origin and historical source reference, not as current Gusic repository navigation or a release entry point. This project-origin statement does not assert that copyright or other rights were transferred. Gusic is not an official PixelPlayerOSS, lx-music-mobile, or platform release; PixelPlayerOSS references are historical attribution only, not a Git upstream. Upstream licenses, notices, and attribution remain in force.
 
 ## Versioning
 
 Version values live in `gradle.properties`:
 
 ```properties
-APP_VERSION_NAME=26.10.05.001
-APP_VERSION_CODE=522010001
+APP_VERSION_NAME=26.10.06
+APP_VERSION_CODE=522012000
 ```
 
-The version name has four dot-separated segments: `YY.MM.DD.MOD`. The first three segments identify the formal release date, and `MOD` is a zero-padded modification number for changes made on that formal date. The first formal Gusic date is `26.10.05`; its first modification build is `26.10.05.001`. For a same-date modification, increment only the fourth segment (`.002`, `.003`, and so on); when the formal date changes, advance the date segments and reset the modification segment to `.001`.
+The stable version name is `YY.MM.DD`; its three segments identify the formal release date, and the omitted modification number is treated as `000`. Thus the formal date `26.10.06` has code `261006 * 2000 + 000 = 522012000`. For a same-date follow-up build, an optional fourth, zero-padded segment is supported (`26.10.06.001`, `.002`, and so on); its code is `YYMMDD * 2000 + MOD`. When the formal date changes, advance the date segments and normally omit the modification segment for the initial stable build.
 
-`APP_VERSION_CODE` is derived as `YYMMDD * 2000 + MOD`. Stable and formal builds reserve modification slots `0` through `999`; therefore `26.10.05.001` becomes `261005 * 2000 + 1 = 522010001`, while the formal date's slot zero is `522010000`. Alpha CI builds reserve slots `1001` through `1999`: the workflow validates a run number from `1` through `999` and computes `YYMMDD * 2000 + 1000 + run number`. This keeps alpha artifacts separate from stable modifications and below Android's signed 32-bit version-code limit. Every published or CI code must be strictly greater than the last code distributed through the same release channel, must never be reused, and must be checked before publishing.
+Alpha CI builds reserve slots `1001` through `1999`: the workflow calls `scripts/alpha_version.py`, which validates the stable name/code pair (including a real calendar date), validates a run number from `1` through `999`, and computes `YYMMDD * 2000 + 1000 + run number`. For example, alpha run 1 for `26.10.06` is `26.10.06-alpha.1` with code `522013001`. This keeps alpha artifacts separate from stable modifications and below Android's signed 32-bit version-code limit. Every published or CI code must be strictly greater than the last code distributed through the same release channel, must never be reused, and must be checked before publishing.
 
 For every public release:
 
-1. Update `APP_VERSION_NAME` using the four-segment rule above.
-2. Set `APP_VERSION_CODE` to the matching monotonic numeric value and verify it is greater than the last published code.
+1. Set `APP_VERSION_NAME` to the release date (`YY.MM.DD`); use the optional `.MOD` suffix only for same-date follow-ups.
+2. Set `APP_VERSION_CODE` to `YYMMDD * 2000 + MOD` (`MOD=000` when omitted) and verify it is greater than the last published code.
 3. Move the relevant `CHANGELOG.md` entries from `Unreleased` to the release version.
-4. Tag the release as `v<APP_VERSION_NAME>`, for example `v26.10.05.001`.
+4. Tag the release as `v<APP_VERSION_NAME>`, for example `v26.10.06`.
 
 ## Required Local Checks
 
@@ -37,15 +37,17 @@ JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :app:testDebugUnitTest
 JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :app:assembleRelease -Ppixelplayer.enableAbiSplits=false
 ```
 
-The release-candidate command above is an official release check and requires the external Gusic release keystore described below. Do not add the signing-disable property to a release intended for distribution.
+The release-candidate command above is the only supported Release packaging check and requires the external Gusic release keystore described below. Do not add the signing-disable property to a release intended for distribution.
 
-For a diagnostic build only (for example, to inspect packaging before signing is provisioned), use:
+An unsigned diagnostic `assembleRelease` command is not currently supported. Although `-Ppixelplayer.disableReleaseSigning=true` disables creation of the release signing configuration, Release tasks still depend on `validateReleaseSigningConfig` and therefore fail rather than producing a diagnostic APK. Do not use that property as a Release verification or packaging workaround. If signing is not provisioned, use a debug variant for general packaging diagnostics instead, or provision the dedicated keystore and run the supported Release check above.
+
+For a debug packaging check only, use:
 
 ```sh
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :app:assembleRelease -Ppixelplayer.enableAbiSplits=false -Ppixelplayer.disableReleaseSigning=true
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :app:assembleDebug -Ppixelplayer.enableAbiSplits=false
 ```
 
-A diagnostic build with signing disabled is not a publishable release and must not be uploaded or tagged as the official artifact.
+A debug APK is not a Release candidate, is not a publishable release, and must not be uploaded or tagged as the official artifact.
 
 For split APK artifacts, use:
 
@@ -70,7 +72,7 @@ keyPassword=...
 
 CI workflows create temporary `gusic-ci.jks` keys with the `gusic-ci-key` alias for CI artifacts. Those keys are disposable CI credentials, not the official Gusic release key, and CI artifacts must not be used as official releases.
 
-For a diagnostic build only, pass `-Ppixelplayer.disableReleaseSigning=true` even when local signing files exist. This opt-out is for packaging/debug diagnosis and does not make the resulting APK a releasable artifact.
+The property `-Ppixelplayer.disableReleaseSigning=true` is intentionally not a Release verification path: it suppresses the signing configuration, but Release tasks still depend on `validateReleaseSigningConfig` and fail. Use the debug packaging check above for general diagnostics, or provision the dedicated release keystore before invoking any Release task.
 
 ## Device Smoke Test
 
@@ -90,7 +92,7 @@ Install the release candidate and verify:
 2. Create a tag: `git tag v<APP_VERSION_NAME>`.
 3. Push the tag: `git push origin v<APP_VERSION_NAME>`.
 4. Create a GitHub release from the tag.
-5. Attach APK artifacts and paste the changelog section.
+External publication is a separate approval step: do not upload, publish, or distribute an artifact outside the repository until the authorized release owner has given explicit approval for that publication.
 
 ## Store Metadata
 

@@ -38,7 +38,7 @@ class MusicBrainzApiService @Inject constructor(
                     .header(
                         "User-Agent",
                         "Gusic/${BuildConfig.VERSION_NAME} " +
-                            "(https://github.com/MiNoMinoaa/PixelPlayerOLX)"
+                            "(https://github.com/gurio-wine/Gusic)"
                     )
                     .header("Accept", "application/json")
                     .build()

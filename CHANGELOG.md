@@ -2,6 +2,16 @@
 
 All notable changes to Gusic will be documented in this file.
 
+## [26.10.06] - 2026-10-06
+
+### Changed
+- Refreshed the About experience with Gusic artwork, including updated launcher artwork and a dedicated Gusic About icon.
+- Replaced the About-page sponsor section with a current-maintainer card for Gurio Wine and separate acknowledgements for the original PixelPlayer maintainers.
+- Updated in-app source, release/update, issue-reporting, and MusicBrainz links to the current Gusic repository.
+- Set the release baseline to `26.10.06` / `522012000`; alpha CI now validates the baseline and derives reserved alpha versions and codes through the shared helper.
+
+---
+
 ## [26.10.05.001] - 2026-10-05
 
 ### Added

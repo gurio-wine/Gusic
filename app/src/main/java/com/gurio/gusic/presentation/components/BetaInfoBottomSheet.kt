@@ -70,8 +70,8 @@ import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 @Composable
 fun BetaInfoBottomSheet(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val issuesUrl = "https://github.com/MiNoMinoaa/PixelPlayerOLX/issues"
-    val reportUrl = "https://github.com/MiNoMinoaa/PixelPlayerOLX/issues/new/choose"
+    val issuesUrl = "https://github.com/gurio-wine/Gusic/issues"
+    val reportUrl = "https://github.com/gurio-wine/Gusic/issues/new/choose"
 
     val fabCornerRadius = 18.dp
 

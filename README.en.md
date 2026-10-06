@@ -17,8 +17,8 @@
 </p>
 
 <p align="center">
-  An Android music player continuing the PixelPlayerOLX codebase, with historical PixelPlayerOSS attribution,
-  adding <a href="https://github.com/lyswhut/lx-music-mobile">lx-music-mobile</a>-compatible online music sources (自定义音源) plus playlist-interoperable import/export and other features.
+  An independently maintained Android music player by Gurio Wine, focused on local playback, self-hosted libraries, and offline use,
+  with optional lx-music-mobile-compatible online music sources (自定义音源) and playlist import/export.
 </p>
 
 > **Note:** Gusic is an independent project. It is **not** an official version of PixelPlayerOSS, lx-music-mobile, lx-lxwalnut-music-mobile, or any music platform, and it is not endorsed by their original authors.
@@ -36,27 +36,19 @@
 
 ## Introduction
 
-Gusic retains the historical PixelPlayerOSS foundation and attribution while adding an online music source (自定义音源 / "LX Music") system whose design references [lx-music-mobile](https://github.com/lyswhut/lx-music-mobile) and [lx-lxwalnut-music-mobile](https://github.com/WalnutBai/lx-lxwalnut-music-mobile).
+Gusic is independently maintained by Gurio Wine. It focuses on local playback, self-hosted music libraries, and offline use, with optional online sources compatible with lx-music-mobile and `.lxmc` playlist import/export.
 
-Local playback, self-hosted libraries, and offline use work by default. The online source features are optional and are only active after you import and enable a source script (or sign in to a supported platform).
+Local playback, self-hosted libraries, and offline use work by default. Online source features are optional and activate only after you import and enable a source script (or sign in to a supported platform).
+
+Repository: [github.com/gurio-wine/Gusic](https://github.com/gurio-wine/Gusic)
 
 Package name: `com.gurio.gusic`
 
-
-PixelPlayerOSS keeps the player FOSS-oriented and removes integrations that are not part of that direction (Telegram, NetEase, QQ Music, Google Drive, Gemini, Cast, Wear OS, Play Store billing, Firebase, Crashlytics, and Google Play Services runtime dependencies).
-
-Gusic builds on that FOSS base and adds back an *optional, user-controlled* online music source system, implemented with reference to [lx-music-mobile](https://github.com/lyswhut/lx-music-mobile) and [lx-lxwalnut-music-mobile](https://github.com/WalnutBai/lx-lxwalnut-music-mobile):
-
-- A sandboxed **QuickJS** script engine that runs lx-music-mobile-compatible source scripts (音源脚本).
-- Built-in official API paths for several platforms, used alongside scripts to pick the best available quality.
-- Basic login for platforms that require it.
-- `.lxmc` playlist import/export so playlists can be shared with lx-music-mobile.
-
-The offline/self-hosted experience remains the core of the app.
+Gurio Wine maintains Gusic’s current code, features, and releases; historical source information and third-party licenses and copyrights are documented in the project-origin and attribution section below.
 
 ## Features
 
-### Based on the historical PixelPlayerOSS foundation
+### Local Playback & Library
 
 | Area | Highlights |
 | --- | --- |
@@ -69,7 +61,7 @@ The offline/self-hosted experience remains the core of the app.
 | UI | Jetpack Compose, Material 3, dynamic color, light/dark themes, Glance widgets, animated player surfaces |
 | Backup | Preferences, playlists, favorites, lyrics, stats, and app state backup/restore |
 
-### Added by Gusic
+### Optional Online Sources
 
 | Area | Highlights |
 | --- | --- |
@@ -116,16 +108,16 @@ https://github.com/gurio-wine/Gusic/releases
 
 To install a release, download the APK for your device and install it: `arm64-v8a` fits most modern devices, and `armeabi-v7a` is for older 32-bit ones.
 
-## Upstream Projects & Attribution
+## Project Origin & Attribution
 
-Gusic is the renamed continuation of the former PixelPlayerOLX project. The original source repository is [https://github.com/MiNoMinoaa/PixelPlayerOLX](https://github.com/MiNoMinoaa/PixelPlayerOLX); this link is retained as an origin reference. Gusic is independently maintained and is not an official PixelPlayerOSS, lx-music-mobile, or platform release.
+Gurio Wine maintains Gusic’s current code, features, and releases. The current project homepage, source navigation, issue tracker, and release entry point are the [Gusic repository](https://github.com/gurio-wine/Gusic). Gusic continues the PixelPlayerOLX codebase; the [original source repository](https://github.com/MiNoMinoaa/PixelPlayerOLX) is retained only as an origin and historical reference, not as the current Gusic navigation or release entry point. This project-origin statement does not assert that copyright or other rights were transferred; each work remains subject to its applicable terms and the rights of its respective holders. Gusic is not an official PixelPlayerOSS, lx-music-mobile, or platform release, and is not endorsed by their original authors.
 
 PixelPlayerOSS is retained in this project only as historical foundation and attribution (GPL-3.0). Some online-source features are implemented with reference to [lx-music-mobile](https://github.com/lyswhut/lx-music-mobile) and [lx-lxwalnut-music-mobile](https://github.com/WalnutBai/lx-lxwalnut-music-mobile). The relevant licenses and copyrights are retained.
 
 | Project | Repository | License | Copyright / attribution |
 | --- | --- | --- | --- |
 | PixelPlayerOSS | https://github.com/PixelPlayerHQ/PixelPlayerOSS | GPL-3.0 | Copyright © 2026 Duhan (lostf1sh) |
-| Pixel Player (upstream of PixelPlayerOSS) | https://github.com/PixelPlayerHQ/PixelPlayer | Proprietary (formerly MIT) | Copyright © Theo Vilardo (theovilardo); logo designed by **Aureal** |
+| Pixel Player (historical upstream of PixelPlayerOSS) | https://github.com/PixelPlayerHQ/PixelPlayer | Proprietary (formerly MIT) | Copyright © Theo Vilardo (theovilardo); logo designed by **Aureal** |
 | lx-music-mobile | https://github.com/lyswhut/lx-music-mobile | Apache-2.0 | Copyright © lyswhut |
 | lx-lxwalnut-music-mobile | https://github.com/WalnutBai/lx-lxwalnut-music-mobile | Apache-2.0 | Copyright © WalnutBai |
 
