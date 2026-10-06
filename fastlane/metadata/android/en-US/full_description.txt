@@ -1,4 +1,4 @@
-PixelPlayerOLX is a fork of PixelPlayerOSS, an open-source Android music player focused on local playback, self-hosted music libraries, and user-controlled online lookups. It adds an optional lx-music-mobile-compatible online music source (自定义音源) system.
+Gusic continues the PixelPlayerOLX codebase and preserves historical PixelPlayerOSS attribution. It is an open-source Android music player focused on local playback, self-hosted music libraries, and user-controlled online lookups, with an optional lx-music-mobile-compatible online music source (自定义音源) system.
 
 The app works offline by default. Network features are optional and must be enabled by the user.
 
@@ -14,6 +14,6 @@ Features:
 * Material 3 UI, dynamic color, light/dark themes, and Glance widgets
 * Backup and restore for preferences, playlists, favorites, lyrics, stats, and app state
 
-PixelPlayerOLX does not include analytics, ads, Firebase, Crashlytics, Play Store billing, or Google Play Services runtime dependencies.
+Gusic does not include analytics, ads, Firebase, Crashlytics, Play Store billing, or Google Play Services runtime dependencies.
 
-PixelPlayerOLX is not affiliated with or endorsed by any music platform. Please respect copyright and support the official platforms.
+Gusic is not affiliated with or endorsed by any music platform. Please respect copyright and support the official platforms.

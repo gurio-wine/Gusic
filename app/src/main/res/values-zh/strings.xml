@@ -1,11 +1,11 @@
 <resources>
-<string name="app_name">PixelPlayerOLX</string>
+<string name="app_name">Gusic</string>
 <string name="app_name_change_title">應用名稱已變更</string>
-<string name="app_name_change_message">本應用現已更名為 PixelPlayerOLX！開啟你的音樂之旅吧！</string>
+<string name="app_name_change_message">本應用現已更名為 Gusic！開啟你的音樂之旅吧！</string>
 <string name="do_not_show_again">不再提示</string>
 <string name="dismiss">關閉</string>
 <string name="all_files_access_title">需要特殊權限</string>
-<string name="all_files_access_description">為了編輯歌曲元數據（mp3文件），PixelPlayerOLX需要全部文件訪問權限，以此直接修改歌曲標籤。請在下一界面授予權限，啟用元數據編輯功能。</string>
+<string name="all_files_access_description">為了編輯歌曲元數據（mp3文件），Gusic需要全部文件訪問權限，以此直接修改歌曲標籤。請在下一界面授予權限，啟用元數據編輯功能。</string>
 <string name="grant_permission_button">授予權限</string>
 <string name="error">錯誤</string>
 <string name="ok">確定</string>
@@ -127,7 +127,7 @@
 <string name="playlist_share_failed">分享失敗：%1$s</string>
 <string name="playlist_none_to_export">沒有可導出的播放列表</string>
 <string name="playlist_export_failed">導出失敗：%1$s</string>
-<string name="playlist_export_folder_display">Music/PixelPlayerOLX Exports</string>
+<string name="playlist_export_folder_display">Music/Gusic Exports</string>
 <string name="error_unknown">未知錯誤</string>
 
 

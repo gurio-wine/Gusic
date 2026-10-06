@@ -162,7 +162,7 @@
     <string name="device_capabilities_report_copy">複製</string>
     <string name="device_capabilities_report_share">分享</string>
     <string name="device_capabilities_report_copied">報告已複製到剪貼板</string>
-    <string name="device_capabilities_report_share_title">PixelPlayer 性能報告</string>
+    <string name="device_capabilities_report_share_title">Gusic 性能報告</string>
     <string name="device_capabilities_advanced_diagnostics_title">高級性能診斷</string>
     <string name="device_capabilities_advanced_diagnostics_description">默認關閉。記錄簡短的卡頓時間線，用於測試版故障排查。</string>
     <string name="device_capabilities_advanced_diagnostics_expires">有效期至 %1$s</string>
@@ -181,7 +181,7 @@
     <string name="presentation_batch_g_artist_group_by_album_artist">按專輯藝術家分組</string>
     <string name="presentation_batch_g_artist_group_by_album_artist_sub">藝術家列表與專輯將按照專輯藝術家分組，避免合作、合輯藝術家擾亂列表。</string>
     <string name="presentation_batch_g_artist_info_title">關於多藝術家解析</string>
-    <string name="presentation_batch_g_artist_info_body">PixelPlayerOLX 使用字符分隔符（/、;、&amp;）以及關鍵詞分隔符（feat.、ft.、vs.、x）拆分藝術家標籤，關鍵詞分隔符匹配不區分大小寫。
+    <string name="presentation_batch_g_artist_info_body">Gusic 使用字符分隔符（/、;、&amp;）以及關鍵詞分隔符（feat.、ft.、vs.、x）拆分藝術家標籤，關鍵詞分隔符匹配不區分大小寫。
 
 「從歌曲標題提取藝術家」可以識別歌名內類似 (feat. 藝人) 的格式。
 
@@ -270,7 +270,7 @@
     <string name="presentation_batch_g_presets_cd_pin">置頂</string>
     <string name="presentation_batch_g_presets_cd_rename">重命名</string>
     <string name="presentation_batch_g_presets_cd_delete">刪除</string>
-    <string name="presentation_batch_g_beta_sheet_welcome_title">歡迎使用 PixelPlayerOLX %1$s</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_title">歡迎使用 Gusic %1$s</string>
     <string name="presentation_batch_g_beta_sheet_welcome_body">你正在使用測試版本，可能存在漏洞、崩潰或者實驗性功能。遇到問題歡迎反饋，幫助項目改進。</string>
     <string name="presentation_batch_g_beta_sheet_welcome_body_stable">你正在使用正式發布版本。查看更新日誌了解新功能，遇到異常可以提交反饋。</string>
     <string name="presentation_batch_g_beta_sheet_expect_title">版本說明</string>
@@ -287,7 +287,7 @@
     <string name="presentation_batch_g_beta_sheet_report_summary">新建反饋前的簡易檢查清單。</string>
     <string name="presentation_batch_g_beta_sheet_before_title">提交反饋前</string>
     <string name="presentation_batch_g_beta_sheet_before_1">檢索已存在的開放/已關閉問題，避免重複提交。</string>
-    <string name="presentation_batch_g_beta_sheet_before_2">更新到最新 PixelPlayerOLX，確認問題依舊存在。</string>
+    <string name="presentation_batch_g_beta_sheet_before_2">更新到最新 Gusic，確認問題依舊存在。</string>
     <string name="presentation_batch_g_beta_sheet_before_3">重啟應用，確認故障可以復現。</string>
     <string name="presentation_batch_g_beta_sheet_before_4">儘量復現問題，記錄完整操作步驟。</string>
     <string name="presentation_batch_g_beta_sheet_issue_type_title">反饋類型</string>
@@ -305,7 +305,7 @@
     <string name="presentation_batch_g_beta_sheet_bug_screenshot">截圖/錄屏（如有）。</string>
     <string name="presentation_batch_g_beta_sheet_bug_logs">日誌/堆棧信息（如有）。</string>
     <string name="presentation_batch_g_beta_sheet_env_title">運行環境</string>
-    <string name="presentation_batch_g_beta_sheet_env_version">PixelPlayerOLX版本：</string>
+    <string name="presentation_batch_g_beta_sheet_env_version">Gusic版本：</string>
     <string name="presentation_batch_g_beta_sheet_env_source">安裝來源：GitHub發布包、調試構建、每日構建等</string>
     <string name="presentation_batch_g_beta_sheet_env_android">Android版本：</string>
     <string name="presentation_batch_g_beta_sheet_env_device">設備型號：</string>
@@ -339,7 +339,7 @@
     <string name="presentation_batch_g_album_sel_selected">已選擇</string>
     <string name="presentation_batch_g_album_sel_queue_hint">加入隊列並播放將嚴格遵循你的選中順序。</string>
     <string name="presentation_batch_g_album_sel_limit">上限：單次最多選擇 %1$d 張專輯。</string>
-    <string name="presentation_batch_g_app_name">PixelPlayerOLX</string>
+    <string name="presentation_batch_g_app_name">Gusic</string>
     <string name="presentation_batch_g_app_tagline">音樂播放器</string>
     <string name="presentation_batch_g_brick_high">最高分 %1$d</string>
     <string name="presentation_batch_g_brick_cd_close">關閉</string>
@@ -380,7 +380,7 @@
 
     <string name="presentation_batch_g_changelog_sec_whats_new">新增功能</string>
     <string name="presentation_batch_g_changelog_sec_changes">部分改動</string>
-    <string name="presentation_batch_g_changelog_fork_title">全新的分支！PixelPlayerOLX</string>
+    <string name="presentation_batch_g_changelog_fork_title">全新的分支！Gusic</string>
     <string name="presentation_batch_g_changelog_legacy_header">PixelPlayerOSS</string>
     <string name="presentation_batch_g_changelog_legacy_ellipsis">……</string>
     <!-- PixelPlayerOLX 0.1.0：新增功能 -->

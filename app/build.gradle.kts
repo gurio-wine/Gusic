@@ -18,7 +18,7 @@ val keystoreProperties = Properties().apply {
 }
 
 val releaseSigningStoreFile = rootProject.file(
-    keystoreProperties.getProperty("storeFile") ?: "vz-pixelplay.jks"
+    keystoreProperties.getProperty("storeFile") ?: "gusic-release.jks"
 )
 val disableReleaseSigning = providers.gradleProperty("pixelplayer.disableReleaseSigning")
     .getOrElse("false")
@@ -28,6 +28,25 @@ val hasReleaseSigningConfig = !disableReleaseSigning &&
     keystoreProperties.getProperty("storePassword") != null &&
     keystoreProperties.getProperty("keyAlias") != null &&
     keystoreProperties.getProperty("keyPassword") != null
+
+val validateReleaseSigning = tasks.register("validateReleaseSigningConfig") {
+    group = "verification"
+    description = "Ensures release variants are signed with the configured release key."
+    inputs.property("releaseSigningConfigured", hasReleaseSigningConfig)
+    doLast {
+        if (inputs.properties["releaseSigningConfigured"] != true) {
+            throw GradleException(
+                "Release signing is not configured. Add a valid root keystore.properties referencing the dedicated release keystore before building a release variant."
+            )
+        }
+    }
+}
+
+tasks.configureEach {
+    if (name != "validateReleaseSigningConfig" && name.contains("Release") && !name.contains("Benchmark")) {
+        dependsOn(validateReleaseSigning)
+    }
+}
 
 val enableAbiSplits = providers.gradleProperty("pixelplayer.enableAbiSplits")
     .getOrElse("true")
@@ -39,7 +58,7 @@ val enableComposeCompilerReports = providers.gradleProperty("pixelplayer.enableC
 
 @Suppress("DEPRECATION")
 android {
-    namespace = "com.minoppol.music"
+    namespace = "com.gurio.gusic"
     compileSdk = 37
 
     sourceSets {
@@ -78,7 +97,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.minoppol.music"
+        applicationId = "com.gurio.gusic"
         minSdk = 30
         targetSdk = 37
         versionCode = (project.findProperty("APP_VERSION_CODE") as? String)?.toInt() ?: 1
@@ -104,10 +123,8 @@ android {
         }
 
         release {
-            signingConfig = if (hasReleaseSigningConfig) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            if (hasReleaseSigningConfig) {
+                signingConfig = signingConfigs.getByName("release")
             }
             isMinifyEnabled = true
             isShrinkResources = true
@@ -119,6 +136,11 @@ android {
 
         create("benchmark") {
             initWith(getByName("release"))
+            signingConfig = if (hasReleaseSigningConfig) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             matchingFallbacks += listOf("release")
             isDebuggable = false
         }

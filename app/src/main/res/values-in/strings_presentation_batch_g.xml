@@ -50,7 +50,7 @@
     <string name="device_capabilities_report_generate">Buat laporan</string>
     <string name="device_capabilities_report_regenerate">Regenerasi</string>
     <string name="device_capabilities_report_share">Bagikan</string>
-    <string name="device_capabilities_report_share_title">Laporan performa PixelPlayer</string>
+    <string name="device_capabilities_report_share_title">Laporan performa Gusic</string>
     <string name="device_capabilities_report_title">Laporan performa</string>
     <string name="device_capabilities_review_title">Pemutaran perlu ditinjau</string>
     <string name="device_capabilities_storage_available">Tersedia</string>
@@ -194,7 +194,7 @@
     <string name="presentation_batch_g_brick_try_again">Coba Lagi?</string>
     <string name="presentation_batch_g_cd_selected">Terpilih</string>
     <string name="presentation_batch_g_cd_switch_on">Sakelar aktif</string>
-    <string name="presentation_batch_g_changelog_fork_title">Fork yang sepenuhnya baru: PixelPlayerOLX</string>
+    <string name="presentation_batch_g_changelog_fork_title">Fork yang sepenuhnya baru: Gusic</string>
     <string name="presentation_batch_g_changelog_legacy_header">PixelPlayerOSS</string>
     <string name="presentation_batch_g_changelog_legacy_ellipsis">…</string>
     <string name="presentation_batch_g_changelog_sec_whats_new">Apa yang baru</string>

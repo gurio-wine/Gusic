@@ -50,7 +50,7 @@
     <string name="device_capabilities_report_generate">Generer rapport</string>
     <string name="device_capabilities_report_regenerate">Regenerer</string>
     <string name="device_capabilities_report_share">Del</string>
-    <string name="device_capabilities_report_share_title">PixelPlayer ytelsesrapport</string>
+    <string name="device_capabilities_report_share_title">Gusic ytelsesrapport</string>
     <string name="device_capabilities_report_title">Ytelsesrapport</string>
     <string name="device_capabilities_review_title">Avspilling krever gjennomgang</string>
     <string name="device_capabilities_storage_available">Tilgjengelig</string>
@@ -194,7 +194,7 @@
     <string name="presentation_batch_g_brick_try_again">Prøv igjen?</string>
     <string name="presentation_batch_g_cd_selected">Valgt</string>
     <string name="presentation_batch_g_cd_switch_on">Bryter er på</string>
-    <string name="presentation_batch_g_changelog_fork_title">En helt ny forgrening: PixelPlayerOLX</string>
+    <string name="presentation_batch_g_changelog_fork_title">En helt ny forgrening: Gusic</string>
     <string name="presentation_batch_g_changelog_legacy_header">PixelPlayerOSS</string>
     <string name="presentation_batch_g_changelog_legacy_ellipsis">…</string>
     <string name="presentation_batch_g_changelog_sec_whats_new">Nytt i denne versjonen</string>

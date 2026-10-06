@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="widget_tap_to_open">點擊打開</string>
     <string name="widget_album_art">專輯封面</string>
@@ -94,7 +94,7 @@
     <string name="song_info_choose_tone">設置提示音</string>
     <string name="cd_choose_song_tone">選擇將該歌曲用作系統音效</string>
     <string name="song_info_tone_picker_title">將歌曲用作</string>
-    <string name="song_info_tone_picker_body">選擇 PixelPlayerOLX 將該音效設置為何種系統聲音。</string>
+    <string name="song_info_tone_picker_body">選擇 Gusic 將該音效設置為何種系統聲音。</string>
     <string name="song_info_tone_ringtone_title">手機鈴聲</string>
     <string name="song_info_tone_ringtone_subtitle">來電鈴聲</string>
     <string name="song_info_tone_notification_title">通知提示音</string>
@@ -108,7 +108,7 @@
     <string name="song_info_tone_ringtone_label">鈴聲</string>
     <string name="song_info_tone_notification_label">通知音</string>
     <string name="song_info_tone_alarm_label">鬧鐘音</string>
-    <string name="song_info_ringtone_permission_prompt">請開啟修改系統設置權限，返回 PixelPlayerOLX 自動完成設置。</string>
+    <string name="song_info_ringtone_permission_prompt">請開啟修改系統設置權限，返回 Gusic 自動完成設置。</string>
     <string name="song_info_ringtone_permission_missing">未授予修改系統設置權限。</string>
     <string name="song_info_ringtone_local_only">僅本地歌曲可以設置為鈴聲。</string>
     <string name="song_info_ringtone_missing_file">無法處理該音頻文件作為鈴聲。</string>

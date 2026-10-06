@@ -24,19 +24,19 @@
 -dontwarn com.jsyn.**
 -dontwarn com.softsynth.**
 
--keepclassmembers class com.minoppol.music.data.model.** { *; }
+-keepclassmembers class com.gurio.gusic.data.model.** { *; }
 
 -keep class com.google.gson.reflect.TypeToken { *; }
 -keep class * extends com.google.gson.reflect.TypeToken
 
--keep class com.minoppol.music.data.preferences.PreferenceBackupEntry { *; }
--keep class com.minoppol.music.data.backup.model.** { *; }
--keep class com.minoppol.music.data.backup.module.** { *; }
--keep class com.minoppol.music.data.database.FavoritesEntity { *; }
--keep class com.minoppol.music.data.database.SongEngagementEntity { *; }
--keep class com.minoppol.music.data.database.LyricsEntity { *; }
--keep class com.minoppol.music.data.database.SearchHistoryEntity { *; }
--keep class com.minoppol.music.data.database.TransitionRuleEntity { *; }
+-keep class com.gurio.gusic.data.preferences.PreferenceBackupEntry { *; }
+-keep class com.gurio.gusic.data.backup.model.** { *; }
+-keep class com.gurio.gusic.data.backup.module.** { *; }
+-keep class com.gurio.gusic.data.database.FavoritesEntity { *; }
+-keep class com.gurio.gusic.data.database.SongEngagementEntity { *; }
+-keep class com.gurio.gusic.data.database.LyricsEntity { *; }
+-keep class com.gurio.gusic.data.database.SearchHistoryEntity { *; }
+-keep class com.gurio.gusic.data.database.TransitionRuleEntity { *; }
 
 -keep class io.ktor.server.engine.** { *; }
 -keep class io.ktor.server.cio.** { *; }
@@ -74,4 +74,4 @@
 }
 
 # Route C: local-only private write implementation, looked up by fixed class name via reflection
--keep class com.minoppol.music.data.lxmusic.LxPrivateAccountExtension { *; }
+-keep class com.gurio.gusic.data.lxmusic.LxPrivateAccountExtension { *; }

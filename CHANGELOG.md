@@ -1,11 +1,12 @@
 # Changelog
 
-All notable changes to PixelPlayerOLX will be documented in this file.
+All notable changes to Gusic will be documented in this file.
 
-## [0.1.0] - 2026-09-17
+## [26.10.05.001] - 2026-10-05
 
 ### Added
-- Forked from PixelPlayerOSS and rebranded as PixelPlayerOLX.
+- Continued as Gusic with PixelPlayerOSS retained only as historical attribution.
+- Continued from the former PixelPlayerOLX source repository: https://github.com/MiNoMinoaa/PixelPlayerOLX.
 - Discover page to enable online features.
 - Split online and local entries: online pages perform online operations only; local pages perform local operations only.
 - LX Music playlist import/export (落雪 `.lxmc` format).
@@ -107,7 +108,7 @@ The sections below are the upstream [PixelPlayerOSS](https://github.com/PixelPla
 
 #### Release readiness
 - Added F-Droid metadata, Fastlane store metadata, dependency/license documentation, privacy notes, security notes, and contributor guidance.
-- Release builds now stay unsigned when local signing keys are absent, and `pixelplayer.disableReleaseSigning=true` forces unsigned verification builds even on a maintainer machine.
+- Upstream historical behavior: release builds stayed unsigned when local signing keys were absent, and `pixelplayer.disableReleaseSigning=true` forced unsigned verification builds on a maintainer machine.
 - Documented third-party asset and dependency licenses, including native/binary Maven artifacts and JitPack source trails.
 
 #### Security and privacy

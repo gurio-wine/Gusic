@@ -3,25 +3,25 @@
 </p>
 
 <p align="center">
-  <img src="assets/icon.png" alt="PixelPlayerOLX logo" width="160"/>
+  <img src="assets/icon.png" alt="Gusic logo" width="160"/>
 </p>
 
-<h1 align="center">PixelPlayerOLX</h1>
+<h1 align="center">Gusic</h1>
 
 <p align="center">
-  <a href="https://github.com/MiNoMinoaa/PixelPlayerOLX/releases/latest">
-    <img src="https://img.shields.io/github/v/release/MiNoMinoaa/PixelPlayerOLX?include_prereleases&logo=github&style=for-the-badge&label=Latest%20Release" alt="Latest release">
+  <a href="https://github.com/gurio-wine/Gusic/releases/latest">
+    <img src="https://img.shields.io/github/v/release/gurio-wine/Gusic?include_prereleases&logo=github&style=for-the-badge&label=Latest%20Release" alt="Latest release">
   </a>
   <img src="https://img.shields.io/badge/Android-11%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android 11+">
   <img src="https://img.shields.io/badge/License-GPLv3-blue?style=for-the-badge" alt="GPLv3 license">
 </p>
 
 <p align="center">
-  An Android music player forked from <a href="https://github.com/PixelPlayerHQ/PixelPlayerOSS">PixelPlayerOSS</a>,
+  An Android music player continuing the PixelPlayerOLX codebase, with historical PixelPlayerOSS attribution,
   adding <a href="https://github.com/lyswhut/lx-music-mobile">lx-music-mobile</a>-compatible online music sources (自定义音源) plus playlist-interoperable import/export and other features.
 </p>
 
-> **Note:** PixelPlayerOLX is an independent fork. It is **not** an official version of PixelPlayerOSS, lx-music-mobile, lx-lxwalnut-music-mobile, or any music platform, and it is not endorsed by their original authors.
+> **Note:** Gusic is an independent project. It is **not** an official version of PixelPlayerOSS, lx-music-mobile, lx-lxwalnut-music-mobile, or any music platform, and it is not endorsed by their original authors.
 
 <p align="center">This software implements lx source import and playback online features solely for personal use. Platform online features only take effect after a source script is imported and enabled. This software does not host, store, or own any copyrighted audio content.</p>
 
@@ -36,16 +36,16 @@
 
 ## Introduction
 
-PixelPlayerOLX is a fork of [PixelPlayerOSS](https://github.com/PixelPlayerHQ/PixelPlayerOSS). It keeps the upstream project's local-playback, self-hostable foundation and adds an online music source (自定义音源 / "LX Music") system whose design references [lx-music-mobile](https://github.com/lyswhut/lx-music-mobile) and [lx-lxwalnut-music-mobile](https://github.com/WalnutBai/lx-lxwalnut-music-mobile).
+Gusic retains the historical PixelPlayerOSS foundation and attribution while adding an online music source (自定义音源 / "LX Music") system whose design references [lx-music-mobile](https://github.com/lyswhut/lx-music-mobile) and [lx-lxwalnut-music-mobile](https://github.com/WalnutBai/lx-lxwalnut-music-mobile).
 
 Local playback, self-hosted libraries, and offline use work by default. The online source features are optional and are only active after you import and enable a source script (or sign in to a supported platform).
 
-Package name: `com.minoppol.music`
+Package name: `com.gurio.gusic`
 
 
 PixelPlayerOSS keeps the player FOSS-oriented and removes integrations that are not part of that direction (Telegram, NetEase, QQ Music, Google Drive, Gemini, Cast, Wear OS, Play Store billing, Firebase, Crashlytics, and Google Play Services runtime dependencies).
 
-PixelPlayerOLX builds on that FOSS base and adds back an *optional, user-controlled* online music source system, implemented with reference to [lx-music-mobile](https://github.com/lyswhut/lx-music-mobile) and [lx-lxwalnut-music-mobile](https://github.com/WalnutBai/lx-lxwalnut-music-mobile):
+Gusic builds on that FOSS base and adds back an *optional, user-controlled* online music source system, implemented with reference to [lx-music-mobile](https://github.com/lyswhut/lx-music-mobile) and [lx-lxwalnut-music-mobile](https://github.com/WalnutBai/lx-lxwalnut-music-mobile):
 
 - A sandboxed **QuickJS** script engine that runs lx-music-mobile-compatible source scripts (音源脚本).
 - Built-in official API paths for several platforms, used alongside scripts to pick the best available quality.
@@ -56,7 +56,7 @@ The offline/self-hosted experience remains the core of the app.
 
 ## Features
 
-### Inherited from PixelPlayerOSS
+### Based on the historical PixelPlayerOSS foundation
 
 | Area | Highlights |
 | --- | --- |
@@ -69,7 +69,7 @@ The offline/self-hosted experience remains the core of the app.
 | UI | Jetpack Compose, Material 3, dynamic color, light/dark themes, Glance widgets, animated player surfaces |
 | Backup | Preferences, playlists, favorites, lyrics, stats, and app state backup/restore |
 
-### Added by PixelPlayerOLX
+### Added by Gusic
 
 | Area | Highlights |
 | --- | --- |
@@ -111,14 +111,16 @@ LRCLIB and Deezer are partially enabled by default and can be toggled later from
 Releases are published on GitHub:
 
 ```text
-https://github.com/MiNoMinoaa/PixelPlayerOLX/releases
+https://github.com/gurio-wine/Gusic/releases
 ```
 
 To install a release, download the APK for your device and install it: `arm64-v8a` fits most modern devices, and `armeabi-v7a` is for older 32-bit ones.
 
 ## Upstream Projects & Attribution
 
-PixelPlayerOLX is a fork of [PixelPlayerOSS](https://github.com/PixelPlayerHQ/PixelPlayerOSS). Some online-source features are implemented with reference to [lx-music-mobile](https://github.com/lyswhut/lx-music-mobile) and [lx-lxwalnut-music-mobile](https://github.com/WalnutBai/lx-lxwalnut-music-mobile). The relevant licenses and copyrights are retained.
+Gusic is the renamed continuation of the former PixelPlayerOLX project. The original source repository is [https://github.com/MiNoMinoaa/PixelPlayerOLX](https://github.com/MiNoMinoaa/PixelPlayerOLX); this link is retained as an origin reference. Gusic is independently maintained and is not an official PixelPlayerOSS, lx-music-mobile, or platform release.
+
+PixelPlayerOSS is retained in this project only as historical foundation and attribution (GPL-3.0). Some online-source features are implemented with reference to [lx-music-mobile](https://github.com/lyswhut/lx-music-mobile) and [lx-lxwalnut-music-mobile](https://github.com/WalnutBai/lx-lxwalnut-music-mobile). The relevant licenses and copyrights are retained.
 
 | Project | Repository | License | Copyright / attribution |
 | --- | --- | --- | --- |
@@ -139,7 +141,7 @@ This project's app icon is a derivative work based on icon assets from the follo
   The original icon assets are used and modified under the Apache License 2.0.  
   lx-music-mobile also states that some images, fonts, and other resources included in the project may come from the Internet and may not be owned by the project itself.
 
-- **PixelPlayerOSS**  
+- **PixelPlayerOSS historical attribution**
   Repository: https://github.com/PixelPlayerHQ/PixelPlayerOSS  
   License: GNU General Public License v3.0 (GPL-3.0)  
   The original icon/logo design is attributed to **Aureal**, as stated in the PixelPlayerOSS project.
@@ -148,7 +150,7 @@ The combined/modified icon in this repository is provided for identification, at
 This project is **not** an official version of lx-music-mobile or PixelPlayerOSS, and it is not endorsed by their original authors.
 
 All respective copyrights belong to their original owners.  
-If you are the copyright holder of any asset used here and wish to request removal or modification, please open an issue or contact the repository maintainer.
+If you are the copyright holder of any asset used here and wish to request removal or modification, please open an [issue](https://github.com/gurio-wine/Gusic/issues/new) or contact the repository maintainer.
 
 ## Disclaimer — Respect Copyright
 
@@ -163,7 +165,7 @@ The online music source feature retrieves data from third-party platforms throug
 
 ## Contributing
 
-Contributions are welcome. Open an issue or pull request with a focused change and include test/build results when possible.
+Contributions are welcome. Open a focused [issue](https://github.com/gurio-wine/Gusic/issues/new) or [pull request](https://github.com/gurio-wine/Gusic/pulls), and include test/build results when possible.
 
 
 See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
@@ -181,10 +183,10 @@ Thanks to the following projects and their maintainers for their contributions t
 
 ## License
 
-PixelPlayerOLX is licensed under the [GNU General Public License v3.0](LICENSE) (`SPDX-License-Identifier: GPL-3.0-or-later`).
+Gusic is licensed under the [GNU General Public License v3.0](LICENSE) (`SPDX-License-Identifier: GPL-3.0-or-later`).
 
 ```
-PixelPlayerOLX
+Gusic
 Copyright (C) 2026 MiNoMinoaa
 
 This program is free software: you can redistribute it and/or modify
@@ -201,10 +203,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ```
 
-PixelPlayerOLX is a fork of PixelPlayerOSS (GPL-3.0, Copyright © 2026 Duhan (lostf1sh)). Some online-source features are implemented with reference to lx-music-mobile (Apache-2.0, Copyright © lyswhut) and lx-lxwalnut-music-mobile (Apache-2.0, Copyright © WalnutBai), and are used under their respective licenses.
+Gusic retains PixelPlayerOSS historical foundation and attribution (GPL-3.0, Copyright © 2026 Duhan (lostf1sh)). Some online-source features are implemented with reference to lx-music-mobile (Apache-2.0, Copyright © lyswhut) and lx-lxwalnut-music-mobile (Apache-2.0, Copyright © WalnutBai), and are used under their respective licenses.
 
 Distributed APKs include third-party components under their own licenses. In particular, the optional FFmpeg decoder dependency `org.jellyfin.media3:media3-ffmpeg-decoder` is GPL-3.0; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 <p align="center">
-  Maintained by <a href="https://github.com/MiNoMinoaa">MiNoMinoaa</a>
+  Maintained by <a href="https://github.com/gurio-wine/Gusic">Gusic</a>
 </p>

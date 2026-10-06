@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="setcat_m3u_sync_section">播放列表同步</string>
     <string name="setcat_m3u_sync_title">自動 M3U 檔案同步</string>
@@ -202,7 +202,7 @@
     <string name="setcat_trigger_crash_title">觸發測試崩潰</string>
     <string name="setcat_trigger_crash_subtitle">模擬程序崩潰，用於測試崩潰上報系統</string>
     <string name="setcat_application">應用信息</string>
-    <string name="setcat_about_pixelplayer_title">關於 PixelPlayerOLX</string>
+    <string name="setcat_about_pixelplayer_title">關於 Gusic</string>
     <string name="setcat_about_pixelplayer_subtitle">版本、致謝等更多信息</string>
 
     <string name="backup_summary_none">未選擇任何備份模塊</string>
@@ -257,7 +257,7 @@
     <string name="dialog_regenerate_stats_title">重建播放統計？</string>
     <string name="dialog_regenerate_stats_body">清空統計緩存，基於資料庫歷史重新計算播放數據。</string>
     <string name="toast_stats_regeneration_started">開始重建播放統計</string>
-    <string name="backup_file_name_format">PixelPlayerOLX_Backup_%1$d.pxpl</string>
+    <string name="backup_file_name_format">Gusic_Backup_%1$d.pxpl</string>
 
     <string name="setcat_regenerate_daily_mix_action">重新生成每日混合歌單</string>
     <string name="setcat_regenerate_stats_action">重建播放統計</string>

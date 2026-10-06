@@ -50,7 +50,7 @@
     <string name="device_capabilities_report_generate">Bericht generieren</string>
     <string name="device_capabilities_report_regenerate">Neu generieren</string>
     <string name="device_capabilities_report_share">Teilen</string>
-    <string name="device_capabilities_report_share_title">PixelPlayer Leistungsbericht</string>
+    <string name="device_capabilities_report_share_title">Gusic Leistungsbericht</string>
     <string name="device_capabilities_report_title">Leistungsbericht</string>
     <string name="device_capabilities_review_title">Wiedergabe überprüfen</string>
     <string name="device_capabilities_storage_available">Verfügbar</string>
@@ -194,7 +194,7 @@
     <string name="presentation_batch_g_brick_try_again">Nochmal versuchen?</string>
     <string name="presentation_batch_g_cd_selected">Ausgewählt</string>
     <string name="presentation_batch_g_cd_switch_on">Schalter an</string>
-    <string name="presentation_batch_g_changelog_fork_title">Ein brandneuer Fork: PixelPlayerOLX</string>
+    <string name="presentation_batch_g_changelog_fork_title">Ein brandneuer Fork: Gusic</string>
     <string name="presentation_batch_g_changelog_legacy_header">PixelPlayerOSS</string>
     <string name="presentation_batch_g_changelog_legacy_ellipsis">…</string>
     <string name="presentation_batch_g_changelog_sec_whats_new">Was ist neu</string>

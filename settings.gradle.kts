@@ -28,6 +28,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PixelPlayerOLX"
+rootProject.name = "Gusic"
 include(":app")
 include(":baselineprofile")

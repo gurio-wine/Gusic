@@ -7,7 +7,7 @@
     <string name="audio_bookmarks_cd_open">音頻書籤</string>
     <string name="audio_bookmarks_cd_add">保存書籤</string>
     <string name="nav_error_genre_id_missing">錯誤：缺少流派ID</string>
-    <string name="easter_egg_thank_you">感謝使用 PixelPlayerOLX！</string>
+    <string name="easter_egg_thank_you">感謝使用 Gusic！</string>
 
     <string name="word_delimiter_section_title">當前詞語分隔符</string>
     <string name="word_delimiter_section_subtitle">該關鍵詞在兩側存在空格時用於拆分藝術家名稱，匹配不區分大小寫。點擊可移除。</string>
@@ -51,7 +51,7 @@
     <string name="setup_theme_footer">後續可在 設置＞外觀＞應用主題 中修改。</string>
     <string name="setup_recommended">推薦</string>
     <string name="setup_external_services_title">可選在線服務</string>
-    <string name="setup_external_services_subtitle">PixelPlayerOLX 默認離線運行，按需開啟需要的聯網查詢功能。</string>
+    <string name="setup_external_services_subtitle">Gusic 默認離線運行，按需開啟需要的聯網查詢功能。</string>
     <string name="setup_external_lyrics_title">來自 LRCLIB 的在線歌詞</string>
     <string name="setup_external_lyrics_description">本地或內嵌歌詞缺失時，從 lrclib.net 搜索歌詞。</string>
     <string name="setup_external_artist_images_title">來自 Deezer 的藝術家封面</string>
@@ -101,7 +101,7 @@
     <string name="setup_excluded_folders_description">默認掃描全部文件夾，選擇需要忽略的目錄，建立音樂庫時不會讀取。</string>
     <string name="setup_choose_folders_ignore">選擇要忽略的文件夾</string>
     <string name="setup_permission_media_title">媒體權限</string>
-    <string name="setup_permission_media_description">PixelPlayerOLX 需要訪問音頻文件來構建音樂庫。</string>
+    <string name="setup_permission_media_description">Gusic 需要訪問音頻文件來構建音樂庫。</string>
     <string name="setup_permission_granted">權限已授予</string>
     <string name="setup_grant_media_permission">授予媒體權限</string>
     <string name="setup_permission_notifications_title">通知權限</string>
@@ -111,12 +111,12 @@
     <string name="setup_permission_alarms_description">可選，若使用睡眠定時，建議開啟，保證準時停止播放。</string>
     <string name="setup_grant_permission_generic">授予權限</string>
     <string name="setup_backup_have_title">你是否擁有備份？</string>
-    <string name="setup_backup_have_description">如果你有 PixelPlayerOLX 的備份，可以現在恢復，省去本機大部分設置步驟。</string>
+    <string name="setup_backup_have_description">如果你有 Gusic 的備份，可以現在恢復，省去本機大部分設置步驟。</string>
     <string name="setup_inspecting_backup">正在檢查備份</string>
     <string name="setup_restoring_backup">正在恢復備份</string>
     <string name="setup_import_backup">導入備份</string>
     <string name="setup_theme_dark_title">深色</string>
-    <string name="setup_theme_dark_description">PixelPlayerOLX 默認 Material 3 深色主題。</string>
+    <string name="setup_theme_dark_description">Gusic 默認 Material 3 深色主題。</string>
     <string name="setup_theme_light_title">淺色</string>
     <string name="setup_theme_light_description">全局明亮的 Material 3 界面。</string>
     <string name="setup_theme_follow_title">跟隨系統</string>
@@ -153,7 +153,7 @@
     <string name="crash_report_stack_preview_label">堆棧信息（預覽）：</string>
     <string name="crash_report_clipboard_label">崩潰日誌</string>
     <string name="toast_crash_log_copied">崩潰日誌已複製到剪貼板</string>
-    <string name="crash_report_share_subject">PixelPlayerOLX 崩潰報告</string>
+    <string name="crash_report_share_subject">Gusic 崩潰報告</string>
     <string name="crash_report_share_chooser">分享崩潰報告</string>
     <string name="action_copy">複製</string>
     <string name="action_share">分享</string>
@@ -174,13 +174,13 @@
     <string name="browse_by_genre">按流派瀏覽</string>
     <string name="no_genres_available">暫無可用流派。</string>
 
-    <string name="about_app_name">PixelPlayerOLX</string>
+    <string name="about_app_name">Gusic</string>
     <string name="about_tagline">基於 Material 3 的開源播放器。</string>
     <string name="about_version_format">版本 v%1$s</string>
     <string name="about_contributions_format">%1$d 位貢獻者</string>
     <string name="screen_about">關於</string>
-    <string name="about_olx_maintainer_title">PixelPlayerOLX 版本維護者</string>
-    <string name="about_olx_maintainer_subtitle">PixelPlayerOLX 分支維護者</string>
+    <string name="about_olx_maintainer_title">Gusic 版本維護者</string>
+    <string name="about_olx_maintainer_subtitle">Gusic 分支維護者</string>
     <string name="about_maintainer_title">原版維護者</string>
     <string name="about_maintainer_subtitle">開源版本與原版維護團隊。</string>
     <string name="about_project_title">項目信息</string>
@@ -194,7 +194,7 @@
     <string name="about_signal_community_first">社區驅動</string>
     <string name="about_signal_material3">Material 3 設計風格</string>
     <string name="about_support_eyebrow">贊助</string>
-    <string name="about_support_title">支持 PixelPlayerOLX</string>
+    <string name="about_support_title">支持 Gusic</string>
     <string name="about_support_body">支持此版本。您的支持是維護此版本的重大動力。</string>
     <string name="about_support_chip_foss">開源版本維護</string>
     <string name="about_support_chip_ci">持續集成與版本發布</string>

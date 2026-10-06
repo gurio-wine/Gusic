@@ -7,9 +7,9 @@
         android:shortcutShortLabel="@string/shortcut_shuffle_short"
         android:shortcutLongLabel="@string/shortcut_shuffle_long">
         <intent
-            android:action="com.minoppol.music.ACTION_SHUFFLE_ALL"
-            android:targetPackage="com.minoppol.music"
-            android:targetClass="com.minoppol.music.MainActivity" />
+            android:action="com.gurio.gusic.ACTION_SHUFFLE_ALL"
+            android:targetPackage="com.gurio.gusic"
+            android:targetClass="com.gurio.gusic.MainActivity" />
         <categories android:name="android.shortcut.conversation" />
     </shortcut>
 </shortcuts>

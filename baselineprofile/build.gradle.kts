@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.minoppol.music.baselineprofile"
+    namespace = "com.gurio.gusic.baselineprofile"
     compileSdk = 37
 
     compileOptions {

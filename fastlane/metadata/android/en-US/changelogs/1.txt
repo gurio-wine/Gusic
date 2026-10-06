@@ -1,6 +1,6 @@
-PixelPlayerOLX 0.1.0:
+Gusic 26.10.05.001:
 
-* Forked from PixelPlayerOSS and rebranded as PixelPlayerOLX.
+* Continued as Gusic with PixelPlayerOSS retained only as historical attribution.
 * Discover page for optional online features.
 * LX Music sources: custom source and script import, search, download, quality selection, login, and playback caching.
 * LX Music playlist import/export (落雪 .lxmc format).

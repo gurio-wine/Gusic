@@ -36,10 +36,39 @@ jobs:
         run: |
           BASE_VERSION="$(grep '^APP_VERSION_NAME=' gradle.properties | cut -d= -f2)"
           BASE_CODE="$(grep '^APP_VERSION_CODE=' gradle.properties | cut -d= -f2)"
-          ALPHA_VERSION="${BASE_VERSION}-alpha.${{ github.run_number }}"
-          # Keeps version codes ordered across stable bumps: 0.2.0 alphas sit in the
-          # 2xxxxx range, 0.3.0 alphas in 3xxxxx, so alpha updates always install.
-          ALPHA_CODE="$(( BASE_CODE * 100000 + ${{ github.run_number }} ))"
+          RUN_NUMBER="${{ github.run_number }}"
+          if [[ "$BASE_VERSION" =~ ^([0-9]{2})\.([0-9]{2})\.([0-9]{2})\.([0-9]{3})$ ]]; then
+            VERSION_YEAR="${BASH_REMATCH[1]}"
+            VERSION_MONTH="${BASH_REMATCH[2]}"
+            VERSION_DAY="${BASH_REMATCH[3]}"
+            VERSION_MOD="${BASH_REMATCH[4]}"
+          else
+            echo "APP_VERSION_NAME must use YY.MM.DD.MOD (got $BASE_VERSION)" >&2
+            exit 1
+          fi
+          if [[ ! "$BASE_CODE" =~ ^[0-9]+$ ]]; then
+            echo "APP_VERSION_CODE must be numeric (got $BASE_CODE)" >&2
+            exit 1
+          fi
+          if (( RUN_NUMBER < 1 || RUN_NUMBER > 999 )); then
+            echo "Alpha run number must be between 1 and 999 (got $RUN_NUMBER)" >&2
+            exit 1
+          fi
+          DATE_CODE=$((10#$VERSION_YEAR * 10000 + 10#$VERSION_MONTH * 100 + 10#$VERSION_DAY))
+          BASE_MOD=$((10#$VERSION_MOD))
+          if (( BASE_MOD < 0 || BASE_MOD > 999 )); then
+            echo "Stable modification must be between 000 and 999 (got $VERSION_MOD)" >&2
+            exit 1
+          fi
+          EXPECTED_BASE_CODE=$((DATE_CODE * 2000 + BASE_MOD))
+          if (( BASE_CODE != EXPECTED_BASE_CODE )); then
+            echo "APP_VERSION_CODE $BASE_CODE does not match $BASE_VERSION (expected $EXPECTED_BASE_CODE)" >&2
+            exit 1
+          fi
+          ALPHA_VERSION="${BASE_VERSION}-alpha.${RUN_NUMBER}"
+          # Stable modifications use slots 000-999; alpha CI uses 1001-1999.
+          # The bounded date formula stays below Android's signed 32-bit limit.
+          ALPHA_CODE=$(( DATE_CODE * 2000 + 1000 + RUN_NUMBER ))
           echo "name=$ALPHA_VERSION" >> "$GITHUB_OUTPUT"
           echo "code=$ALPHA_CODE" >> "$GITHUB_OUTPUT"
           echo "tag=v$ALPHA_VERSION" >> "$GITHUB_OUTPUT"
@@ -64,17 +93,17 @@ jobs:
         run: |
           if [ -n "$CI_KEYSTORE_B64" ] && [ -n "$CI_KEYSTORE_PASSWORD" ]; then
             KEYSTORE_PASSWORD="$CI_KEYSTORE_PASSWORD"
-            printf '%s' "$CI_KEYSTORE_B64" | base64 -d > pixelplayerolx-ci.jks
+            printf '%s' "$CI_KEYSTORE_B64" | base64 -d > gusic-ci.jks
           else
             KEYSTORE_PASSWORD="$(openssl rand -hex 24)"
-            keytool -genkey -v -keystore pixelplayerolx-ci.jks -alias pixelplayerolx-ci-key -keyalg RSA -keysize 4096 -validity 10000 \
+            keytool -genkey -v -keystore gusic-ci.jks -alias gusic-ci-key -keyalg RSA -keysize 4096 -validity 10000 \
               -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_PASSWORD" \
-              -dname "CN=PixelPlayerOLX CI Throwaway, OU=Dev, O=PixelPlayerOLX, L=World, S=World, C=US"
+              -dname "CN=Gusic CI Throwaway, OU=Dev, O=Gusic, L=World, S=World, C=US"
           fi
           {
-            echo "storeFile=pixelplayerolx-ci.jks"
+            echo "storeFile=gusic-ci.jks"
             echo "storePassword=$KEYSTORE_PASSWORD"
-            echo "keyAlias=pixelplayerolx-ci-key"
+            echo "keyAlias=gusic-ci-key"
             echo "keyPassword=$KEYSTORE_PASSWORD"
           } > keystore.properties
 
@@ -93,7 +122,7 @@ jobs:
             apk="app/build/outputs/apk/release/app-$abi-release.apk"
             "$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/aapt2" dump badging "$apk" >/dev/null
             "$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner" verify --verbose "$apk"
-            cp "$apk" "release-apks/PixelPlayerOLX-${{ steps.version.outputs.name }}-$abi.apk"
+            cp "$apk" "release-apks/Gusic-${{ steps.version.outputs.name }}-$abi.apk"
           done
 
       - name: Create GitHub prerelease
@@ -103,5 +132,5 @@ jobs:
           gh release create "${{ steps.version.outputs.tag }}"
           --prerelease
           --generate-notes
-          --title "PixelPlayerOLX ${{ steps.version.outputs.name }}"
+          --title "Gusic ${{ steps.version.outputs.name }}"
           release-apks/*.apk
