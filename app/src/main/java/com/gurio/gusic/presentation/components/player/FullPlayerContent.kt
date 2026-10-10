@@ -714,6 +714,7 @@ fun FullPlayerContent(
 
     Scaffold(
         containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         modifier = Modifier.pointerInput(currentSheetState, queueGestureBottomExclusionPx) {
             val queueDragActivationThresholdPx = 4.dp.toPx()
             val quickFlickVelocityThreshold = -520f
@@ -1442,7 +1443,8 @@ private fun FullPlayerPortraitContent(
 
         controlsSection()
 
-        Spacer(Modifier.height(20.dp))
+        val portraitNavBarBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        Spacer(Modifier.height((portraitNavBarBottomInset / 2).coerceAtLeast(8.dp)))
     }
 }
 

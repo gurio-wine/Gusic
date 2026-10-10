@@ -10,11 +10,9 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -34,7 +32,6 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Dataset
@@ -84,8 +81,6 @@ val genHeight = 42.dp
 fun LibraryActionRow(
     onMainActionClick: () -> Unit,
     iconRotation: Float,
-    onLocateClick: () -> Unit = {},
-    showLocateButton: Boolean = false,
     showImportButton: Boolean = true,
     isPlaylistTab: Boolean,
     onImportM3uClick: () -> Unit = {},
@@ -97,6 +92,9 @@ fun LibraryActionRow(
     onFolderClick: (String) -> Unit,
     onNavigateBack: () -> Unit,
 ) {
+    // 歌单/文件夹以外的标签左侧没有任何按钮，整行不渲染也不占高度
+    if (!isPlaylistTab && !isFoldersTab) return
+
     val shouldShowImport = isPlaylistTab && showImportButton
 
     Row(
@@ -246,25 +244,7 @@ fun LibraryActionRow(
             }
         }
 
-
         Spacer(modifier = Modifier.width(8.dp))
-
-        AnimatedVisibility(
-            visible = showLocateButton,
-            enter = slideInHorizontally(initialOffsetX = { it / 2 }) + fadeIn(),
-            exit = slideOutHorizontally(targetOffsetX = { it / 2 }) + fadeOut()
-        ) {
-            FilledTonalIconButton(
-                onClick = onLocateClick,
-                shape = RoundedCornerShape(26.dp),
-                modifier = Modifier.size(genHeight)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.MyLocation,
-                    contentDescription = stringResource(R.string.cd_locate_current_song)
-                )
-            }
-        }
     }
 }
 

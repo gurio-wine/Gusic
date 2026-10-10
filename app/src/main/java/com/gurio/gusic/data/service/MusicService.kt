@@ -701,11 +701,12 @@ class MusicService : MediaSessionService() {
                             else -> Player.REPEAT_MODE_OFF
                         }
                         session.player.repeatMode = newMode
-                        refreshMediaSessionUi(session)
+                        refreshMediaSessionUi(session, force = true)
                         requestWidgetFullUpdate(force = true)
                     }
                     MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_PLAY_MODE -> {
-                        // 与播放页一致的三档循环：列表循环 → 单曲循环 → 随机循环
+                        // 与播放页一致的三档循环：列表循环 → 单曲循环 → 随机循环。
+                        // 状态纯本地、不会失败，同步改完立即强制刷新，通知图标即时切换
                         val player = session.player
                         when {
                             player.shuffleModeEnabled || isManualShuffleEnabled -> {
@@ -718,7 +719,7 @@ class MusicService : MediaSessionService() {
                             }
                             else -> player.repeatMode = Player.REPEAT_MODE_ONE
                         }
-                        refreshMediaSessionUi(session)
+                        refreshMediaSessionUi(session, force = true)
                         requestWidgetFullUpdate(force = true)
                     }
                     MusicNotificationProvider.CUSTOM_COMMAND_LIKE -> {
@@ -2567,7 +2568,7 @@ class MusicService : MediaSessionService() {
             favoriteSongIds - songId
         }
 
-        refreshMediaSessionUi(session)
+        refreshMediaSessionUi(session, force = true)
         requestWidgetFullUpdate(force = true)
 
         serviceScope.launch {
@@ -2579,6 +2580,28 @@ class MusicService : MediaSessionService() {
         }
 
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+    }
+
+    /** 通知收藏在线歌：先改本地镜像立即变图标，网络失败再回退。 */
+    private fun applyOnlineLikedMirror(
+        source: String,
+        song: com.gurio.gusic.data.model.Song,
+        trackId: String,
+        liked: Boolean,
+    ) {
+        when (source) {
+            "wy" -> neteaseLikedIds = if (liked) neteaseLikedIds + trackId else neteaseLikedIds - trackId
+            "tx" -> txLikedIds = if (liked) txLikedIds + trackId else txLikedIds - trackId
+            "kg" -> {
+                val hash = song.lxMusicHash
+                kgLikedIds = if (liked) {
+                    kgLikedIds + trackId + listOfNotNull(hash)
+                } else {
+                    kgLikedIds - trackId - listOfNotNull(hash)
+                }
+            }
+            "kw" -> kwLikedIds = if (liked) kwLikedIds + trackId else kwLikedIds - trackId
+        }
     }
 
     private fun setOnlineSongFavoriteState(
@@ -2596,55 +2619,63 @@ class MusicService : MediaSessionService() {
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
 
+        // 登录检查放在乐观更新之前：未登录直接提示，不动图标
+        val notLoggedInMessage = when (source) {
+            "wy" -> if (!neteaseCookieStore.hasCookie()) "登录网易云后可同步喜欢" else null
+            "tx" -> if (!tencentCookieStore.hasCookie()) "登录 QQ 音乐后可同步喜欢" else null
+            "kg" -> if (!kugouCookieStore.hasAppLogin()) "登录酷狗音乐后可同步喜欢" else null
+            "kw" -> if (!kuwoCookieStore.hasCookie()) "登录酷我音乐后可同步喜欢" else null
+            else -> null
+        }
+        if (notLoggedInMessage != null) {
+            notificationLikeBusyIds.remove(trackId)
+            showNotificationLikeToast(notLoggedInMessage)
+            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+        }
+
+        // 乐观更新：先切换本地镜像并强制刷新，通知红心立即变化；失败再回退
+        val previousLiked = isOnlineSongLiked(song)
+        applyOnlineLikedMirror(source, song, trackId, targetFavoriteState)
+        refreshMediaSessionUi(session, force = true)
+        requestWidgetFullUpdate(force = true)
+
         serviceScope.launch {
             try {
                 val ok = when (source) {
-                    "wy" -> {
-                        if (!neteaseCookieStore.hasCookie()) {
-                            showNotificationLikeToast("登录网易云后可同步喜欢")
-                            return@launch
-                        }
-                        lxMusicRepository.neteaseSetSongLike(trackId, targetFavoriteState)
-                    }
+                    "wy" -> lxMusicRepository.neteaseSetSongLike(trackId, targetFavoriteState)
                     "tx" -> {
-                        if (!tencentCookieStore.hasCookie()) {
-                            showNotificationLikeToast("登录 QQ 音乐后可同步喜欢")
-                            return@launch
-                        }
                         val txSongId = song.lxMusicExtraFields["songId"]
-                        if (txSongId == null) {
-                            showNotificationLikeToast("缺少歌曲信息，无法收藏")
-                            false
+                        val (resolvedSongId, resolvedType) = if (txSongId != null) {
+                            txSongId to (song.lxMusicExtraFields["songType"]?.toIntOrNull() ?: 0)
                         } else {
-                            val txType = song.lxMusicExtraFields["songType"]?.toIntOrNull() ?: 0
-                            lxMusicRepository.txSetSongLike(txSongId, txType, targetFavoriteState)
+                            // 榜单、专辑等入口缺数字 songId，先按 songmid 反查
+                            val resolved = lxMusicRepository.txResolveSongLikeInfo(song)
+                            if (resolved == null) {
+                                applyOnlineLikedMirror(source, song, trackId, previousLiked)
+                                refreshMediaSessionUi(session, force = true)
+                                showNotificationLikeToast("缺少歌曲信息，无法收藏")
+                                return@launch
+                            } else {
+                                resolved.first.toString() to resolved.second
+                            }
                         }
+                        lxMusicRepository.txSetSongLike(resolvedSongId, resolvedType, targetFavoriteState)
                     }
-                    "kg" -> {
-                        if (!kugouCookieStore.hasAppLogin()) {
-                            showNotificationLikeToast("登录酷狗音乐后可同步喜欢")
-                            return@launch
-                        }
-                        lxMusicRepository.kgSetSongLike(
-                            songmid = trackId,
-                            hash = song.lxMusicHash,
-                            name = song.title,
-                            singer = song.artist,
-                            albumId = song.lxMusicExtraFields["albumId"],
-                            mixSongId = song.lxMusicExtraFields["mixSongId"],
-                            like = targetFavoriteState,
-                        )
-                    }
-                    "kw" -> {
-                        if (!kuwoCookieStore.hasCookie()) {
-                            showNotificationLikeToast("登录酷我音乐后可同步喜欢")
-                            return@launch
-                        }
-                        lxMusicRepository.kwSetSongLike(trackId, targetFavoriteState)
-                    }
+                    "kg" -> lxMusicRepository.kgSetSongLike(
+                        songmid = trackId,
+                        hash = song.lxMusicHash,
+                        name = song.title,
+                        singer = song.artist,
+                        albumId = song.lxMusicExtraFields["albumId"],
+                        mixSongId = song.lxMusicExtraFields["mixSongId"],
+                        like = targetFavoriteState,
+                    )
+                    "kw" -> lxMusicRepository.kwSetSongLike(trackId, targetFavoriteState)
                     else -> false
                 }
                 if (!ok) {
+                    // 执行失败：回退乐观状态并恢复图标
+                    applyOnlineLikedMirror(source, song, trackId, previousLiked)
                     showNotificationLikeToast(
                         if (targetFavoriteState) "喜欢失败，请稍后重试" else "取消喜欢失败，请稍后重试"
                     )
@@ -2671,7 +2702,7 @@ class MusicService : MediaSessionService() {
                         )
                     }
                 }
-                refreshMediaSessionUi(session)
+                refreshMediaSessionUi(session, force = true)
                 requestWidgetFullUpdate(force = true)
             } finally {
                 notificationLikeBusyIds.remove(trackId)

@@ -242,6 +242,23 @@ internal class TencentAccountApi(
         return fetchDissSongs(liked = false, disstid = disstid)
     }
 
+    /**
+     * 按 songmid 反查数字 songId/songType。榜单、专辑详情等入口只带 songmid，
+     * 而红心接口 AddSonglist 需要数字 songId，收藏前先在这里补齐。
+     */
+    suspend fun resolveSongLikeInfoByMid(songmid: String): Pair<Long, Int>? =
+        withContext(Dispatchers.IO) {
+            if (songmid.isBlank()) return@withContext null
+            val (cookie, _) = loginCookie() ?: return@withContext null
+            val param = JsonObject().apply { addProperty("song_mid", songmid) }
+            val block = musicuCall(cookie, "req_1", "music.pf_song_detail_svr", "GetSongDetail", param)
+                ?: return@withContext null
+            val trackSource = (block.get("data") as? JsonObject)?.takeIf { it.keySet().isNotEmpty() } ?: block
+            val track = mapTrack(trackSource) ?: return@withContext null
+            val id = track.extraFields["songId"]?.toLongOrNull() ?: return@withContext null
+            id to (track.extraFields["songType"]?.toIntOrNull() ?: 0)
+        }
+
     private suspend fun fetchDissSongs(liked: Boolean, disstid: String?): List<LxSong>? =
         withContext(Dispatchers.IO) {
             val (cookie, _) = loginCookie() ?: return@withContext null

@@ -488,4 +488,16 @@
         <item>徹底移除書籤（bookmarks）功能</item>
         <item>預設開啟「記憶隨機播放狀態」與「顯示播放歷史佇列」</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101104_whats_new">
+        <item>播放頁消除底部空隙，控制按鈕貼近螢幕底部</item>
+        <item>收藏 QQ 音樂歌曲自動補齊缺失的歌曲資訊，不再提示「缺少歌曲資訊」</item>
+        <item>通知按鈕即時回應：先切換圖示再執行，失敗自動回退（循環/紅心）</item>
+        <item>新開始播放時自動開啟播放頁（暫停後繼續、切歌不觸發）</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101104_changes">
+        <item>榜單標籤不再被右側操作膠囊遮擋</item>
+        <item>「我的」頁移除定位按鈕，無按鈕時整行不再佔空間</item>
+        <item>「我的」頁刪除「資料夾」分類，「我喜歡」移到第一位</item>
+        <item>播放通知循環模式按鈕保持最前</item>
+    </string-array>
 </resources>

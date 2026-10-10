@@ -488,4 +488,16 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>Completely removed the bookmarks feature</item>
         <item>Remember shuffle state and show queue history are now on by default</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101104_whats_new">
+        <item>Player page: bottom gap eliminated, controls now sit flush at the bottom edge</item>
+        <item>Favoriting QQ Music songs auto-resolves missing song info, no more missing-info error</item>
+        <item>Notification buttons respond instantly: icon switches first, rolls back on failure</item>
+        <item>Starting new playback auto-opens the player page (resume and track change excluded)</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101104_changes">
+        <item>Chart chips no longer hidden behind the right action capsule</item>
+        <item>Mine page: locate button removed; action row takes no space when empty</item>
+        <item>Mine page: Folders category removed, Liked moved to first</item>
+        <item>Playback notification cycle-mode button stays in front</item>
+    </string-array>
 </resources>

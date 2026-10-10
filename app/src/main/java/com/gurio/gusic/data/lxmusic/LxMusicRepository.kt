@@ -16,6 +16,7 @@ import com.gurio.gusic.data.lxmusic.platform.KugouOfficialApi
 import com.gurio.gusic.data.lxmusic.platform.PlatformResult
 import com.gurio.gusic.data.lxmusic.platform.TencentOfficialApi
 import com.gurio.gusic.data.lxmusic.tencent.TencentAccountApi
+import com.gurio.gusic.data.model.Song
 import com.gurio.gusic.data.preferences.UserPreferencesRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -2092,6 +2093,25 @@ class LxMusicRepository @Inject constructor(
 
     suspend fun txSetSongLike(songId: String, songType: Int, like: Boolean): Boolean =
         accountExtension.txApplySongLike(songId, songType, like)
+
+    /**
+     * 收藏 tx 歌曲前解析红心接口需要的数字 songId/songType：
+     * 先走 songmid 歌曲详情，查不到再用「歌名 歌手」搜索按 songmid 匹配。
+     */
+    suspend fun txResolveSongLikeInfo(song: Song): Pair<Long, Int>? = withContext(Dispatchers.IO) {
+        val songmid = song.lxMusicSongMid?.takeIf(String::isNotBlank) ?: return@withContext null
+        accountExtension.txResolveSongLikeInfo(songmid)?.let { return@withContext it }
+        val keyword = listOfNotNull(
+            song.title.takeIf { it.isNotBlank() },
+            song.artist.takeIf { it.isNotBlank() },
+        ).joinToString(" ").takeIf { it.isNotBlank() } ?: return@withContext null
+        runCatching { searchQQ(keyword, 1) }.getOrNull()
+            ?.firstOrNull { it.songmid == songmid }
+            ?.let { match ->
+                match.extraFields["songId"]?.toLongOrNull()
+                    ?.let { id -> id to (match.extraFields["songType"]?.toIntOrNull() ?: 0) }
+            }
+    }
 
     suspend fun kgSetSongLike(
         songmid: String,

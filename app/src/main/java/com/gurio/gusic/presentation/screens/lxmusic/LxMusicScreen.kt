@@ -2550,9 +2550,11 @@ private fun LxBoardPage(
             contentAlignment = Alignment.CenterEnd,
         ) {
             androidx.compose.foundation.lazy.LazyRow(
-                modifier = Modifier.fillMaxWidth(),
+                // 收窄到右侧操作胶囊左边，初始与滚动全程 chip 都不会被胶囊盖住（此前只靠
+                // contentPadding 预留，首屏最后一个 chip 仍会被悬浮胶囊截断）
+                modifier = Modifier.fillMaxWidth().padding(end = 162.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(start = 10.dp, end = 162.dp),
+                contentPadding = PaddingValues(start = 10.dp, end = 8.dp),
             ) {
                     items(browseState.boards, key = { it.id }) { board ->
                         Surface(

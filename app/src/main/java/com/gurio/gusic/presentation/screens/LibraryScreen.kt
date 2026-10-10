@@ -876,19 +876,6 @@ fun LibraryScreen(
                             LibraryTabId.FOLDERS -> playerUiState.currentFolderSortOption
                         }
 
-                        val showLocateButton = when (currentTabId) {
-                            LibraryTabId.SONGS -> songsShowLocateButton
-                            LibraryTabId.LIKED -> likedShowLocateButton
-                            LibraryTabId.FOLDERS -> foldersShowLocateButton
-                            else -> false
-                        }
-                        val locateAction = when (currentTabId) {
-                            LibraryTabId.SONGS -> songsLocateAction
-                            LibraryTabId.LIKED -> likedLocateAction
-                            LibraryTabId.FOLDERS -> foldersLocateAction
-                            else -> null
-                        }
-
                         val onSortOptionChanged: (SortOption) -> Unit = remember(playerViewModel, playlistViewModel, currentTabId) {
                             { option ->
                                 when (currentTabId) {
@@ -902,6 +889,12 @@ fun LibraryScreen(
                             }
                         }
 
+                        // 仅在选择模式、歌单或文件夹标签下才有动作行；其余标签整行不渲染也不占空间
+                        val actionRowHasContent = hasSelectionInCurrentTab ||
+                            currentTabId == LibraryTabId.PLAYLISTS ||
+                            (currentTabId == LibraryTabId.FOLDERS &&
+                                (!playerUiState.isFoldersPlaylistView || playerUiState.currentFolder != null))
+
                         AnimatedContent(
                             targetState = hasSelectionInCurrentTab,
                             label = "ActionRowModeSwitch",
@@ -909,13 +902,17 @@ fun LibraryScreen(
                                 (slideInHorizontally { -it } + fadeIn()) togetherWith
                                         (slideOutHorizontally { it } + fadeOut())
                             },
-                            modifier = Modifier
-                                .padding(
-                                    top = 6.dp,
-                                    start = 10.dp,
-                                    end = 10.dp
-                                )
-                                .heightIn(min = 56.dp)
+                            modifier = if (actionRowHasContent) {
+                                Modifier
+                                    .padding(
+                                        top = 6.dp,
+                                        start = 10.dp,
+                                        end = 10.dp
+                                    )
+                                    .heightIn(min = 56.dp)
+                            } else {
+                                Modifier
+                            }
                         ) { inSelectionMode ->
                             if (inSelectionMode) {
                                 if (currentTabId == LibraryTabId.PLAYLISTS && isPlaylistSelectionMode) {
@@ -1001,8 +998,6 @@ fun LibraryScreen(
                                         showPlaylistCreationTypeDialog = true
                                     },
                                     iconRotation = iconRotation,
-                                    showLocateButton = showLocateButton,
-                                    onLocateClick = { locateAction?.invoke() },
                                     isPlaylistTab = currentTabId == LibraryTabId.PLAYLISTS,
                                     isFoldersTab = currentTabId == LibraryTabId.FOLDERS && (!playerUiState.isFoldersPlaylistView || playerUiState.currentFolder != null),
                                     onImportM3uClick = {

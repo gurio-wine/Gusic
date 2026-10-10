@@ -103,6 +103,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -451,6 +452,14 @@ class PlayerViewModel @Inject constructor(
     private val _sheetState = MutableStateFlow(PlayerSheetState.COLLAPSED)
     val sheetState: StateFlow<PlayerSheetState> = _sheetState.asStateFlow()
     private val _isSheetVisible = MutableStateFlow(false)
+
+    // 新播放会话（用户主动点歌/随机全播/外部 URI）时记录时间戳；随后 isPlaying 首次变 true
+    // 且在有效期内则自动展开全屏播放页。暂停恢复、上下首切歌与自动连播不走这些入口，不会触发。
+    private var pendingAutoExpandOnNewPlaybackAtMs: Long = 0L
+
+    private fun markPendingAutoExpandOnNewPlayback() {
+        pendingAutoExpandOnNewPlaybackAtMs = System.currentTimeMillis()
+    }
     private val _bottomBarHeight = MutableStateFlow(0)
     val bottomBarHeight: StateFlow<Int> = _bottomBarHeight.asStateFlow()
     private val _predictiveBackCollapseFraction = MutableStateFlow(0f)
@@ -928,6 +937,23 @@ class PlayerViewModel @Inject constructor(
         themeStateHolder.initialize(viewModelScope)
 
         viewModelScope.launch {
+            playbackStateHolder.stablePlayerState
+                .map { it.isPlaying }
+                .distinctUntilChanged()
+                .filter { it }
+                .collect {
+                    val markedAt = pendingAutoExpandOnNewPlaybackAtMs
+                    pendingAutoExpandOnNewPlaybackAtMs = 0L
+                    val withinWindow =
+                        markedAt > 0L && System.currentTimeMillis() - markedAt <= 10_000L
+                    if (withinWindow && _sheetState.value == PlayerSheetState.COLLAPSED) {
+                        _isSheetVisible.value = true
+                        _sheetState.value = PlayerSheetState.EXPANDED
+                    }
+                }
+        }
+
+        viewModelScope.launch {
             combine(
                 _playbackOrigin,
                 stablePlayerState.map { it.currentSong?.lxMusicSource }.distinctUntilChanged(),
@@ -1087,19 +1113,27 @@ class PlayerViewModel @Inject constructor(
             initialValue = 0
         )
 
+    // “我的”页固定顺序：我喜欢置顶、不再提供文件夹分类；已保存的顺序里也会剔除 FOLDERS
+    private fun normalizeLibraryTabs(raw: List<String>): ImmutableList<String> {
+        val withoutFolders = raw.filter { it != "FOLDERS" && it.isNotBlank() }
+            .ifEmpty { listOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS") }
+        val rest = withoutFolders.filter { it != "LIKED" }
+        return (listOf("LIKED") + rest).toImmutableList()
+    }
+
     val libraryTabsFlow: StateFlow<ImmutableList<String>> = userPreferencesRepository.libraryTabsOrderFlow
         .map { orderJson ->
             if (orderJson != null) {
                 try {
-                    Json.decodeFromString<List<String>>(orderJson).toImmutableList()
+                    normalizeLibraryTabs(Json.decodeFromString<List<String>>(orderJson))
                 } catch (e: Exception) {
-                    persistentListOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED")
+                    normalizeLibraryTabs(emptyList())
                 }
             } else {
-                persistentListOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED")
+                normalizeLibraryTabs(emptyList())
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), persistentListOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED"))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), normalizeLibraryTabs(emptyList()))
 
     private val _loadedTabs = MutableStateFlow(emptySet<String>())
     private var lastBlockedDirectories: Set<String>? = null
@@ -3115,6 +3149,7 @@ class PlayerViewModel @Inject constructor(
         playlistId: String? = null,
         origin: PlaybackOrigin = PlaybackOrigin.LOCAL,
     ) {
+        markPendingAutoExpandOnNewPlayback()
         _playbackOrigin.value = origin
         savePlaybackOrigin(origin)
         cancelPendingFullQueuePlayback()
@@ -3170,6 +3205,7 @@ class PlayerViewModel @Inject constructor(
         onStartSongResolved: ((Song) -> Unit)? = null,
         origin: PlaybackOrigin = PlaybackOrigin.LOCAL,
     ) {
+        markPendingAutoExpandOnNewPlayback()
         _playbackOrigin.value = origin
         savePlaybackOrigin(origin)
         cancelPendingFullQueuePlayback()
@@ -3197,6 +3233,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun playExternalUri(uri: Uri) {
+        markPendingAutoExpandOnNewPlayback()
         viewModelScope.launch {
             val externalResult = externalMediaStateHolder.buildExternalSongFromUri(uri)
             if (externalResult == null) {
@@ -3619,6 +3656,25 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    private fun applyTxSongLike(song: Song, songId: String, songType: Int, removing: Boolean) {
+        viewModelScope.launch {
+            val liked = lxMusicRepository.txLikedSongIds.value.contains(song.lxMusicSongMid)
+            val target = if (removing) false else !liked
+            val ok = lxMusicRepository.txSetSongLike(songId, songType, target)
+            if (ok) {
+                song.lxMusicSongMid?.let { mid ->
+                    val current = lxMusicRepository.txLikedSongIds.value
+                    lxMusicRepository.setTxLikedSongIds(
+                        if (target) current + mid else current - mid
+                    )
+                }
+                showFavoriteToast(if (target) "已添加到我喜欢" else "已从我喜欢移除")
+            } else {
+                showFavoriteToast("操作失败，请稍后再试")
+            }
+        }
+    }
+
     fun togglePlatformFavorite(song: Song) {
         toggleOnlineSongFavorite(song, removing = false)
     }
@@ -3641,26 +3697,19 @@ class PlayerViewModel @Inject constructor(
                     showFavoriteToast("登录 QQ 音乐后可同步喜欢")
                     return
                 }
-                val songId = song.lxMusicExtraFields["songId"]
-                if (songId == null) {
-                    showFavoriteToast("缺少歌曲信息，无法收藏")
+                val knownSongId = song.lxMusicExtraFields["songId"]
+                if (knownSongId != null) {
+                    val songType = song.lxMusicExtraFields["songType"]?.toIntOrNull() ?: 0
+                    applyTxSongLike(song, knownSongId, songType, removing)
                     return
                 }
-                val songType = song.lxMusicExtraFields["songType"]?.toIntOrNull() ?: 0
+                // 榜单、专辑等入口只有 songmid，先反查红心接口需要的数字 songId
                 viewModelScope.launch {
-                    val liked = lxMusicRepository.txLikedSongIds.value.contains(song.lxMusicSongMid)
-                    val target = if (removing) false else !liked
-                    val ok = lxMusicRepository.txSetSongLike(songId, songType, target)
-                    if (ok) {
-                        song.lxMusicSongMid?.let { mid ->
-                            val current = lxMusicRepository.txLikedSongIds.value
-                            lxMusicRepository.setTxLikedSongIds(
-                                if (target) current + mid else current - mid
-                            )
-                        }
-                        showFavoriteToast(if (target) "已添加到我喜欢" else "已从我喜欢移除")
+                    val resolved = lxMusicRepository.txResolveSongLikeInfo(song)
+                    if (resolved == null) {
+                        showFavoriteToast("缺少歌曲信息，无法收藏")
                     } else {
-                        showFavoriteToast("操作失败，请稍后再试")
+                        applyTxSongLike(song, resolved.first.toString(), resolved.second, removing)
                     }
                 }
             }
