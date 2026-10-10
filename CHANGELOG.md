@@ -2,6 +2,13 @@
 
 All notable changes to Gusic will be documented in this file.
 
+## [26.10.08.001] - 2026-10-08
+
+### Changed
+- Bumped the version code to `522016001` for a same-date installable follow-up build.
+
+---
+
 ## [26.10.08] - 2026-10-08
 
 ### Changed

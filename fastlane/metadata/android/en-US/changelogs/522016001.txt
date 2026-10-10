@@ -1,0 +1,3 @@
+Gusic 26.10.08.001:
+
+* Bumped the version code to 522016001 for a same-date installable follow-up build.

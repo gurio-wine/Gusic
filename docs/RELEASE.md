@@ -11,11 +11,11 @@ Gurio Wine maintains Gusic’s current code, features, and releases in the Gusic
 Version values live in `gradle.properties`:
 
 ```properties
-APP_VERSION_NAME=26.10.08
-APP_VERSION_CODE=522016000
+APP_VERSION_NAME=26.10.08.001
+APP_VERSION_CODE=522016001
 ```
 
-The stable version name is `YY.MM.DD`; its three segments identify the formal release date, and the omitted modification number is treated as `000`. Thus the formal date `26.10.08` has code `261008 * 2000 + 000 = 522016000`. Optional fourth, zero-padded segments support same-date follow-up builds (`26.10.08.001`, `.002`, and so on); their code is `YYMMDD * 2000 + MOD`. When the formal date changes, advance the date segments and normally omit the modification segment for the initial stable build.
+The stable version name is `YY.MM.DD`; its three segments identify the formal release date, and the omitted modification number is treated as `000`. Thus the formal date `26.10.08` has base code `261008 * 2000 + 000 = 522016000`; the current same-date follow-up `26.10.08.001` uses MOD `001` and code `522016001`. Optional fourth, zero-padded segments support further same-date follow-up builds (`26.10.08.002`, and so on); their code is `YYMMDD * 2000 + MOD`. When the formal date changes, advance the date segments and normally omit the modification segment for the initial stable build.
 
 Alpha CI builds reserve slots `1001` through `1999`: the workflow calls `scripts/alpha_version.py`, which validates the stable name/code pair (including a real calendar date), validates a run number from `1` through `999`, and computes `YYMMDD * 2000 + 1000 + run number`. For example, alpha run 1 for `26.10.08` is `26.10.08-alpha.1` with code `522017001`. This keeps alpha artifacts separate from stable modifications and below Android's signed 32-bit version-code limit. Every published or CI code must be strictly greater than the last code distributed through the same release channel, must never be reused, and must be checked before publishing.
 
@@ -24,7 +24,7 @@ For every public release:
 1. Set `APP_VERSION_NAME` to the release date (`YY.MM.DD`); use the optional `.MOD` suffix only for same-date follow-ups.
 2. Set `APP_VERSION_CODE` to `YYMMDD * 2000 + MOD` (`MOD=000` when omitted) and verify it is greater than the last published code.
 3. Move the relevant `CHANGELOG.md` entries from `Unreleased` to the release version.
-4. Tag the release as `v<APP_VERSION_NAME>`, for example `v26.10.08`.
+4. Tag the release as `v<APP_VERSION_NAME>`, for example `v26.10.08.001`.
 
 ## Required Local Checks
 
