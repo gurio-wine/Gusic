@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.gurio.gusic.BuildConfig
 import com.gurio.gusic.R
 import com.gurio.gusic.ui.theme.RoundedSans
-import com.gurio.gusic.ui.theme.PixelPlayerStatusBarStyle
+import com.gurio.gusic.ui.theme.GusicStatusBarStyle
 import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,7 +56,7 @@ fun GenreGradientTopBar(
         Brush.verticalGradient(colors = listOf(startColor, endColor))
     }
 
-    PixelPlayerStatusBarStyle(color = startColor)
+    GusicStatusBarStyle(color = startColor)
 
     LargeTopAppBar(
         scrollBehavior = scrollBehavior,
@@ -108,7 +108,7 @@ fun HomeGradientTopBar(
 ) {
     val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHighest
 
-    PixelPlayerStatusBarStyle(color = surfaceContainerHigh)
+    GusicStatusBarStyle(color = surfaceContainerHigh)
 
     val animatedAlpha by animateFloatAsState(
         targetValue = if (isScrolled) 1f else 0f,

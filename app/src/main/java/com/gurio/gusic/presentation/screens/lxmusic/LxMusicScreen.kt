@@ -193,8 +193,8 @@ import com.gurio.gusic.presentation.components.subcomps.EnhancedSongListItem
 import com.gurio.gusic.presentation.screens.ListExtraBottomGap
 import com.gurio.gusic.presentation.screens.MusicIconPattern
 import com.gurio.gusic.presentation.viewmodel.PlayerViewModel
-import com.gurio.gusic.ui.theme.LocalPixelPlayerDarkTheme
-import com.gurio.gusic.ui.theme.PixelPlayerStatusBarStyle
+import com.gurio.gusic.ui.theme.LocalGusicDarkTheme
+import com.gurio.gusic.ui.theme.GusicStatusBarStyle
 import com.gurio.gusic.ui.theme.RoundedSans
 import com.gurio.gusic.utils.formatSongCount
 import com.gurio.gusic.utils.shapes.RoundedStarShape
@@ -3674,7 +3674,7 @@ private fun LxCollapsingDetailHeader(
 ) {
     val surfaceColor = MaterialTheme.colorScheme.surface
     val statusBarColor =
-        if (LocalPixelPlayerDarkTheme.current) Color.Black.copy(alpha = 0.6f)
+        if (LocalGusicDarkTheme.current) Color.Black.copy(alpha = 0.6f)
         else Color.White.copy(alpha = 0.4f)
     val solidAlpha = (collapseFraction * 2f).coerceIn(0f, 1f)
     val expandedContentAlpha = 1f - solidAlpha
@@ -3701,7 +3701,7 @@ private fun LxCollapsingDetailHeader(
     val titleVerticalBias = lerp(1f, -1f, collapseFraction)
     val shuffleAlignment = BiasAlignment(horizontalBias = 1f, verticalBias = titleVerticalBias)
 
-    PixelPlayerStatusBarStyle(color = fallbackStatusBarColor)
+    GusicStatusBarStyle(color = fallbackStatusBarColor)
 
     Box(
         modifier = modifier

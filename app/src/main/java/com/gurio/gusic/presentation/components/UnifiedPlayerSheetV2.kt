@@ -79,7 +79,7 @@ import com.gurio.gusic.presentation.components.scoped.rememberSheetThemeState
 import com.gurio.gusic.presentation.components.scoped.rememberSheetVisualState
 import com.gurio.gusic.presentation.viewmodel.PlayerSheetState
 import com.gurio.gusic.presentation.viewmodel.PlayerViewModel
-import com.gurio.gusic.ui.theme.LocalPixelPlayerDarkTheme
+import com.gurio.gusic.ui.theme.LocalGusicDarkTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -474,7 +474,7 @@ fun UnifiedPlayerSheetV2(
 
     val activePlayerSchemePair by playerViewModel.activePlayerColorSchemePair.collectAsStateWithLifecycle()
     val themedAlbumArtUri by playerViewModel.currentThemedAlbumArtUri.collectAsStateWithLifecycle()
-    val isDarkTheme = LocalPixelPlayerDarkTheme.current
+    val isDarkTheme = LocalGusicDarkTheme.current
     val currentSong = infrequentPlayerState.currentSong
     val sheetThemeState = rememberSheetThemeState(
         activePlayerSchemePair = activePlayerSchemePair,

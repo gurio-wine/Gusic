@@ -45,7 +45,7 @@ import com.gurio.gusic.presentation.components.getNavigationBarHeight
 import com.gurio.gusic.presentation.components.resolveNavBarOccupiedHeight
 import com.gurio.gusic.presentation.utils.GenreIconProvider
 import com.gurio.gusic.presentation.viewmodel.PlayerViewModel
-import com.gurio.gusic.ui.theme.LocalPixelPlayerDarkTheme
+import com.gurio.gusic.ui.theme.LocalGusicDarkTheme
 import androidx.compose.ui.res.stringResource
 import com.gurio.gusic.R
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
@@ -151,7 +151,7 @@ private fun GenreCard(
     onClick: () -> Unit,
     isGridView: Boolean
 ) {
-    val isDark = LocalPixelPlayerDarkTheme.current
+    val isDark = LocalGusicDarkTheme.current
     val themeColor = remember(genre, isDark) {
         com.gurio.gusic.ui.theme.GenreThemeUtils.getGenreThemeColor(
             genre = genre,

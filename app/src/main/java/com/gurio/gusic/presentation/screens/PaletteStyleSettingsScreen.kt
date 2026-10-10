@@ -67,7 +67,7 @@ import com.gurio.gusic.presentation.components.MiniPlayerHeight
 import com.gurio.gusic.presentation.viewmodel.ColorSchemePair
 import com.gurio.gusic.presentation.viewmodel.PlayerViewModel
 import com.gurio.gusic.presentation.viewmodel.SettingsViewModel
-import com.gurio.gusic.ui.theme.LocalPixelPlayerDarkTheme
+import com.gurio.gusic.ui.theme.LocalGusicDarkTheme
 import com.gurio.gusic.ui.theme.generateColorSchemeFromSeed
 import kotlin.math.roundToInt
 
@@ -81,7 +81,7 @@ fun PaletteStyleSettingsScreen(
 ) {
     val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
-    val isDarkTheme = LocalPixelPlayerDarkTheme.current
+    val isDarkTheme = LocalGusicDarkTheme.current
     val albumSchemePair by playerViewModel.currentAlbumArtColorSchemePair.collectAsStateWithLifecycle()
 
     val baseScheme = MaterialTheme.colorScheme

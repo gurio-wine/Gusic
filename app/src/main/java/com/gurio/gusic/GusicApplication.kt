@@ -36,7 +36,7 @@ import timber.log.Timber
 import javax.inject.Inject
 
 @HiltAndroidApp
-class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.Provider {
+class GusicApplication : Application(), ImageLoaderFactory, Configuration.Provider {
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
@@ -152,7 +152,7 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
         advancedPerformanceDiagnosticsController.get().start(startupScope)
 
         startupScope.launch {
-            AlbumArtUtils.migrateLegacyCacheLocation(this@PixelPlayerApplication)
+            AlbumArtUtils.migrateLegacyCacheLocation(this@GusicApplication)
             val savedLimit = runCatching {
                 userPreferencesRepository.get().albumArtCacheLimitMbFlow.first()
             }.getOrNull()
@@ -165,7 +165,7 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
     private fun healDisabledMediaComponents() {
         val required = arrayOf(
             "com.gurio.gusic.data.service.MusicService",
-            "com.gurio.gusic.data.service.PixelPlayerMediaButtonReceiver",
+            "com.gurio.gusic.data.service.GusicMediaButtonReceiver",
         )
         val pm = packageManager
         for (name in required) {

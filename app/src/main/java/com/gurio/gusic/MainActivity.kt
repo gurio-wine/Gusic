@@ -127,7 +127,7 @@ import com.gurio.gusic.presentation.navigation.Screen
 import com.gurio.gusic.presentation.screens.SetupScreen
 import com.gurio.gusic.presentation.viewmodel.MainViewModel
 import com.gurio.gusic.presentation.viewmodel.PlayerViewModel
-import com.gurio.gusic.ui.theme.PixelPlayerTheme
+import com.gurio.gusic.ui.theme.GusicTheme
 import com.gurio.gusic.ui.theme.resolveAppWideNowPlayingColorSchemePair
 import com.gurio.gusic.utils.AppLocaleManager
 import com.gurio.gusic.utils.CrashHandler
@@ -254,13 +254,13 @@ class MainActivity : ComponentActivity() {
         val isBenchmarkMode = intent.getBooleanExtra("is_benchmark", false)
         val shouldBenchmarkRebuildDatabase =
             isBenchmarkMode && intent.getBooleanExtra("benchmark_rebuild_database", false)
-        Timber.tag("PixelPlayerBenchmark").i(
+        Timber.tag("GusicBenchmark").i(
             "onCreate benchmark=$isBenchmarkMode rebuildDatabase=$shouldBenchmarkRebuildDatabase"
         )
         if (shouldBenchmarkRebuildDatabase) {
             lifecycleScope.launch {
                 userPreferencesRepository.setInitialSetupDone(true)
-                Timber.tag("PixelPlayerBenchmark").i("Preparing benchmark player from the existing Room library")
+                Timber.tag("GusicBenchmark").i("Preparing benchmark player from the existing Room library")
                 playerViewModel.prepareBenchmarkPlayerFromLibrary()
             }
         }
@@ -335,7 +335,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            PixelPlayerTheme(
+            GusicTheme(
                 darkTheme = useDarkTheme,
                 colorSchemePairOverride = appWideNowPlayingScheme
             ) {

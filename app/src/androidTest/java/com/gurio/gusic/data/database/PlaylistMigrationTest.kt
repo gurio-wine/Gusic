@@ -16,7 +16,7 @@ class PlaylistMigrationTest {
     @get:Rule
     val migrationHelper = MigrationTestHelper(
         instrumentation = InstrumentationRegistry.getInstrumentation(),
-        databaseClass = PixelPlayerDatabase::class.java,
+        databaseClass = GusicDatabase::class.java,
     )
 
     @Test

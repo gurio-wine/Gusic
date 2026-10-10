@@ -25,7 +25,7 @@ import com.gurio.gusic.data.database.MIGRATION_3_4
 import com.gurio.gusic.data.database.MIGRATION_4_5
 import com.gurio.gusic.data.database.MIGRATION_5_6
 import com.gurio.gusic.data.database.MusicDao
-import com.gurio.gusic.data.database.PixelPlayerDatabase
+import com.gurio.gusic.data.database.GusicDatabase
 import com.gurio.gusic.data.database.SongEntity
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -51,7 +51,7 @@ import java.util.concurrent.TimeUnit
 class MusicServiceWorkflowTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private lateinit var database: PixelPlayerDatabase
+    private lateinit var database: GusicDatabase
     private lateinit var musicDao: MusicDao
     private lateinit var controller: MediaController
     private lateinit var wavFile: File
@@ -71,10 +71,10 @@ class MusicServiceWorkflowTest {
         // MusicService will still exercise its real production Hilt graph and DAO.
         database = Room.databaseBuilder(
             context.applicationContext,
-            PixelPlayerDatabase::class.java,
+            GusicDatabase::class.java,
             DATABASE_NAME,
         )
-            .addCallback(PixelPlayerDatabase.createRuntimeArtifactsCallback())
+            .addCallback(GusicDatabase.createRuntimeArtifactsCallback())
             .addMigrations(
                 MIGRATION_1_2,
                 MIGRATION_2_3,

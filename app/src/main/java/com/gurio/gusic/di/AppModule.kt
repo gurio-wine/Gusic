@@ -12,7 +12,7 @@ import coil.ImageLoader
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.gurio.gusic.BuildConfig
-import com.gurio.gusic.PixelPlayerApplication
+import com.gurio.gusic.GusicApplication
 import com.gurio.gusic.data.database.AlbumArtThemeDao
 import com.gurio.gusic.data.database.EngagementDao
 import com.gurio.gusic.data.database.FavoritesDao
@@ -32,7 +32,7 @@ import com.gurio.gusic.data.database.MIGRATION_9_10
 import com.gurio.gusic.data.database.MIGRATION_10_11
 import com.gurio.gusic.data.database.MusicDao
 import com.gurio.gusic.data.database.OfflineTrackDao
-import com.gurio.gusic.data.database.PixelPlayerDatabase
+import com.gurio.gusic.data.database.GusicDatabase
 import com.gurio.gusic.data.database.SearchHistoryDao
 import com.gurio.gusic.data.database.TransitionDao
 import com.gurio.gusic.data.library.AndroidSafDocumentIdentityReader
@@ -84,8 +84,8 @@ object AppModule {
 
     @Singleton
     @Provides
-    fun provideApplication(@ApplicationContext app: Context): PixelPlayerApplication {
-        return app as PixelPlayerApplication
+    fun provideApplication(@ApplicationContext app: Context): GusicApplication {
+        return app as GusicApplication
     }
 
     @Singleton
@@ -135,13 +135,13 @@ object AppModule {
 
     @Singleton
     @Provides
-    fun providePixelPlayerDatabase(@ApplicationContext context: Context): PixelPlayerDatabase {
+    fun provideGusicDatabase(@ApplicationContext context: Context): GusicDatabase {
         val builder = Room.databaseBuilder(
             context.applicationContext,
-            PixelPlayerDatabase::class.java,
+            GusicDatabase::class.java,
             "pixelplayer_database"
         )
-            .addCallback(PixelPlayerDatabase.createRuntimeArtifactsCallback())
+            .addCallback(GusicDatabase.createRuntimeArtifactsCallback())
             .addMigrations(
                 MIGRATION_1_2,
                 MIGRATION_2_3,
@@ -165,79 +165,79 @@ object AppModule {
 
     @Singleton
     @Provides
-    fun provideAlbumArtThemeDao(database: PixelPlayerDatabase): AlbumArtThemeDao {
+    fun provideAlbumArtThemeDao(database: GusicDatabase): AlbumArtThemeDao {
         return database.albumArtThemeDao()
     }
 
     @Singleton
     @Provides
-    fun provideSearchHistoryDao(database: PixelPlayerDatabase): SearchHistoryDao {
+    fun provideSearchHistoryDao(database: GusicDatabase): SearchHistoryDao {
         return database.searchHistoryDao()
     }
 
     @Singleton
     @Provides
-    fun provideMusicDao(database: PixelPlayerDatabase): MusicDao {
+    fun provideMusicDao(database: GusicDatabase): MusicDao {
         return database.musicDao()
     }
 
     @Singleton
     @Provides
-    fun provideTransitionDao(database: PixelPlayerDatabase): TransitionDao {
+    fun provideTransitionDao(database: GusicDatabase): TransitionDao {
         return database.transitionDao()
     }
 
     @Singleton
     @Provides
-    fun provideEngagementDao(database: PixelPlayerDatabase): EngagementDao {
+    fun provideEngagementDao(database: GusicDatabase): EngagementDao {
         return database.engagementDao()
     }
 
     @Singleton
     @Provides
-    fun provideFavoritesDao(database: PixelPlayerDatabase): FavoritesDao {
+    fun provideFavoritesDao(database: GusicDatabase): FavoritesDao {
         return database.favoritesDao()
     }
 
     @Singleton
     @Provides
-    fun provideLyricsDao(database: PixelPlayerDatabase): LyricsDao {
+    fun provideLyricsDao(database: GusicDatabase): LyricsDao {
         return database.lyricsDao()
     }
 
     @Singleton
     @Provides
-    fun provideLocalPlaylistDao(database: PixelPlayerDatabase): LocalPlaylistDao {
+    fun provideLocalPlaylistDao(database: GusicDatabase): LocalPlaylistDao {
         return database.localPlaylistDao()
     }
 
     @Singleton
     @Provides
-    fun provideNavidromeDao(database: PixelPlayerDatabase): com.gurio.gusic.data.database.NavidromeDao {
+    fun provideNavidromeDao(database: GusicDatabase): com.gurio.gusic.data.database.NavidromeDao {
         return database.navidromeDao()
     }
     
     @Singleton
     @Provides
-    fun provideJellyfinDao(database: PixelPlayerDatabase): com.gurio.gusic.data.database.JellyfinDao {
+    fun provideJellyfinDao(database: GusicDatabase): com.gurio.gusic.data.database.JellyfinDao {
         return database.jellyfinDao()
     }
 
     @Singleton
     @Provides
-    fun provideListenBrainzDao(database: PixelPlayerDatabase): ListenBrainzDao {
+    fun provideListenBrainzDao(database: GusicDatabase): ListenBrainzDao {
         return database.listenBrainzDao()
     }
 
     @Singleton
     @Provides
-    fun provideAudioBookmarkDao(database: PixelPlayerDatabase): AudioBookmarkDao {
+    fun provideAudioBookmarkDao(database: GusicDatabase): AudioBookmarkDao {
         return database.audioBookmarkDao()
     }
 
     @Singleton
     @Provides
-    fun provideOfflineTrackDao(database: PixelPlayerDatabase): OfflineTrackDao {
+    fun provideOfflineTrackDao(database: GusicDatabase): OfflineTrackDao {
         return database.offlineTrackDao()
     }
 

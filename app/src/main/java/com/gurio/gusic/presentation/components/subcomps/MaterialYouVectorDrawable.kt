@@ -13,7 +13,7 @@ import androidx.annotation.DrawableRes
 import androidx.appcompat.content.res.AppCompatResources
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.gurio.gusic.R
-import com.gurio.gusic.ui.theme.LocalPixelPlayerDarkTheme
+import com.gurio.gusic.ui.theme.LocalGusicDarkTheme
 
 /**
  * Inflates an XML vector that depends on Android theme attrs using the app's
@@ -25,7 +25,7 @@ fun MaterialYouVectorDrawable(
     @DrawableRes drawableResId: Int
 ) {
     val context = LocalContext.current
-    val isDarkTheme = LocalPixelPlayerDarkTheme.current
+    val isDarkTheme = LocalGusicDarkTheme.current
     val themedContext = remember(context, isDarkTheme) {
         context.createVectorThemedContext(isDarkTheme = isDarkTheme)
     }
@@ -49,5 +49,5 @@ private fun Context.createVectorThemedContext(isDarkTheme: Boolean): Context {
             if (isDarkTheme) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
     }
     val modeContext = createConfigurationContext(themedConfiguration)
-    return ContextThemeWrapper(modeContext, R.style.Theme_PixelPlayer)
+    return ContextThemeWrapper(modeContext, R.style.Theme_Gusic)
 }

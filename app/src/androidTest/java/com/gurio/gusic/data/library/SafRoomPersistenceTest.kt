@@ -8,7 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gurio.gusic.data.database.AlbumEntity
 import com.gurio.gusic.data.database.ArtistEntity
 import com.gurio.gusic.data.database.LibraryItemIdentityEntity
-import com.gurio.gusic.data.database.PixelPlayerDatabase
+import com.gurio.gusic.data.database.GusicDatabase
 import com.gurio.gusic.data.database.SongEntity
 import com.gurio.gusic.data.database.SourceType
 import kotlinx.coroutines.flow.first
@@ -26,16 +26,16 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class SafRoomPersistenceTest {
-    private lateinit var database: PixelPlayerDatabase
+    private lateinit var database: GusicDatabase
     private lateinit var persistence: RoomSafSongPersistence
 
     @Before
     fun createDb() {
         database = Room.inMemoryDatabaseBuilder(
             ApplicationProvider.getApplicationContext<Context>(),
-            PixelPlayerDatabase::class.java,
+            GusicDatabase::class.java,
         )
-            .addCallback(PixelPlayerDatabase.createRuntimeArtifactsCallback())
+            .addCallback(GusicDatabase.createRuntimeArtifactsCallback())
             .allowMainThreadQueries()
             .build()
         persistence = RoomSafSongPersistence(database)

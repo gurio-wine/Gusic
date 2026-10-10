@@ -83,7 +83,7 @@ import com.gurio.gusic.data.jellyfin.model.JellyfinCredentials
 import com.gurio.gusic.presentation.components.CloudLibraryPickerItem
 import com.gurio.gusic.presentation.components.CloudLibraryPickerSheet
 import com.gurio.gusic.ui.theme.RoundedSans
-import com.gurio.gusic.ui.theme.PixelPlayerTheme
+import com.gurio.gusic.ui.theme.GusicTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.collections.immutable.toImmutableList
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
@@ -99,7 +99,7 @@ class JellyfinLoginActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            PixelPlayerTheme {
+            GusicTheme {
                 JellyfinLoginScreen(onClose = { finish() })
             }
         }

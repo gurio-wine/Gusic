@@ -8597,6 +8597,17 @@
 
     <issue
         id="ObsoleteSdkInt"
+        message="Unnecessary; `SDK_INT` is always >= 30"
+        errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/gurio/gusic/GusicApplication.kt"
+            line="138"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
         message="Unnecessary; `SDK_INT` is always >= 24"
         errorLine1="@RequiresApi(Build.VERSION_CODES.N)"
         errorLine2="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
@@ -8791,17 +8802,6 @@
             file="src/main/java/com/gurio/gusic/utils/MediaStorePermissionHelper.kt"
             line="316"
             column="5"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is always >= 30"
-        errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/gurio/gusic/PixelPlayerApplication.kt"
-            line="138"
-            column="13"/>
     </issue>
 
     <issue
@@ -9550,7 +9550,7 @@
 
     <issue
         id="Overdraw"
-        message="Possible overdraw: Root element paints background `?attr/colorSurfaceContainer` with a theme that also paints a background (inferred theme is `@style/Theme.PixelPlayer`)"
+        message="Possible overdraw: Root element paints background `?attr/colorSurfaceContainer` with a theme that also paints a background (inferred theme is `@style/Theme.Gusic`)"
         errorLine1="    android:background=&quot;?attr/colorSurfaceContainer&quot;>"
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location

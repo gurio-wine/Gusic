@@ -18,14 +18,14 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class LibraryItemIdentityDaoTest {
 
-    private lateinit var db: PixelPlayerDatabase
+    private lateinit var db: GusicDatabase
     private lateinit var dao: LibraryItemIdentityDao
 
     @Before
     fun createDb() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        db = Room.inMemoryDatabaseBuilder(context, PixelPlayerDatabase::class.java)
-            .addCallback(PixelPlayerDatabase.createRuntimeArtifactsCallback())
+        db = Room.inMemoryDatabaseBuilder(context, GusicDatabase::class.java)
+            .addCallback(GusicDatabase.createRuntimeArtifactsCallback())
             .allowMainThreadQueries()
             .build()
         dao = db.libraryItemIdentityDao()

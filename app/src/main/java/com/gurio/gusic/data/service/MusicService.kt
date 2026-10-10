@@ -39,7 +39,7 @@ import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import com.gurio.gusic.PixelPlayerApplication
+import com.gurio.gusic.GusicApplication
 import com.gurio.gusic.MainActivity
 import com.gurio.gusic.R
 import com.gurio.gusic.data.diagnostics.AdvancedPerformanceDiagnostics
@@ -55,7 +55,7 @@ import com.gurio.gusic.data.service.player.DualPlayerEngine
 import com.gurio.gusic.data.service.player.TransitionController
 import com.gurio.gusic.data.service.player.selectCanonicalCloudPlaybackUri
 import com.gurio.gusic.ui.glancewidget.ControlWidget4x2
-import com.gurio.gusic.ui.glancewidget.PixelPlayerGlanceWidget
+import com.gurio.gusic.ui.glancewidget.GusicGlanceWidget
 import com.gurio.gusic.ui.glancewidget.PlayerActions
 import com.gurio.gusic.ui.glancewidget.PlayerInfoStateDefinition
 import com.gurio.gusic.utils.AlbumArtUtils
@@ -145,7 +145,7 @@ suspend fun loadArtworkBytesViaCoil(context: Context, uri: Uri): ByteArray? {
             config = ArtworkTransportSanitizer.WIDGET_CONFIG,
         )
     }.getOrElse { error ->
-        Timber.tag("MusicService_PixelPlayer").w(error, "Artwork read failed via Coil for uri=%s", uri)
+        Timber.tag("MusicService_Gusic").w(error, "Artwork read failed via Coil for uri=%s", uri)
         null
     }
 }
@@ -274,7 +274,7 @@ class MusicService : MediaSessionService() {
     private var temporaryForegroundNotificationVisible = false
 
     companion object {
-        private const val TAG = "MusicService_PixelPlayer"
+        private const val TAG = "MusicService_Gusic"
         const val NOTIFICATION_ID = 101
         const val ACTION_SLEEP_TIMER_EXPIRED = "com.gurio.gusic.ACTION_SLEEP_TIMER_EXPIRED"
         const val EXTRA_FORCE_FOREGROUND_ON_START =
@@ -1018,7 +1018,7 @@ class MusicService : MediaSessionService() {
     private fun startTemporaryForegroundForCommand() {
         val notification = NotificationCompat.Builder(
             this,
-            PixelPlayerApplication.NOTIFICATION_CHANNEL_ID
+            GusicApplication.NOTIFICATION_CHANNEL_ID
         )
             .setSmallIcon(R.drawable.monochrome_player)
             .setContentTitle(getString(R.string.app_name))
@@ -2282,10 +2282,10 @@ class MusicService : MediaSessionService() {
             val glanceManager = GlanceAppWidgetManager(applicationContext)
             val widgetPlayerInfo = playerInfo.toWidgetTransportState()
 
-            val glanceIds = glanceManager.getGlanceIds(PixelPlayerGlanceWidget::class.java)
+            val glanceIds = glanceManager.getGlanceIds(GusicGlanceWidget::class.java)
             glanceIds.forEach { id ->
                 updateAppWidgetState(applicationContext, PlayerInfoStateDefinition, id) { widgetPlayerInfo }
-                PixelPlayerGlanceWidget().update(applicationContext, id)
+                GusicGlanceWidget().update(applicationContext, id)
             }
 
             val barGlanceIds = glanceManager.getGlanceIds(BarWidget4x1::class.java)

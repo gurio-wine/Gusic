@@ -38,7 +38,7 @@ fun buildLocalAudioSelection(minDurationMs: Int): Pair<String, Array<String>> {
         append(" AND COALESCE(${MediaStore.Audio.Media.TITLE}, '') != ''")
         append(" AND ${MediaStore.Audio.Media.DATA} IS NOT NULL")
         // Keep downloads out of the local library under both the legacy and current folder names.
-        append(" AND ${MediaStore.Audio.Media.DATA} NOT LIKE '%/Music/PixelPlayer/%'")
+        append(" AND ${MediaStore.Audio.Media.DATA} NOT LIKE '%/Music/Gusic/%'")
         append(" AND ${MediaStore.Audio.Media.DATA} NOT LIKE '%/Music/Gusic/%'")
     }
     return selection to arrayOf(clampedMinDurationMs.toString()) +

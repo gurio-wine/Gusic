@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.gurio.gusic.ui.theme.PixelPlayerStatusBarStyle
+import com.gurio.gusic.ui.theme.GusicStatusBarStyle
 import androidx.compose.ui.res.stringResource
 import com.gurio.gusic.R
 
@@ -65,7 +65,7 @@ fun CollapsibleCommonTopBar(
     val statusBarFallbackColor = backgroundColor.compositeOver(MaterialTheme.colorScheme.surface)
 
     if (syncStatusBarWithContainer) {
-        PixelPlayerStatusBarStyle(color = statusBarFallbackColor)
+        GusicStatusBarStyle(color = statusBarFallbackColor)
     }
     
     Box(

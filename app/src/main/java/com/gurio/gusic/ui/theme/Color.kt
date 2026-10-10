@@ -2,14 +2,14 @@ package com.gurio.gusic.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val PixelPlayerPurpleDark = Color(0xFF1E1234)
-val PixelPlayerPurplePrimary = Color(0xFFAB47BC)
-val PixelPlayerPink = Color(0xFFF06292)
-val PixelPlayerOrange = Color(0xFFFF8A65)
-val PixelPlayerLightPurple = Color(0xFFE1BEE7)
-val PixelPlayerWhite = Color(0xFFFFFFFF)
-val PixelPlayerBlack = Color(0xFF000000)
-val PixelPlayerSurface = Color(0xFF2A1F40)
+val GusicPurpleDark = Color(0xFF1E1234)
+val GusicPurplePrimary = Color(0xFFAB47BC)
+val GusicPink = Color(0xFFF06292)
+val GusicOrange = Color(0xFFFF8A65)
+val GusicLightPurple = Color(0xFFE1BEE7)
+val GusicWhite = Color(0xFFFFFFFF)
+val GusicBlack = Color(0xFF000000)
+val GusicSurface = Color(0xFF2A1F40)
 
 val LightBackground = Color(0xFFF7F2FF)
 val LightSurface = Color(0xFFFBF8FF)

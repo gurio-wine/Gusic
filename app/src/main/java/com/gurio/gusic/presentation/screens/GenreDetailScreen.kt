@@ -62,7 +62,7 @@ import com.gurio.gusic.presentation.viewmodel.SortOption
 import com.gurio.gusic.presentation.viewmodel.AlbumData
 import com.gurio.gusic.presentation.viewmodel.PlayerViewModel
 import com.gurio.gusic.presentation.viewmodel.StablePlayerState
-import com.gurio.gusic.ui.theme.LocalPixelPlayerDarkTheme
+import com.gurio.gusic.ui.theme.LocalGusicDarkTheme
 import com.gurio.gusic.utils.formatSongCount
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
@@ -95,7 +95,7 @@ fun GenreDetailScreen(
     }
 
     val density = LocalDensity.current
-    val darkMode = LocalPixelPlayerDarkTheme.current
+    val darkMode = LocalGusicDarkTheme.current
 
     val coroutineScope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()

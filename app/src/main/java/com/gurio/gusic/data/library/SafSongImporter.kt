@@ -8,7 +8,7 @@ import androidx.room.withTransaction
 import com.gurio.gusic.data.database.AlbumEntity
 import com.gurio.gusic.data.database.ArtistEntity
 import com.gurio.gusic.data.database.LibraryItemIdentityEntity
-import com.gurio.gusic.data.database.PixelPlayerDatabase
+import com.gurio.gusic.data.database.GusicDatabase
 import com.gurio.gusic.data.database.SongArtistCrossRef
 import com.gurio.gusic.data.database.SongEntity
 import com.gurio.gusic.data.database.SourceType
@@ -91,7 +91,7 @@ class AndroidSafDocumentIdentityReader @Inject constructor() : SafDocumentIdenti
 /** Room persistence adapter; all identity rows and library rows are committed atomically. */
 @Singleton
 class RoomSafSongPersistence @Inject constructor(
-    private val database: PixelPlayerDatabase,
+    private val database: GusicDatabase,
 ) : SafSongPersistence {
     override suspend fun persist(
         uri: Uri,

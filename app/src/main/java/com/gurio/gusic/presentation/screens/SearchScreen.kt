@@ -80,7 +80,7 @@ import com.gurio.gusic.presentation.components.SmartImage
 import com.gurio.gusic.presentation.components.SmartImageListTargetSize
 import com.gurio.gusic.presentation.components.SongInfoBottomSheet
 import com.gurio.gusic.presentation.viewmodel.PlayerViewModel
-import com.gurio.gusic.ui.theme.LocalPixelPlayerDarkTheme
+import com.gurio.gusic.ui.theme.LocalGusicDarkTheme
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material3.TextButton
@@ -205,7 +205,7 @@ fun SearchScreen(
 
     val searchbarCornerRadius = 28.dp
 
-    val dm = LocalPixelPlayerDarkTheme.current
+    val dm = LocalGusicDarkTheme.current
 
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer

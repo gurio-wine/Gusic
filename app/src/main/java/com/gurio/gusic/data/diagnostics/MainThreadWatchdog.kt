@@ -35,7 +35,7 @@ class MainThreadWatchdog(
                     handledTick.set(posted)
                 }
             }
-        }, "PixelPlayer-MainThreadWatchdog").apply {
+        }, "Gusic-MainThreadWatchdog").apply {
             isDaemon = true
             start()
         }
