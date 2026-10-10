@@ -303,9 +303,6 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 HomeGradientTopBar(
-                    onNavigationIconClick = {
-                        navController.navigateSafely(Screen.Settings.route)
-                    },
                     onMoreOptionsClick = {
                         showChangelogBottomSheet = true
                     },

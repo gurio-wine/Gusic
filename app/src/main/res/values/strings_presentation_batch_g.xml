@@ -512,4 +512,16 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>Lyrics alignment defaults to center</item>
         <item>Removed the settings entry from the Discover top bar</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101106_whats_new">
+        <item>Player page: expanded layout now wraps its height, all components shift down to close the bottom gap</item>
+        <item>QQ favorites: requests now carry the web sign; failures show a business code for diagnosis</item>
+        <item>Playback notification: previous-track button restored, cycle-mode button stays in front</item>
+        <item>Play/pause button background now matches the cycle-mode button color</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101106_changes">
+        <item>"Show file info" now defaults to off in Settings</item>
+        <item>Removed the settings entry from the Home top bar</item>
+        <item>Mine page: Playlists category moved to second</item>
+        <item>"Charts" module button widened so its label shows in full</item>
+    </string-array>
 </resources>

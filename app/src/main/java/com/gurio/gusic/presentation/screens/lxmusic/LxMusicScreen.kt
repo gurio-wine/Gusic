@@ -631,8 +631,9 @@ fun LxMusicScreen(
                                     transformOrigin = TransformOrigin(0f, 0.5f)
                                 },
                         )
+                        // “排行榜”三字更长，多分一点宽度保证完整显示
                         LxModuleButton(boardLabel, Icons.Rounded.Leaderboard,
-                            indicatorModule == "board", { viewModel.selectModule("board") }, Modifier.weight(1f))
+                            indicatorModule == "board", { viewModel.selectModule("board") }, Modifier.weight(1.3f))
                         LxModuleButton(playlistLabel, Icons.Rounded.QueueMusic,
                             indicatorModule == "playlist", { viewModel.selectModule("playlist") }, Modifier.weight(1f))
                         LxModuleButton(searchLabel, Icons.Rounded.Search,

@@ -512,4 +512,16 @@
         <item>歌词对齐默认居中</item>
         <item>删除发现页顶部的设置入口</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101106_whats_new">
+        <item>播放页：展开态改为自适应高度，组件整体下移，底部空隙消除</item>
+        <item>QQ 收藏：请求补齐网页端签名，失败提示带业务码便于定位</item>
+        <item>播放通知：恢复上一首按钮，循环模式按钮仍保持最前</item>
+        <item>播放/暂停按钮背景色与循环模式按钮统一</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101106_changes">
+        <item>设置中“显示文件信息”默认改为关闭</item>
+        <item>删除推荐页顶部的设置入口</item>
+        <item>“我的”页歌单分类移到第二位</item>
+        <item>“排行榜”模块按钮加宽，文字完整显示</item>
+    </string-array>
 </resources>

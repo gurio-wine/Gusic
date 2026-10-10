@@ -337,12 +337,13 @@ fun FullPlayerContent(
     val playerOnBaseColor = LocalMaterialTheme.current.onPrimaryContainer
     val playerAccentColor = LocalMaterialTheme.current.primary
     val playerOnAccentColor = LocalMaterialTheme.current.onPrimary
-    val transportPlayPauseColors = expressivePlayPauseButtonColors(LocalMaterialTheme.current)
-    val transportSkipColors = expressiveSkipButtonColors(LocalMaterialTheme.current)
     val transportSkipButtonColors = TransportButtonColors(
         container = playerAccentColor,
         content = playerOnAccentColor
     )
+    // 播放/暂停大按钮背景与循环、上一首/下一首按钮保持同色
+    val transportPlayPauseColors = transportSkipButtonColors
+    val transportSkipColors = transportSkipButtonColors
     val progressActiveColor = playerOnBaseColor
 
     val placeholderColor = playerOnBaseColor.copy(alpha = 0.1f)
@@ -1178,9 +1179,13 @@ private fun FullPlayerControlsSection(
         applyPlaceholderDelayOnClose = loadingTweaks.applyPlaceholdersOnClose,
         switchOnDragRelease = loadingTweaks.switchOnDragRelease,
         isSheetDragGestureActive = isSheetDragGestureActive,
-        sharedBoundsModifier = Modifier.fillMaxWidth().height(182.dp),
-        // 182dp 容器是折叠态共享边界动画的尺寸；展开态内容约 96dp，贴底放置避免底部留白
-        sharedBoundsContentAlignment = Alignment.BottomCenter,
+        // 182dp 是折叠态共享边界动画需要的尺寸；展开态改自适应高度，
+        // 省出的空间由上方封面区吸收，其余组件随之上移、底部不再留白
+        sharedBoundsModifier = if (currentSheetState == PlayerSheetState.EXPANDED) {
+            Modifier.fillMaxWidth()
+        } else {
+            Modifier.fillMaxWidth().height(182.dp)
+        },
         expansionFractionProvider = expansionFractionProvider,
         isExpandedOverride = currentSheetState == PlayerSheetState.EXPANDED,
         normalStartThreshold = 0.42f,

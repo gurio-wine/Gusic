@@ -2641,6 +2641,7 @@ class MusicService : MediaSessionService() {
 
         serviceScope.launch {
             try {
+                var txFailureCode: Int? = null
                 val ok = when (source) {
                     "wy" -> lxMusicRepository.neteaseSetSongLike(trackId, targetFavoriteState)
                     "tx" -> {
@@ -2659,7 +2660,9 @@ class MusicService : MediaSessionService() {
                                 resolved.first.toString() to resolved.second
                             }
                         }
-                        lxMusicRepository.txSetSongLike(resolvedSongId, resolvedType, targetFavoriteState)
+                        lxMusicRepository.txSetSongLike(resolvedSongId, resolvedType, targetFavoriteState).also { result ->
+                            if (!result.success) txFailureCode = result.code
+                        }.success
                     }
                     "kg" -> lxMusicRepository.kgSetSongLike(
                         songmid = trackId,
@@ -2676,8 +2679,9 @@ class MusicService : MediaSessionService() {
                 if (!ok) {
                     // 执行失败：回退乐观状态并恢复图标
                     applyOnlineLikedMirror(source, song, trackId, previousLiked)
+                    val codeHint = txFailureCode?.let { "($it)" }.orEmpty()
                     showNotificationLikeToast(
-                        if (targetFavoriteState) "喜欢失败，请稍后重试" else "取消喜欢失败，请稍后重试"
+                        if (targetFavoriteState) "喜欢失败$codeHint，请稍后重试" else "取消喜欢失败$codeHint，请稍后重试"
                     )
                 } else {
                     when (source) {
@@ -2820,8 +2824,14 @@ class MusicService : MediaSessionService() {
         val playModeButton = CommandButton.Builder(playModeIcon)
             .setDisplayName(getString(R.string.presentation_batch_e_cd_toggle_repeat))
             .setSessionCommand(SessionCommand(MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_PLAY_MODE, Bundle.EMPTY))
-            // SLOT_BACK：排在通知传输控制（上一首/播放/下一首）之前，即最前面
+            // SLOT_BACK：排在通知传输控制（播放/下一首）之前，即最前面；
+            // 它占掉 backward 槽后系统不再自动补“上一首”，改为自带 prev 按钮回退到 OVERFLOW 槽
             .setSlots(CommandButton.SLOT_BACK)
+            .build()
+        val previousButton = CommandButton.Builder(CommandButton.ICON_PREVIOUS)
+            .setDisplayName("Previous")
+            .setPlayerCommand(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+            .setSlots(CommandButton.SLOT_BACK, CommandButton.SLOT_OVERFLOW)
             .build()
 
         val likeButton = CommandButton.Builder(
@@ -2832,7 +2842,7 @@ class MusicService : MediaSessionService() {
             .setSlots(CommandButton.SLOT_OVERFLOW)
             .build()
 
-        return listOf(playModeButton, likeButton)
+        return listOf(playModeButton, previousButton, likeButton)
     }
 
     /**

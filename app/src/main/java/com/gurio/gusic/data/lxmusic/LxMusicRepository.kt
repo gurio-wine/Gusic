@@ -2091,7 +2091,7 @@ class LxMusicRepository @Inject constructor(
 
     fun setKwLikedSongIds(ids: Set<String>) { _kwLikedSongIds.value = ids }
 
-    suspend fun txSetSongLike(songId: String, songType: Int, like: Boolean): Boolean =
+    suspend fun txSetSongLike(songId: String, songType: Int, like: Boolean): TxSongLikeResult =
         accountExtension.txApplySongLike(songId, songType, like)
 
     /**

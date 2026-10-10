@@ -6,6 +6,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.gurio.gusic.data.lxmusic.LxPlaylist
 import com.gurio.gusic.data.lxmusic.LxSong
+import com.gurio.gusic.data.lxmusic.TxSongLikeResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -15,6 +16,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import timber.log.Timber
 import java.net.URLDecoder
+import java.security.MessageDigest
 
 /**
  * QQ 音乐账号读取接口：基于登录 Cookie（网页登录/扫码登录后保存在 [TencentCookieStore]）。
@@ -97,6 +99,22 @@ internal class TencentAccountApi(
             }
         }
 
+        /**
+         * musicu.fcg 写接口的 URL sign（web 端 getSecuritySign 的 zza 版）：
+         * "zza" + 10~16 位随机小写字母数字 + MD5("CJBPACrRuNy7" + 请求体)。
+         */
+        internal fun getSecuritySign(data: String): String {
+            val chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+            val randomPart = buildString {
+                repeat((10..16).random()) { append(chars[(0..35).random()]) }
+            }
+            return "zza$randomPart" + md5Hex("CJBPACrRuNy7$data")
+        }
+
+        private fun md5Hex(input: String): String =
+            MessageDigest.getInstance("MD5").digest(input.toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
+
         internal fun albumCover(albumMid: String): String =
             if (albumMid.isBlank()) ""
             else "https://y.qq.com/music/photo_new/T002R300x300M000${albumMid}.jpg"
@@ -152,6 +170,9 @@ internal class TencentAccountApi(
 
         private fun JsonObject.long(name: String): Long? =
             get(name)?.takeIf { it.isJsonPrimitive }?.let { runCatching { it.asLong }.getOrNull() }
+
+        private fun JsonObject.intField(name: String): Int? =
+            get(name)?.takeIf { it.isJsonPrimitive }?.let { runCatching { it.asInt }.getOrNull() }
     }
 
     private fun loginCookie(): Pair<String, Map<String, String>>? {
@@ -218,12 +239,16 @@ internal class TencentAccountApi(
     /**
      * 红心开关：web 端实际调用 music.musicasset.PlaylistDetailWrite 的
      * AddSonglist/DelSonglist，dirId=201 即“我喜欢”，v_songInfo 用数字 songId。
+     * 响应需三层校验：网关 code / 业务块 code / data.retCode（80105 表示签名或授权被拒）。
      */
-    suspend fun applySongLike(songId: Long, songType: Int, like: Boolean): Boolean =
+    suspend fun applySongLike(songId: Long, songType: Int, like: Boolean): TxSongLikeResult =
         withContext(Dispatchers.IO) {
-            val (cookie, _) = loginCookie() ?: return@withContext false
+            val (cookie, _) = loginCookie()
+                ?: return@withContext TxSongLikeResult(false, -1, "not logged in")
             val param = JsonObject().apply {
                 addProperty("dirId", 201L)
+                addProperty("tid", 201L)
+                addProperty("bFmtUtf8", true)
                 add("v_songInfo", JsonArray().apply {
                     add(JsonObject().apply {
                         addProperty("songType", songType)
@@ -233,8 +258,23 @@ internal class TencentAccountApi(
             }
             val method = if (like) "AddSonglist" else "DelSonglist"
             val block = musicuCall(cookie, "req_1", "music.musicasset.PlaylistDetailWrite", method, param)
-                ?: return@withContext false
-            block.get("code")?.takeIf { it.isJsonPrimitive }?.asInt == 0
+                ?: return@withContext TxSongLikeResult(false, -1, "network error")
+            val gatewayCode = block.intField("code") ?: -1
+            if (gatewayCode != 0) {
+                Timber.w("$TAG: $method gateway code=$gatewayCode")
+                return@withContext TxSongLikeResult(false, gatewayCode, "gateway")
+            }
+            val data = block.get("data") as? JsonObject
+            val retCode = data?.intField("retCode")
+            if (data == null || retCode == null) {
+                Timber.w("$TAG: $method unexpected response=$block")
+                return@withContext TxSongLikeResult(false, -2, "unexpected response")
+            }
+            if (retCode != 0) {
+                Timber.w("$TAG: $method retCode=$retCode")
+                return@withContext TxSongLikeResult(false, retCode, "retCode")
+            }
+            TxSongLikeResult(true)
         }
 
     suspend fun fetchPlaylistSongs(disstid: String): List<LxSong>? {
@@ -401,12 +441,14 @@ internal class TencentAccountApi(
                 add("param", param)
             })
         }
+        // sign 只含字母数字，可直接拼进 query；写接口（AddSonglist 等）缺 sign 会被 80105 拒绝
+        val body = payload.toString()
         val request = Request.Builder()
-            .url(MUSICU_URL)
+            .url("$MUSICU_URL?sign=${getSecuritySign(body)}")
             .header("User-Agent", USER_AGENT)
             .header("Referer", "https://y.qq.com/")
             .header("Cookie", cookie)
-            .post(payload.toString().toRequestBody(JSON_MEDIA_TYPE))
+            .post(body.toRequestBody(JSON_MEDIA_TYPE))
             .build()
         return runCatching {
             okHttpClient.newCall(request).execute().use { response ->

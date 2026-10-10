@@ -512,4 +512,16 @@
         <item>歌詞對齊預設置中</item>
         <item>刪除發現頁頂部的設定入口</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101106_whats_new">
+        <item>播放頁：展開態改為自適應高度，組件整體下移，底部空隙消除</item>
+        <item>QQ 收藏：請求補齊網頁端簽名，失敗提示帶業務碼便於定位</item>
+        <item>播放通知：恢復上一首按鈕，循環模式按鈕仍保持最前</item>
+        <item>播放/暫停按鈕背景色與循環模式按鈕統一</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101106_changes">
+        <item>設定中「顯示檔案資訊」預設改為關閉</item>
+        <item>刪除推薦頁頂部的設定入口</item>
+        <item>「我的」頁歌單分類移到第二位</item>
+        <item>「排行榜」模組按鈕加寬，文字完整顯示</item>
+    </string-array>
 </resources>

@@ -993,7 +993,7 @@ constructor(
 
     val showPlayerFileInfoFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
-                preferences[PreferencesKeys.FULL_PLAYER_SHOW_FILE_INFO] ?: true
+                preferences[PreferencesKeys.FULL_PLAYER_SHOW_FILE_INFO] ?: false
             }
 
     suspend fun setShowPlayerFileInfo(show: Boolean) {

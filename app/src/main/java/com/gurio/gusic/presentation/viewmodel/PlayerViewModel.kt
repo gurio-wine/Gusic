@@ -1113,12 +1113,12 @@ class PlayerViewModel @Inject constructor(
             initialValue = 0
         )
 
-    // “我的”页固定顺序：我喜欢置顶、不再提供文件夹分类；已保存的顺序里也会剔除 FOLDERS
+    // “我的”页固定顺序：我喜欢第一、歌单第二、不再提供文件夹分类；已保存的顺序里也会剔除 FOLDERS
     private fun normalizeLibraryTabs(raw: List<String>): ImmutableList<String> {
         val withoutFolders = raw.filter { it != "FOLDERS" && it.isNotBlank() }
             .ifEmpty { listOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS") }
-        val rest = withoutFolders.filter { it != "LIKED" }
-        return (listOf("LIKED") + rest).toImmutableList()
+        val rest = withoutFolders.filter { it != "LIKED" && it != "PLAYLISTS" }
+        return (listOf("LIKED", "PLAYLISTS") + rest).toImmutableList()
     }
 
     val libraryTabsFlow: StateFlow<ImmutableList<String>> = userPreferencesRepository.libraryTabsOrderFlow
@@ -3607,11 +3607,14 @@ class PlayerViewModel @Inject constructor(
         if (trackId in _neteaseLikeBusyIds.value) return true
         _neteaseLikeBusyIds.value = _neteaseLikeBusyIds.value + trackId
         try {
+            var txFailureCode: Int? = null
             val ok = when (song.lxMusicSource) {
                 "tx" -> {
                     val txSongId = song.lxMusicExtraFields["songId"] ?: trackId
                     val txType = song.lxMusicExtraFields["songType"]?.toIntOrNull() ?: 0
-                    lxMusicRepository.txSetSongLike(txSongId, txType, like)
+                    lxMusicRepository.txSetSongLike(txSongId, txType, like).also { result ->
+                        if (!result.success) txFailureCode = result.code
+                    }.success
                 }
                 "kg" -> lxMusicRepository.kgSetSongLike(
                     songmid = trackId,
@@ -3626,7 +3629,8 @@ class PlayerViewModel @Inject constructor(
                 else -> false
             }
             if (!ok) {
-                showFavoriteToast(if (like) "喜欢失败，请稍后重试" else "取消喜欢失败，请稍后重试")
+                val codeHint = txFailureCode?.let { "($it)" }.orEmpty()
+                showFavoriteToast(if (like) "喜欢失败$codeHint，请稍后重试" else "取消喜欢失败$codeHint，请稍后重试")
             }
             return ok
         } finally {
@@ -3660,8 +3664,8 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val liked = lxMusicRepository.txLikedSongIds.value.contains(song.lxMusicSongMid)
             val target = if (removing) false else !liked
-            val ok = lxMusicRepository.txSetSongLike(songId, songType, target)
-            if (ok) {
+            val result = lxMusicRepository.txSetSongLike(songId, songType, target)
+            if (result.success) {
                 song.lxMusicSongMid?.let { mid ->
                     val current = lxMusicRepository.txLikedSongIds.value
                     lxMusicRepository.setTxLikedSongIds(
@@ -3670,7 +3674,7 @@ class PlayerViewModel @Inject constructor(
                 }
                 showFavoriteToast(if (target) "已添加到我喜欢" else "已从我喜欢移除")
             } else {
-                showFavoriteToast("操作失败，请稍后再试")
+                showFavoriteToast("操作失败(${result.code})，请稍后再试")
             }
         }
     }

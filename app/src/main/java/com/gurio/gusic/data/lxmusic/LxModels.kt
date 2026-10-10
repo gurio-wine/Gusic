@@ -144,6 +144,13 @@ data class LxArtistDetail(
     val briefDesc: String? = null,
 )
 
+/** tx 红心写接口结果：失败时携带业务码（如 80105 签名/授权拒绝）便于提示定位。 */
+data class TxSongLikeResult(
+    val success: Boolean,
+    val code: Int = 0,
+    val stage: String = "",
+)
+
 data class LxAlbum(
     val id: String,
     val name: String,
