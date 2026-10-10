@@ -108,7 +108,7 @@ fun LxMinePage(
     vipType: Int,
     viewModel: LxMusicViewModel,
     playerViewModel: PlayerViewModel,
-    playLxSong: (LxSong) -> Unit,
+    playLxSong: (LxSong, List<LxSong>, String) -> Unit,
     playAllPlaylist: (List<LxSong>, String) -> Unit,
     shuffleAllPlaylist: (List<LxSong>, String) -> Unit,
     bottomBarHeightDp: Dp,
@@ -324,6 +324,7 @@ fun LxMinePage(
                                 error = mineState.error,
                                 stablePlayerState = stablePlayerState,
                                 playLxSong = playLxSong,
+                                queueName = mineState.pageTitle,
                                 onSongMoreOptions = onSongMoreOptions,
                                 isSelectionMode = isSelectionMode,
                                 selectedSongIds = selectedSongIds,
@@ -367,6 +368,7 @@ fun LxMinePage(
                                     error = mineState.error,
                                     stablePlayerState = stablePlayerState,
                                     playLxSong = playLxSong,
+                                    queueName = mineState.pageTitle,
                                     onSongMoreOptions = onSongMoreOptions,
                                     isSelectionMode = isSelectionMode,
                                     selectedSongIds = selectedSongIds,
@@ -1114,7 +1116,8 @@ internal fun LazyListScope.mineSongItems(
     loading: Boolean,
     error: String?,
     stablePlayerState: com.gurio.gusic.presentation.viewmodel.StablePlayerState,
-    playLxSong: (LxSong) -> Unit,
+    playLxSong: (LxSong, List<LxSong>, String) -> Unit,
+    queueName: String,
     onSongMoreOptions: (LxSong) -> Unit,
     isSelectionMode: Boolean = false,
     selectedSongIds: Set<String> = emptySet(),
@@ -1143,7 +1146,7 @@ internal fun LazyListScope.mineSongItems(
                 if (isSelectionMode) {
                     onSongSelectionToggle(song)
                 } else {
-                    playLxSong(song)
+                    playLxSong(song, songs, queueName)
                 }
             },
         )

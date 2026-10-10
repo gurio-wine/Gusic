@@ -142,10 +142,6 @@
     <string name="setcat_keep_playing_desc">إذا تم إيقافه، فإن إزالة التطبيق من التطبيقات الحديثة سيؤدي لإيقاف التشغيل.</string>
     <string name="setcat_keep_playing_label">استمرار التشغيل بعد الإغلاق</string>
     <string name="setcat_language_system">لغة النظام الافتراضية</string>
-    <string name="setcat_library_nav_compact_pill">شريط كبسولة مدمج وشبكة</string>
-    <string name="setcat_library_nav_tab_row">صف علامات التبويب (افتراضي)</string>
-    <string name="setcat_library_navigation_desc">اختر طريقة التنقل بين علامات تبويب المكتبة الموسيقية.</string>
-    <string name="setcat_library_navigation_label">التنقل في المكتبة</string>
     <string name="setcat_library_structure">بنية المكتبة</string>
     <string name="setcat_lyrics_delay_3s">3 ثوانٍ</string>
     <string name="setcat_lyrics_delay_4s">4 ثوانٍ</string>

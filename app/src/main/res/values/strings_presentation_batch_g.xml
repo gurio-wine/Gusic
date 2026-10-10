@@ -450,4 +450,16 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>Discover now defaults to QQ Music, NetEase Cloud Music, Kugou, Kuwo order.</item>
         <item>Platforms can be hidden in the reorder sheet; logged-out ones are hidden by default and QQ Music always stays visible.</item>
     </string-array>
+    <!-- Gusic 26.10.11.001：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101101_whats_new">
+        <item>Tapping any song in a playlist or chart now queues the whole list in order and starts from that song</item>
+        <item>Fixed QQ Music search returning no results</item>
+        <item>Fixed QQ Music account playlists all showing as liked songs</item>
+    </string-array>
+    <!-- Gusic 26.10.11.001：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101101_changes">
+        <item>Lyrics now always show synced mode; the synced/static toggle is removed and romanization defaults to off</item>
+        <item>Default launch tab is now Discover</item>
+        <item>Library navigation is fixed to compact pill + grid; the tab-row mode and its setting are removed</item>
+    </string-array>
 </resources>

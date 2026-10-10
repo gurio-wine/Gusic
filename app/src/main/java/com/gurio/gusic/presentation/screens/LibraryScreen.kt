@@ -166,7 +166,6 @@ import com.gurio.gusic.presentation.viewmodel.PlaylistViewModel
 import com.gurio.gusic.presentation.viewmodel.SongInfoBottomSheetViewModel
 import com.gurio.gusic.data.model.LibraryTabId
 import com.gurio.gusic.data.model.toLibraryTabIdOrNull
-import com.gurio.gusic.data.preferences.LibraryNavigationMode
 import com.gurio.gusic.presentation.screens.search.components.GenreTypography
 import com.gurio.gusic.presentation.viewmodel.LibraryViewModel
 import com.gurio.gusic.presentation.selection.appendDistinctSelection
@@ -318,8 +317,8 @@ fun LibraryScreen(
             isRefreshing = false
         }
     }
-    val libraryNavigationMode by playerViewModel.libraryNavigationMode.collectAsStateWithLifecycle()
-    val isCompactNavigation = libraryNavigationMode == LibraryNavigationMode.COMPACT_PILL
+    // 曲库导航固定为紧凑胶囊+网格
+    val isCompactNavigation = true
     val tabCount = tabTitles.size.coerceAtLeast(1)
     val normalizedLastTabIndex = positiveMod(lastTabIndex, tabCount)
     val compactInitialPage = remember(tabCount, normalizedLastTabIndex) {

@@ -142,10 +142,6 @@
     <string name="setcat_keep_playing_desc">꺼져 있으면 최근 앱 목록에서 앱을 제거할 때 재생이 중지됩니다.</string>
     <string name="setcat_keep_playing_label">닫은 후에도 계속 재생</string>
     <string name="setcat_language_system">시스템 기본값</string>
-    <string name="setcat_library_nav_compact_pill">컴팩트 알약 및 그리드</string>
-    <string name="setcat_library_nav_tab_row">탭 행 (기본값)</string>
-    <string name="setcat_library_navigation_desc">라이브러리 탭 간 이동 방식을 선택하세요.</string>
-    <string name="setcat_library_navigation_label">라이브러리 내비게이션</string>
     <string name="setcat_library_structure">라이브러리 구조</string>
     <string name="setcat_lyrics_delay_3s">3초</string>
     <string name="setcat_lyrics_delay_4s">4초</string>

@@ -142,10 +142,6 @@
     <string name="setcat_keep_playing_desc">Jika mati, menghapus aplikasi dari daftar terbaru akan menghentikan pemutaran.</string>
     <string name="setcat_keep_playing_label">Tetap putar setelah ditutup</string>
     <string name="setcat_language_system">Default sistem</string>
-    <string name="setcat_library_nav_compact_pill">Pil ringkas &amp; kisi</string>
-    <string name="setcat_library_nav_tab_row">Baris tab (default)</string>
-    <string name="setcat_library_navigation_desc">Pilih cara berpindah antar tab Pustaka.</string>
-    <string name="setcat_library_navigation_label">Navigasi Pustaka</string>
     <string name="setcat_library_structure">Struktur Pustaka</string>
     <string name="setcat_lyrics_delay_3s">3d</string>
     <string name="setcat_lyrics_delay_4s">4d</string>

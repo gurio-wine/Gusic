@@ -301,9 +301,9 @@ fun LyricsSheet(
     val showLyricsTranslation by showLyricsTranslationFlow.collectAsStateWithLifecycle(initialValue = true)
 
     val showLyricsRomanizationFlow = remember(context) {
-        context.dataStore.data.map { it[booleanPreferencesKey("show_lyrics_romanization")] ?: true }
+        context.dataStore.data.map { it[booleanPreferencesKey("show_lyrics_romanization")] ?: false }
     }
-    val showLyricsRomanization by showLyricsRomanizationFlow.collectAsStateWithLifecycle(initialValue = true)
+    val showLyricsRomanization by showLyricsRomanizationFlow.collectAsStateWithLifecycle(initialValue = false)
 
     val useAnimatedLyricsFlow = remember(context) {
         context.dataStore.data.map { it[booleanPreferencesKey("use_animated_lyrics")] ?: false }
@@ -398,7 +398,8 @@ fun LyricsSheet(
     var showSyncControls by remember { mutableStateOf(false) }
     var previewSeekPositionMs by remember(currentSong?.id) { mutableStateOf<Long?>(null) }
 
-    var showSyncedLyrics by remember(lyrics) {
+    // 固定优先显示同步歌词；仅当没有同步歌词时回退静态歌词，不再提供切换
+    val showSyncedLyrics by remember(lyrics) {
         mutableStateOf(
             when {
                 !lyrics?.synced.isNullOrEmpty() -> true
@@ -406,10 +407,6 @@ fun LyricsSheet(
                 else -> null
             }
         )
-    }
-
-    val hasSyncedLyrics = remember(lyrics) {
-        !lyrics?.synced.isNullOrEmpty()
     }
 
     var immersiveMode by remember { mutableStateOf(false) }
@@ -933,8 +930,6 @@ fun LyricsSheet(
                 LyricsFloatingToolbar(
                     modifier = Modifier.padding(horizontal = 0.dp),
                     showSyncedLyrics = showSyncedLyrics,
-                    hasSyncedLyrics = hasSyncedLyrics,
-                    onShowSyncedLyricsChange = { showSyncedLyrics = it },
                     onNavigateBack = {
                         onBackClick()
                     },

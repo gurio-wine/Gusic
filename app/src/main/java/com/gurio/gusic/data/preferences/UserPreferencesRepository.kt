@@ -1423,11 +1423,9 @@ constructor(
         }
     }
 
+    // 曲库导航仅保留"紧凑胶囊+网格"一种方式，历史存储的 tab_row 一律按紧凑处理
     val libraryNavigationModeFlow: Flow<String> =
-            dataStore.data.map { preferences ->
-                preferences[PreferencesKeys.LIBRARY_NAVIGATION_MODE]
-                        ?: LibraryNavigationMode.TAB_ROW
-            }
+            kotlinx.coroutines.flow.flowOf(LibraryNavigationMode.COMPACT_PILL)
 
     suspend fun setLibraryNavigationMode(mode: String) {
         dataStore.edit { preferences ->
@@ -1446,7 +1444,7 @@ constructor(
 
     val launchTabFlow: Flow<String> =
             dataStore.data.map { preferences ->
-                preferences[PreferencesKeys.LAUNCH_TAB] ?: LaunchTab.HOME
+                preferences[PreferencesKeys.LAUNCH_TAB] ?: LaunchTab.LX_MUSIC
             }
 
     suspend fun setLaunchTab(tab: String) {

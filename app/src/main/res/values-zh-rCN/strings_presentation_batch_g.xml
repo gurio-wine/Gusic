@@ -450,4 +450,16 @@
         <item>发现页默认顺序调整为 QQ音乐、网易云音乐、酷狗音乐、酷我音乐</item>
         <item>顺序调整中可隐藏平台，默认隐藏未登录平台，至少保留 QQ音乐</item>
     </string-array>
+    <!-- Gusic 26.10.11.001：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101101_whats_new">
+        <item>歌单/排行榜点任意歌曲：整个列表按顺序加入播放队列并从该歌开始播放</item>
+        <item>修复 QQ音乐搜索无效的问题</item>
+        <item>修复 QQ音乐账号歌单全部显示为"我喜欢的音乐"的问题</item>
+    </string-array>
+    <!-- Gusic 26.10.11.001：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101101_changes">
+        <item>歌词固定为同步歌词，移除同步/静态切换；罗马音默认关闭</item>
+        <item>默认启动页改为"发现"</item>
+        <item>曲库导航固定为紧凑胶囊+网格，移除"标题栏"方式与对应设置项</item>
+    </string-array>
 </resources>

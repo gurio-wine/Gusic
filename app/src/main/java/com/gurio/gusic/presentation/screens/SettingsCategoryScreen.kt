@@ -158,7 +158,6 @@ import com.gurio.gusic.data.preferences.AppThemeMode
 import com.gurio.gusic.data.preferences.CollagePattern
 import com.gurio.gusic.data.preferences.CarouselStyle
 import com.gurio.gusic.data.preferences.LaunchTab
-import com.gurio.gusic.data.preferences.LibraryNavigationMode
 import com.gurio.gusic.data.preferences.NavBarStyle
 import com.gurio.gusic.data.preferences.ThemePreference
 import com.gurio.gusic.data.model.Song
@@ -731,18 +730,6 @@ fun SettingsCategoryScreen(
                                     onSelectionChanged = { settingsViewModel.setLaunchTab(it) },
                                     leadingIcon = { Icon(painterResource(R.drawable.tab_24), null, tint = MaterialTheme.colorScheme.secondary) },
                                     modifier = Modifier.settingHighlight("item_appearance_default_tab", highlightKey)
-                                )
-                                ThemeSelectorItem(
-                                    label = stringResource(R.string.setcat_library_navigation_label),
-                                    description = stringResource(R.string.setcat_library_navigation_desc),
-                                    options = mapOf(
-                                        LibraryNavigationMode.TAB_ROW to stringResource(R.string.setcat_library_nav_tab_row),
-                                        LibraryNavigationMode.COMPACT_PILL to stringResource(R.string.setcat_library_nav_compact_pill)
-                                    ),
-                                    selectedKey = uiState.libraryNavigationMode,
-                                    onSelectionChanged = { settingsViewModel.setLibraryNavigationMode(it) },
-                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_library_music_24), null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_appearance_library_navigation", highlightKey)
                                 )
                             }
                         }

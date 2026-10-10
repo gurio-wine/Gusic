@@ -142,10 +142,6 @@
     <string name="setcat_keep_playing_desc">Si désactivé, supprimer l\'application des récentes arrêtera la lecture.</string>
     <string name="setcat_keep_playing_label">Continuer la lecture après fermeture</string>
     <string name="setcat_language_system">Système par défaut</string>
-    <string name="setcat_library_nav_compact_pill">Pastille compacte et grille</string>
-    <string name="setcat_library_nav_tab_row">Barre d\'onglets (défaut)</string>
-    <string name="setcat_library_navigation_desc">Choisissez comment passer d\'un onglet à l\'autre dans la bibliothèque.</string>
-    <string name="setcat_library_navigation_label">Navigation bibliothèque</string>
     <string name="setcat_library_structure">Structure de la bibliothèque</string>
     <string name="setcat_lyrics_delay_3s">3s</string>
     <string name="setcat_lyrics_delay_4s">4s</string>

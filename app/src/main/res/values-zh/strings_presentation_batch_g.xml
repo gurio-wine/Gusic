@@ -450,4 +450,16 @@
         <item>發現頁預設順序調整為 QQ音樂、網易雲音樂、酷狗音樂、酷我音樂</item>
         <item>順序調整中可隱藏平台，預設隱藏未登入平台，至少保留 QQ音樂</item>
     </string-array>
+    <!-- Gusic 26.10.11.001：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101101_whats_new">
+        <item>歌單/排行榜點任意歌曲：整個列表按順序加入播放佇列並從該歌開始播放</item>
+        <item>修復 QQ音樂搜尋無效的問題</item>
+        <item>修復 QQ音樂帳號歌單全部顯示為「我喜歡的音樂」的問題</item>
+    </string-array>
+    <!-- Gusic 26.10.11.001：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101101_changes">
+        <item>歌詞固定為同步歌詞，移除同步/靜態切換；羅馬音預設關閉</item>
+        <item>預設啟動頁改為「發現」</item>
+        <item>曲庫導航固定為緊湊膠囊+網格，移除「標題欄」方式與對應設定項</item>
+    </string-array>
 </resources>

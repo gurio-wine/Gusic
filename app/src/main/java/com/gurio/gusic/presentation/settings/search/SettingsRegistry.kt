@@ -364,16 +364,6 @@ object SettingsRegistry {
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("launch", "start screen", "default tab", "startup")
             ),
-            SettingSpec(
-                id = "appearance_library_navigation",
-                itemKey = "item_appearance_library_navigation",
-                titleRes = R.string.setcat_library_navigation_label,
-                subtitleRes = R.string.setcat_library_navigation_desc,
-                category = SettingsCategory.APPEARANCE,
-                subscreenRoute = Screen.SettingsCategory.createRoute("appearance"),
-                type = SettingType.NAVIGABLE_CARD,
-                keywordsStatic = listOf("library tabs", "pill", "navigation mode", "tab row")
-            ),
 
             // --- PLAYBACK CATEGORY ---
             SettingSpec(

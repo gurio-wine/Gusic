@@ -154,10 +154,6 @@
     <string name="setcat_keep_screen_awake_title">Oynatırken ekranı açık tut</string>
     <string name="setcat_keep_screen_awake_subtitle">Müzik çalarken ve uygulama görünürken ekranın uykuya geçmesini önler.</string>
     <string name="setcat_language_system">Sistem varsayılanı</string>
-    <string name="setcat_library_nav_compact_pill">Kompakt buton ve ızgara</string>
-    <string name="setcat_library_nav_tab_row">Sekme satırı (varsayılan)</string>
-    <string name="setcat_library_navigation_desc">Kitaplık sekmeleri arasında nasıl geçiş yapılacağını seçin.</string>
-    <string name="setcat_library_navigation_label">Kitaplık Gezinmesi</string>
     <string name="setcat_library_structure">Kitaplık Yapısı</string>
     <string name="setcat_lyrics_delay_3s">3sn</string>
     <string name="setcat_lyrics_delay_4s">4sn</string>

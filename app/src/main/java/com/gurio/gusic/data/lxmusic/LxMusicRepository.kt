@@ -2,6 +2,7 @@ package com.gurio.gusic.data.lxmusic
 
 import android.content.Context
 import android.net.Uri
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.gurio.gusic.data.database.AlbumEntity
 import com.gurio.gusic.data.database.ArtistEntity
@@ -14,6 +15,7 @@ import com.gurio.gusic.data.lxmusic.netease.NeteaseWeapiCrypto
 import com.gurio.gusic.data.lxmusic.platform.KugouOfficialApi
 import com.gurio.gusic.data.lxmusic.platform.PlatformResult
 import com.gurio.gusic.data.lxmusic.platform.TencentOfficialApi
+import com.gurio.gusic.data.lxmusic.tencent.TencentAccountApi
 import com.gurio.gusic.data.preferences.UserPreferencesRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -539,63 +541,43 @@ class LxMusicRepository @Inject constructor(
         }
     }
 
+    // 旧的 client_search_cp 接口已下线，改走 musicu.fcg 的桌面搜索
     private suspend fun searchQQ(keyword: String, page: Int): List<LxSong> = withContext(Dispatchers.IO) {
-        val encoded = URLEncoder.encode(keyword, "UTF-8")
-        val url = "https://c.y.qq.com/soso/fcgi-bin/client_search_cp?w=$encoded&format=json&p=$page&n=30"
-        val req = Request.Builder().url(url)
+        val payload = JsonObject().apply {
+            add("comm", JsonObject().apply {
+                addProperty("uin", "0")
+                addProperty("format", "json")
+                addProperty("ct", 24)
+                addProperty("cv", 0)
+            })
+            add("req_1", JsonObject().apply {
+                addProperty("module", "music.search.SearchCgiService")
+                addProperty("method", "DoSearchForQQMusicDesktop")
+                add("param", JsonObject().apply {
+                    addProperty("search_type", 0)
+                    addProperty("query", keyword)
+                    addProperty("page_num", page)
+                    addProperty("num_per_page", 30)
+                })
+            })
+        }
+        val req = Request.Builder().url("https://u.y.qq.com/cgi-bin/musicu.fcg")
             .header("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36")
             .header("Referer", "https://y.qq.com/")
-            .get()
+            .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
             .build()
         runCatching {
             okHttpClient.newCall(req).execute().use { resp ->
                 val body = resp.body?.string().orEmpty()
                 val root = JsonParser.parseString(body).asJsonObject
-                val songs = root.getAsJsonObject("data")
-                    ?.getAsJsonObject("song")
-                    ?.getAsJsonArray("list") ?: return@use emptyList()
-                songs.mapNotNull { el ->
-                    val obj = el.asJsonObject
-                    val id = obj.get("songmid")?.asString ?: return@mapNotNull null
-                    val name = obj.get("songname")?.asString ?: ""
-                    val singerPairs = obj.getAsJsonArray("singer")
-                        ?.mapNotNull { runCatching { it.asJsonObject }.getOrNull() }
-                        ?.map { (it.get("name")?.asString ?: "") to (it.get("mid")?.asString ?: "") }
-                        ?.filter { it.first.isNotBlank() }
-                        .orEmpty()
-                    val singer = singerPairs.joinToString("/") { it.first }
-                    val albumObj = obj.getAsJsonObject("album")
-                    val album = albumObj?.get("name")?.asString
-                        ?: obj.get("albumname")?.takeIf { it.isJsonPrimitive }?.asString
-                        ?: ""
-                    val albumMid = albumObj?.get("mid")?.asString
-                        ?: obj.get("albummid")?.takeIf { it.isJsonPrimitive }?.asString
-                        ?: ""
-                    val pic = albumMid.takeIf { it.isNotBlank() }
-                        ?.let { "https://y.qq.com/music/photo_new/T002R300x300M000${it}.jpg" }
-                    val interval = obj.get("interval")?.asLong ?: 0L
-                    val strMediaMid = obj.getAsJsonObject("file")?.get("media_mid")?.asString ?: ""
-                    val numericId = obj.get("id")?.asString ?: ""
-                    val extra = mutableMapOf<String, String>()
-                    if (strMediaMid.isNotBlank()) extra["strMediaMid"] = strMediaMid
-                    if (albumMid.isNotBlank()) extra["albumMid"] = albumMid
-                    if (numericId.isNotBlank()) extra["songId"] = numericId
-                    singerPairs.joinToString(",") { it.second }
-                        .takeIf { singerPairs.any { p -> p.second.isNotBlank() } }
-                        ?.let { extra["artistIds"] = it }
-                    LxSong(
-                        source = "tx",
-                        songmid = id,
-                        name = name,
-                        singer = singer,
-                        albumName = album,
-                        interval = interval,
-                        pic = pic,
-                        extraFields = extra,
-                    )
-                }
+                val songs = root.getAsJsonObject("req_1")
+                    ?.getAsJsonObject("data")?.getAsJsonObject("body")
+                    ?.getAsJsonObject("song")?.getAsJsonArray("list")
+                    ?: return@use emptyList()
+                songs.mapNotNull { el -> TencentAccountApi.mapTrack(el) }
             }
         }.getOrElse {
+            Timber.w(it, "searchQQ failed keyword=$keyword page=$page")
             emptyList()
         }
     }

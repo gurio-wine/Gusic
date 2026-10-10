@@ -1640,7 +1640,9 @@ class LxMusicViewModel @Inject constructor(
         val cloudPlaylists = when (source) {
             LxSources.KUGOU -> runCatching { repository.fetchKgUserPlaylists() }.getOrDefault(emptyList())
             LxSources.KUWO -> runCatching { repository.fetchKwUserPlaylists() }.getOrDefault(emptyList())
+            // 打开歌单时按 "tx_pl_" 前缀分流到用户歌单接口，缺失前缀会全部落进红心分支
             LxSources.TENCENT -> runCatching { repository.fetchTxUserPlaylists() }.getOrDefault(emptyList())
+                .map { it.copy(id = "tx_pl_${it.id}") }
             else -> emptyList()
         }
         val likedPlaylist = LxPlaylist(

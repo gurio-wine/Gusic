@@ -37,8 +37,6 @@ fun LyricsFloatingToolbar(
     modifier: Modifier = Modifier,
     onNavigateBack: () -> Unit,
     showSyncedLyrics: Boolean?,
-    onShowSyncedLyricsChange: (Boolean) -> Unit,
-    hasSyncedLyrics: Boolean,
     onMoreClick: () -> Unit,
     backgroundColor: Color,
     onBackgroundColor: Color,
@@ -89,39 +87,8 @@ fun LyricsFloatingToolbar(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            ToggleSegmentButton(
-                modifier = Modifier.weight(1f).height(50.dp),
-                active = showSyncedLyrics,
-                enabled = hasSyncedLyrics,
-                activeColor = accentColor,
-                inactiveColor = backgroundColor,
-                activeContentColor = onAccentColor,
-                inactiveContentColor = onBackgroundColor,
-                activeCornerRadius = 50.dp,
-                onClick = { onShowSyncedLyricsChange(true) },
-                text = stringResource(R.string.presentation_batch_g_lyrics_mode_synced)
-            )
+        Spacer(modifier = Modifier.weight(1f))
 
-            ToggleSegmentButton(
-                modifier = Modifier.weight(1f).height(50.dp),
-                active = !showSyncedLyrics,
-                enabled = true,
-                activeColor = accentColor,
-                inactiveColor = backgroundColor,
-                activeContentColor = onAccentColor,
-                inactiveContentColor = onBackgroundColor,
-                activeCornerRadius = 50.dp,
-                onClick = { onShowSyncedLyricsChange(false) },
-                text = stringResource(R.string.presentation_batch_g_lyrics_mode_static)
-            )
-        }
-        
         Spacer(modifier = Modifier.width(8.dp))
 
         IconButton(

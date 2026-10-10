@@ -142,10 +142,6 @@
     <string name="setcat_keep_playing_desc">Hvis av, vil avspillingen stoppe når appen fjernes fra nylige apper.</string>
     <string name="setcat_keep_playing_label">Fortsett avspilling etter lukking</string>
     <string name="setcat_language_system">Systemstandard</string>
-    <string name="setcat_library_nav_compact_pill">Kompakt pille &amp; rutenett</string>
-    <string name="setcat_library_nav_tab_row">Fanerekke (standard)</string>
-    <string name="setcat_library_navigation_desc">Velg hvordan du flytter mellom biblioteksfanene.</string>
-    <string name="setcat_library_navigation_label">Biblioteksnavigasjon</string>
     <string name="setcat_library_structure">Bibliotekstruktur</string>
     <string name="setcat_lyrics_delay_3s">3s</string>
     <string name="setcat_lyrics_delay_4s">4s</string>

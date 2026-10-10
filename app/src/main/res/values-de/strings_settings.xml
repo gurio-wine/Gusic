@@ -142,10 +142,6 @@
     <string name="setcat_keep_playing_desc">Aus: Wiedergabe stoppt, wenn die App aus den letzten Apps entfernt wird.</string>
     <string name="setcat_keep_playing_label">Nach Schließen weiterspielen</string>
     <string name="setcat_language_system">Systemstandard</string>
-    <string name="setcat_library_nav_compact_pill">Kompakte Pill &amp; Raster</string>
-    <string name="setcat_library_nav_tab_row">Tab-Leiste (Standard)</string>
-    <string name="setcat_library_navigation_desc">Wie zwischen Bibliotheks-Tabs gewechselt wird.</string>
-    <string name="setcat_library_navigation_label">Bibliotheks-Navigation</string>
     <string name="setcat_library_structure">Bibliotheksstruktur</string>
     <string name="setcat_lyrics_delay_3s">3s</string>
     <string name="setcat_lyrics_delay_4s">4s</string>

@@ -347,7 +347,26 @@ fun LxMusicScreen(
         return false
     }
 
-    val playLxSong: (com.gurio.gusic.data.lxmusic.LxSong) -> Unit = { song ->
+    // 点击歌单/榜单内的一首：整个列表按顺序加入队列并从点击的歌曲开始播放
+    val playLxSong: (com.gurio.gusic.data.lxmusic.LxSong, List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit =
+        { song, songs, queueName ->
+            scope.launch {
+                if (!ensureScriptOrToast(song)) return@launch
+                viewModel.recordPlay(song)
+                val contextSongs = songs.ifEmpty { listOf(song) }
+                viewModel.cacheSongsMetadata(contextSongs)
+                viewModel.setPlaybackQueueLxSongs(contextSongs)
+                playerViewModel.playSongs(
+                    songsToPlay = contextSongs.map { LxSongMapper.toSong(it) },
+                    startSong = LxSongMapper.toSong(song),
+                    queueName = queueName.ifBlank { context.getString(R.string.lx_queue_name_playlist) },
+                    origin = com.gurio.gusic.presentation.viewmodel.PlaybackOrigin.ONLINE,
+                )
+            }
+        }
+
+    // 搜索结果页点歌仍只播单首（结果跨歌单，不属于某个列表）
+    val playSearchSong: (com.gurio.gusic.data.lxmusic.LxSong) -> Unit = { song ->
         scope.launch {
             if (!ensureScriptOrToast(song)) return@launch
             viewModel.recordPlay(song)
@@ -733,7 +752,7 @@ fun LxMusicScreen(
                                     },
                                     multiSelectionState = multiSelectionState,
                                     onSelectionOptionsClick = { showMultiSelectionSheet = true })
-                                else -> LxSearchPage(browseState, searchState, viewModel, playerViewModel, playLxSong,
+                                else -> LxSearchPage(browseState, searchState, viewModel, playerViewModel, playSearchSong,
                                     playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
                                     onScrollingChange = { if (pagerState.currentPage == 3) isListScrolling.value = it },
                                     onSongMoreOptions = { lxInfoSong = it },
@@ -775,7 +794,7 @@ fun LxMusicScreen(
                                     },
                                     multiSelectionState = multiSelectionState,
                                     onSelectionOptionsClick = { showMultiSelectionSheet = true })
-                                else -> LxSearchPage(browseState, searchState, viewModel, playerViewModel, playLxSong,
+                                else -> LxSearchPage(browseState, searchState, viewModel, playerViewModel, playSearchSong,
                                     playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
                                     onScrollingChange = { if (pagerState.currentPage == 2) isListScrolling.value = it },
                                     onSongMoreOptions = { lxInfoSong = it },
@@ -909,7 +928,7 @@ fun LxMusicScreen(
             onToggleFavorite = { playerViewModel.togglePlatformFavorite(infoUiSong) },
             onDismiss = { lxInfoSong = null },
             onPlaySong = {
-                playLxSong(infoLxSong)
+                playLxSong(infoLxSong, emptyList(), "")
                 lxInfoSong = null
             },
             onAddToQueue = {
@@ -2404,7 +2423,7 @@ private fun LxBoardPage(
     browseState: LxMusicViewModel.BrowseState,
     viewModel: LxMusicViewModel,
     playerViewModel: PlayerViewModel,
-    playLxSong: (com.gurio.gusic.data.lxmusic.LxSong) -> Unit,
+    playLxSong: (com.gurio.gusic.data.lxmusic.LxSong, List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     playAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     shuffleAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     bottomBarHeightDp: Dp,
@@ -2507,7 +2526,7 @@ private fun LxBoardPage(
                             if (isSelectionMode) {
                                 onSongSelectionToggle(song)
                             } else {
-                                playLxSong(song)
+                                playLxSong(song, browseState.boardSongs, browseState.selectedBoard?.name ?: boardQueueFallback)
                             }
                         },
                     )
@@ -2664,7 +2683,7 @@ private fun LxPlaylistPage(
     browseState: LxMusicViewModel.BrowseState,
     viewModel: LxMusicViewModel,
     playerViewModel: PlayerViewModel,
-    playLxSong: (com.gurio.gusic.data.lxmusic.LxSong) -> Unit,
+    playLxSong: (com.gurio.gusic.data.lxmusic.LxSong, List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     playAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     shuffleAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     bottomBarHeightDp: Dp,
@@ -2808,7 +2827,7 @@ private fun LxPlaylistPage(
                                 if (isSelectionMode) {
                                     onSongSelectionToggle(song)
                                 } else {
-                                    playLxSong(song)
+                                    playLxSong(song, browseState.playlistSongs, browseState.selectedPlaylist?.name.orEmpty())
                                 }
                             },
                         )
@@ -3794,7 +3813,7 @@ private fun LxSearchArtistPage(
     state: LxMusicViewModel.SearchArtistPageState,
     viewModel: LxMusicViewModel,
     playerViewModel: PlayerViewModel,
-    playLxSong: (com.gurio.gusic.data.lxmusic.LxSong) -> Unit,
+    playLxSong: (com.gurio.gusic.data.lxmusic.LxSong, List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     playAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     shuffleAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     bottomBarHeightDp: Dp,
@@ -3915,6 +3934,7 @@ private fun LxSearchArtistPage(
                         error = null,
                         stablePlayerState = stablePlayerState,
                         playLxSong = playLxSong,
+                        queueName = album.name,
                         onSongMoreOptions = onSongMoreOptions,
                         isSelectionMode = isSelectionMode,
                         selectedSongIds = selectedSongIds,
@@ -4115,6 +4135,7 @@ private fun LxSearchArtistPage(
                         error = state.error,
                         stablePlayerState = stablePlayerState,
                         playLxSong = playLxSong,
+                        queueName = artist.name,
                         onSongMoreOptions = onSongMoreOptions,
                         isSelectionMode = isSelectionMode,
                         selectedSongIds = selectedSongIds,
@@ -4209,7 +4230,7 @@ private fun LxSearchAlbumPage(
     state: LxMusicViewModel.SearchAlbumPageState,
     viewModel: LxMusicViewModel,
     playerViewModel: PlayerViewModel,
-    playLxSong: (com.gurio.gusic.data.lxmusic.LxSong) -> Unit,
+    playLxSong: (com.gurio.gusic.data.lxmusic.LxSong, List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     playAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     shuffleAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     bottomBarHeightDp: Dp,
@@ -4326,6 +4347,7 @@ private fun LxSearchAlbumPage(
                     error = state.error,
                     stablePlayerState = stablePlayerState,
                     playLxSong = playLxSong,
+                    queueName = album.name,
                     onSongMoreOptions = onSongMoreOptions,
                     isSelectionMode = isSelectionMode,
                     selectedSongIds = selectedSongIds,

@@ -142,10 +142,6 @@
     <string name="setcat_keep_playing_desc">Если отключено, удаление приложения из списка недавних остановит воспроизведение.</string>
     <string name="setcat_keep_playing_label">Продолжать воспроизведение после закрытия</string>
     <string name="setcat_language_system">Системный по умолчанию</string>
-    <string name="setcat_library_nav_compact_pill">Компактные вкладки и сетка</string>
-    <string name="setcat_library_nav_tab_row">Строка вкладок (по умолчанию)</string>
-    <string name="setcat_library_navigation_desc">Выберите способ переключения между вкладками медиатеки.</string>
-    <string name="setcat_library_navigation_label">Навигация по медиатеке</string>
     <string name="setcat_library_structure">Структура медиатеки</string>
     <string name="setcat_lyrics_delay_3s">3 с</string>
     <string name="setcat_lyrics_delay_4s">4 с</string>
