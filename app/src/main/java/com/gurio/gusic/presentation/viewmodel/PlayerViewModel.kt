@@ -1256,7 +1256,7 @@ class PlayerViewModel @Inject constructor(
         when {
             origin == PlaybackOrigin.LOCAL -> PlayerFavoriteKind.LOCAL
             source == "wy" && valid -> PlayerFavoriteKind.NETEASE
-            source == "tx" && valid && writesEnabled -> PlayerFavoriteKind.TENCENT
+            source == "tx" && valid -> PlayerFavoriteKind.TENCENT
             source == "kg" && valid && writesEnabled -> PlayerFavoriteKind.KUGOU
             source == "kw" && valid && writesEnabled -> PlayerFavoriteKind.KUWO
             else -> PlayerFavoriteKind.DISABLED
@@ -1311,7 +1311,7 @@ class PlayerViewModel @Inject constructor(
             idsBySource = idsMap,
             enabledBySource = mapOf(
                 "wy" to !wyCookie.isNullOrBlank(),
-                "tx" to (!txCookie.isNullOrBlank() && writesEnabled),
+                "tx" to !txCookie.isNullOrBlank(),
                 "kg" to (!kgToken.isNullOrBlank() && writesEnabled),
                 "kw" to (!kwCookie.isNullOrBlank() && writesEnabled),
             ),
@@ -3571,7 +3571,11 @@ class PlayerViewModel @Inject constructor(
         _neteaseLikeBusyIds.value = _neteaseLikeBusyIds.value + trackId
         try {
             val ok = when (song.lxMusicSource) {
-                "tx" -> lxMusicRepository.txSetSongLike(trackId, like)
+                "tx" -> {
+                    val txSongId = song.lxMusicExtraFields["songId"] ?: trackId
+                    val txType = song.lxMusicExtraFields["songType"]?.toIntOrNull() ?: 0
+                    lxMusicRepository.txSetSongLike(txSongId, txType, like)
+                }
                 "kg" -> lxMusicRepository.kgSetSongLike(
                     songmid = trackId,
                     hash = song.lxMusicHash,
@@ -3637,7 +3641,28 @@ class PlayerViewModel @Inject constructor(
                     showFavoriteToast("登录 QQ 音乐后可同步喜欢")
                     return
                 }
-                showFavoriteToast("QQ音乐暂不支持喜欢，敬请期待")
+                val songId = song.lxMusicExtraFields["songId"]
+                if (songId == null) {
+                    showFavoriteToast("缺少歌曲信息，无法收藏")
+                    return
+                }
+                val songType = song.lxMusicExtraFields["songType"]?.toIntOrNull() ?: 0
+                viewModelScope.launch {
+                    val liked = lxMusicRepository.txLikedSongIds.value.contains(song.lxMusicSongMid)
+                    val target = if (removing) false else !liked
+                    val ok = lxMusicRepository.txSetSongLike(songId, songType, target)
+                    if (ok) {
+                        song.lxMusicSongMid?.let { mid ->
+                            val current = lxMusicRepository.txLikedSongIds.value
+                            lxMusicRepository.setTxLikedSongIds(
+                                if (target) current + mid else current - mid
+                            )
+                        }
+                        showFavoriteToast(if (target) "已添加到我喜欢" else "已从我喜欢移除")
+                    } else {
+                        showFavoriteToast("操作失败，请稍后再试")
+                    }
+                }
             }
             song.lxMusicSource == "kg" -> {
                 if (!kugouCookieStore.hasAppLogin()) {

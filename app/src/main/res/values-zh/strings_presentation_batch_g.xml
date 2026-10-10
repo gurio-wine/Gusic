@@ -474,4 +474,18 @@
         <item>專輯封面改為 1:1 比例並加高，下方組件整體下移</item>
         <item>懸浮播放器歌手名移至歌名右側顯示</item>
     </string-array>
+    <!-- Gusic 26.10.11.003：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101103_whats_new">
+        <item>QQ 音樂歌曲支援收藏，紅心同步到「我喜歡的音樂」</item>
+        <item>播放通知：移除關閉按鈕，循環模式按鈕置於最前</item>
+        <item>歌詞「更多」面板新增字體大小調節</item>
+        <item>播放頁封面為真正 1:1 且填滿空餘空間，下方組件下移</item>
+    </string-array>
+    <!-- Gusic 26.10.11.003：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101103_changes">
+        <item>榜單名稱標籤自適應寬度，不再被截斷</item>
+        <item>「我的」頁移除隨機播放、篩選、排序按鈕</item>
+        <item>徹底移除書籤（bookmarks）功能</item>
+        <item>預設開啟「記憶隨機播放狀態」與「顯示播放歷史佇列」</item>
+    </string-array>
 </resources>

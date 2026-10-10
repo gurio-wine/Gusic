@@ -49,7 +49,7 @@ internal interface LxAccountExtension {
 
     suspend fun kwApplyAlbumLike(albumId: String, like: Boolean): Boolean
 
-    suspend fun txApplySongLike(songId: String, like: Boolean): Boolean
+    suspend fun txApplySongLike(songId: String, songType: Int, like: Boolean): Boolean
 
 
     suspend fun kwFetchProfile(): Pair<String?, String?>?
@@ -128,7 +128,7 @@ internal object LxUnavailableAccountExtension : LxAccountExtension {
     override suspend fun kwSetPlaylistCollect(playlistId: String, collect: Boolean): Boolean = false
     override suspend fun kwApplyArtistFollow(artistId: String, follow: Boolean): Boolean = false
     override suspend fun kwApplyAlbumLike(albumId: String, like: Boolean): Boolean = false
-    override suspend fun txApplySongLike(songId: String, like: Boolean): Boolean = false
+    override suspend fun txApplySongLike(songId: String, songType: Int, like: Boolean): Boolean = false
     override suspend fun kwFetchProfile(): Pair<String?, String?>? = null
     override suspend fun kwFetchUserPlaylists(): List<LxPlaylist>? = null
     override suspend fun kwFetchFollowedArtists(): List<LxArtist>? = null
@@ -214,8 +214,9 @@ internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExt
     override suspend fun kwApplyAlbumLike(albumId: String, like: Boolean): Boolean =
         unavailable.kwApplyAlbumLike(albumId, like)
 
-    // 红心写接口经上游实测被业务码 80105 拒绝，保持只读
-    override suspend fun txApplySongLike(songId: String, like: Boolean): Boolean = false
+    // 红心开关走 web 端 PlaylistDetailWrite(dirId=201)，不再依赖被 80105 拒绝的脚本写接口
+    override suspend fun txApplySongLike(songId: String, songType: Int, like: Boolean): Boolean =
+        songId.toLongOrNull()?.let { tencentApi.applySongLike(it, songType, like) } ?: false
 
     override suspend fun kwFetchProfile(): Pair<String?, String?>? = unavailable.kwFetchProfile()
     override suspend fun kwFetchUserPlaylists(): List<LxPlaylist>? = unavailable.kwFetchUserPlaylists()

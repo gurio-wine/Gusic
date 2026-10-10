@@ -606,6 +606,7 @@ class MusicService : MediaSessionService() {
                         MusicNotificationProvider.CUSTOM_COMMAND_SHUFFLE_OFF,
                         MusicNotificationProvider.CUSTOM_COMMAND_SET_SHUFFLE_STATE,
                         MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_REPEAT_MODE,
+                        MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_PLAY_MODE,
                         MusicNotificationProvider.CUSTOM_COMMAND_COUNTED_PLAY,
                         MusicNotificationProvider.CUSTOM_COMMAND_CANCEL_COUNTED_PLAY,
                         MusicNotificationProvider.CUSTOM_COMMAND_SET_SLEEP_TIMER_DURATION,
@@ -700,6 +701,23 @@ class MusicService : MediaSessionService() {
                             else -> Player.REPEAT_MODE_OFF
                         }
                         session.player.repeatMode = newMode
+                        refreshMediaSessionUi(session)
+                        requestWidgetFullUpdate(force = true)
+                    }
+                    MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_PLAY_MODE -> {
+                        // 与播放页一致的三档循环：列表循环 → 单曲循环 → 随机循环
+                        val player = session.player
+                        when {
+                            player.shuffleModeEnabled || isManualShuffleEnabled -> {
+                                updateManualShuffleState(session, enabled = false, broadcast = true)
+                                player.repeatMode = Player.REPEAT_MODE_ALL
+                            }
+                            player.repeatMode == Player.REPEAT_MODE_ONE -> {
+                                player.repeatMode = Player.REPEAT_MODE_ALL
+                                updateManualShuffleState(session, enabled = true, broadcast = true)
+                            }
+                            else -> player.repeatMode = Player.REPEAT_MODE_ONE
+                        }
                         refreshMediaSessionUi(session)
                         requestWidgetFullUpdate(force = true)
                     }
@@ -2593,7 +2611,14 @@ class MusicService : MediaSessionService() {
                             showNotificationLikeToast("登录 QQ 音乐后可同步喜欢")
                             return@launch
                         }
-                        lxMusicRepository.txSetSongLike(trackId, targetFavoriteState)
+                        val txSongId = song.lxMusicExtraFields["songId"]
+                        if (txSongId == null) {
+                            showNotificationLikeToast("缺少歌曲信息，无法收藏")
+                            false
+                        } else {
+                            val txType = song.lxMusicExtraFields["songType"]?.toIntOrNull() ?: 0
+                            lxMusicRepository.txSetSongLike(txSongId, txType, targetFavoriteState)
+                        }
                     }
                     "kg" -> {
                         if (!kugouCookieStore.hasAppLogin()) {
@@ -2753,6 +2778,20 @@ class MusicService : MediaSessionService() {
         val player = session.player
         val songId = player.currentMediaItem?.mediaId
         val isFavorite = isSongFavorite(songId)
+
+        // 三档播放模式：列表循环 → 单曲循环 → 随机循环
+        val shuffleOn = player.shuffleModeEnabled || isManualShuffleEnabled
+        val playModeIcon = when {
+            shuffleOn -> CommandButton.ICON_SHUFFLE_ON
+            player.repeatMode == Player.REPEAT_MODE_ONE -> CommandButton.ICON_REPEAT_ONE
+            else -> CommandButton.ICON_REPEAT_ALL
+        }
+        val playModeButton = CommandButton.Builder(playModeIcon)
+            .setDisplayName(getString(R.string.presentation_batch_e_cd_toggle_repeat))
+            .setSessionCommand(SessionCommand(MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_PLAY_MODE, Bundle.EMPTY))
+            .setSlots(CommandButton.SLOT_OVERFLOW)
+            .build()
+
         val likeButton = CommandButton.Builder(
             if (isFavorite) CommandButton.ICON_HEART_FILLED else CommandButton.ICON_HEART_UNFILLED
         )
@@ -2761,40 +2800,7 @@ class MusicService : MediaSessionService() {
             .setSlots(CommandButton.SLOT_OVERFLOW)
             .build()
 
-        val shuffleOn = isManualShuffleEnabled
-        val shuffleCommandAction = if (shuffleOn) {
-            MusicNotificationProvider.CUSTOM_COMMAND_SHUFFLE_OFF
-        } else {
-            MusicNotificationProvider.CUSTOM_COMMAND_SHUFFLE_ON
-        }
-        val shuffleButton = CommandButton.Builder(
-            if (shuffleOn) CommandButton.ICON_SHUFFLE_ON else CommandButton.ICON_SHUFFLE_OFF
-        )
-            .setDisplayName("Shuffle")
-            .setSessionCommand(SessionCommand(shuffleCommandAction, Bundle.EMPTY))
-            .setSlots(CommandButton.SLOT_OVERFLOW)
-            .build()
-
-        val repeatButton = CommandButton.Builder(
-            when (player.repeatMode) {
-                Player.REPEAT_MODE_ONE -> CommandButton.ICON_REPEAT_ONE
-                Player.REPEAT_MODE_ALL -> CommandButton.ICON_REPEAT_ALL
-                else -> CommandButton.ICON_REPEAT_OFF
-            }
-        )
-            .setDisplayName("Repeat")
-            .setSessionCommand(SessionCommand(MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_REPEAT_MODE, Bundle.EMPTY))
-            .setSlots(CommandButton.SLOT_OVERFLOW)
-            .build()
-
-        val closeButton = CommandButton.Builder(CommandButton.ICON_UNDEFINED)
-            .setCustomIconResId(R.drawable.rounded_close_24)
-            .setDisplayName(getString(R.string.close_notification_player))
-            .setSessionCommand(SessionCommand(MusicNotificationProvider.CUSTOM_COMMAND_CLOSE_PLAYER, Bundle.EMPTY))
-            .setSlots(CommandButton.SLOT_OVERFLOW)
-            .build()
-
-        return listOf(likeButton, closeButton, shuffleButton, repeatButton)
+        return listOf(playModeButton, likeButton)
     }
 
     /**

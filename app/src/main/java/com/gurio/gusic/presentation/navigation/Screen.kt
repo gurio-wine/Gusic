@@ -80,9 +80,4 @@ sealed class Screen(val route: String) {
     object JellyfinDashboard : Screen("jellyfin_dashboard")
     object CloudDownloads : Screen("cloud_downloads")
 
-    object AudioBookmarks : Screen("audio_bookmarks")
-    object AudioBookmarkFolder : Screen("audio_bookmarks/{songId}") {
-        fun createRoute(songId: String) = "audio_bookmarks/${Uri.encode(songId)}"
-    }
-
 }

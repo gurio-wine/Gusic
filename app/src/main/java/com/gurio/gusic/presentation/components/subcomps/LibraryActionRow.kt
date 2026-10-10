@@ -84,9 +84,7 @@ val genHeight = 42.dp
 fun LibraryActionRow(
     onMainActionClick: () -> Unit,
     iconRotation: Float,
-    onSortClick: () -> Unit,
     onLocateClick: () -> Unit = {},
-    showSortButton: Boolean,
     showLocateButton: Boolean = false,
     showImportButton: Boolean = true,
     isPlaylistTab: Boolean,
@@ -98,10 +96,6 @@ fun LibraryActionRow(
     folderRootLabel: String,
     onFolderClick: (String) -> Unit,
     onNavigateBack: () -> Unit,
-    isShuffleEnabled: Boolean = false,
-    showStorageFilterButton: Boolean = false,
-    currentStorageFilter: com.gurio.gusic.data.model.StorageFilter = com.gurio.gusic.data.model.StorageFilter.ALL,
-    onStorageFilterClick: () -> Unit = {}
 ) {
     val shouldShowImport = isPlaylistTab && showImportButton
 
@@ -134,17 +128,14 @@ fun LibraryActionRow(
                     onFolderClick = onFolderClick,
                     onNavigateBack = onNavigateBack
                 )
-            } else {
-                val outerCorner = 26.dp
-                val innerCorner = 8.dp
-
+            } else if (isPlaylistTab) {
                 val newButtonEndCorner by animateDpAsState(
-                    targetValue = if (shouldShowImport) innerCorner else outerCorner,
+                    targetValue = if (shouldShowImport) 8.dp else 26.dp,
                     label = "NewButtonEndCorner"
                 )
 
                 val importButtonStartCorner by animateDpAsState(
-                    targetValue = innerCorner,
+                    targetValue = 8.dp,
                     label = "ImportButtonStartCorner"
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -165,17 +156,9 @@ fun LibraryActionRow(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
                         modifier = Modifier.height(genHeight)
                     ) {
-                        val icon = if (isPlaylistTab) Icons.AutoMirrored.Rounded.PlaylistAdd else Icons.Rounded.Shuffle
-                        val text = if (isPlaylistTab) {
-                            stringResource(R.string.library_action_new)
-                        } else {
-                            stringResource(R.string.shortcut_shuffle_short)
-                        }
-                        val contentDesc = if (isPlaylistTab) {
-                            stringResource(R.string.cd_create_new_playlist)
-                        } else {
-                            stringResource(R.string.cd_shuffle_play)
-                        }
+                        val icon = Icons.AutoMirrored.Rounded.PlaylistAdd
+                        val text = stringResource(R.string.library_action_new)
+                        val contentDesc = stringResource(R.string.cd_create_new_playlist)
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -266,118 +249,20 @@ fun LibraryActionRow(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        if (showSortButton) {
-            val outerCorner = 26.dp
-            
-            val sortStartCorner by animateDpAsState(
-                targetValue = if (showLocateButton || showStorageFilterButton) 8.dp else outerCorner,
-                label = "SortStartCorner"
-            )
-
-            val filterEndCorner = 8.dp
-            val filterStartCorner by animateDpAsState(
-                targetValue = if (showLocateButton) 8.dp else outerCorner,
-                label = "FilterStartCorner"
-            )
-            
-            val locateEndCorner = 8.dp
-
-            val gapBetweenLocateAndNext by animateDpAsState(
-                targetValue = if (showLocateButton) 4.dp else 0.dp,
-                label = "GapLocate"
-            )
-            val gapBetweenFilterAndSort by animateDpAsState(
-                targetValue = if (showStorageFilterButton) 4.dp else 0.dp,
-                label = "GapFilter"
-            )
-
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AnimatedVisibility(
-                    visible = showLocateButton,
-                    enter = slideInHorizontally(initialOffsetX = { it / 2 }) + fadeIn(),
-                    exit = slideOutHorizontally(targetOffsetX = { it / 2 }) + fadeOut()
-                ) {
-                    FilledTonalIconButton(
-                        onClick = onLocateClick,
-                        shape = RoundedCornerShape(
-                            topStart = outerCorner,
-                            bottomStart = outerCorner,
-                            topEnd = locateEndCorner,
-                            bottomEnd = locateEndCorner
-                        ),
-                        modifier = Modifier.size(genHeight)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.MyLocation,
-                            contentDescription = stringResource(R.string.cd_locate_current_song)
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.width(gapBetweenLocateAndNext))
-
-                AnimatedVisibility(
-                    visible = showStorageFilterButton,
-                    enter = slideInHorizontally(initialOffsetX = { it / 2 }) + fadeIn(),
-                    exit = slideOutHorizontally(targetOffsetX = { it / 2 }) + fadeOut()
-                ) {
-                     val finalIcon = when(currentStorageFilter) {
-                         com.gurio.gusic.data.model.StorageFilter.ALL -> Icons.Rounded.Dataset
-                         com.gurio.gusic.data.model.StorageFilter.ONLINE -> Icons.Rounded.Cloud
-                         com.gurio.gusic.data.model.StorageFilter.OFFLINE -> Icons.Rounded.PhoneAndroid
-                     }
-                     val tooltipText = when(currentStorageFilter) {
-                         com.gurio.gusic.data.model.StorageFilter.ALL -> stringResource(R.string.library_storage_filter_all_songs)
-                         com.gurio.gusic.data.model.StorageFilter.ONLINE -> stringResource(R.string.library_storage_filter_online)
-                         com.gurio.gusic.data.model.StorageFilter.OFFLINE -> stringResource(R.string.library_storage_filter_offline)
-                     }
-                     val tooltipState = rememberTooltipState()
-
-                    TooltipBox(
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                        tooltip = {
-                            PlainTooltip {
-                                Text(tooltipText)
-                            }
-                        },
-                        state = tooltipState
-                    ) {
-                        FilledTonalIconButton(
-                            onClick = onStorageFilterClick,
-                            shape = RoundedCornerShape(
-                                topStart = filterStartCorner,
-                                bottomStart = filterStartCorner,
-                                topEnd = filterEndCorner,
-                                bottomEnd = filterEndCorner
-                            ),
-                            modifier = Modifier.size(genHeight)
-                        ) {
-                             Icon(
-                                imageVector = finalIcon,
-                                contentDescription = tooltipText
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(gapBetweenFilterAndSort))
-
-                FilledTonalIconButton(
-                    onClick = onSortClick,
-                    shape = RoundedCornerShape(
-                        topStart = sortStartCorner,
-                        bottomStart = sortStartCorner,
-                        topEnd = outerCorner,
-                        bottomEnd = outerCorner
-                    ),
-                    modifier = Modifier.size(genHeight)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.Sort,
-                        contentDescription = stringResource(R.string.cd_sort_options),
-                    )
-                }
+        AnimatedVisibility(
+            visible = showLocateButton,
+            enter = slideInHorizontally(initialOffsetX = { it / 2 }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { it / 2 }) + fadeOut()
+        ) {
+            FilledTonalIconButton(
+                onClick = onLocateClick,
+                shape = RoundedCornerShape(26.dp),
+                modifier = Modifier.size(genHeight)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.MyLocation,
+                    contentDescription = stringResource(R.string.cd_locate_current_song)
+                )
             }
         }
     }

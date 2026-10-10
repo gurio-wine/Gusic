@@ -113,10 +113,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.gurio.gusic.presentation.viewmodel.AudioBookmarksViewModel
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.res.stringResource
 import androidx.media3.common.Player
@@ -254,8 +252,6 @@ fun FullPlayerContent(
     var lyricsButtonBounds by remember { mutableStateOf<Rect?>(null) }
     val lyricsButtonBounce = remember { Animatable(1f) }
     var showArtistPicker by rememberSaveable { mutableStateOf(false) }
-    var showSaveBookmarkDialog by rememberSaveable { mutableStateOf(false) }
-    val bookmarksViewModel: AudioBookmarksViewModel = hiltViewModel()
     val lxMusicViewModel: LxMusicViewModel = hiltViewModel(
         viewModelStoreOwner = LocalContext.current as androidx.activity.ComponentActivity
     )
@@ -390,30 +386,6 @@ fun FullPlayerContent(
                 onImport = {
                     filePickerLauncher.launch(com.gurio.gusic.utils.LyricsImportSecurity.pickerMimeTypes())
                 }
-            )
-        }
-    }
-
-    if (showSaveBookmarkDialog) {
-        val bookmarkProgressMs = remember(showSaveBookmarkDialog) { currentPositionProvider() }
-        val lyricBookmarkTitle = resolveLyricBookmarkTitle(
-            lyrics = lyricsProvider(),
-            timestampMs = bookmarkProgressMs,
-            lyricsSyncOffsetMs = lyricsSyncOffset
-        )
-        MaterialTheme(
-            colorScheme = LocalMaterialTheme.current,
-            typography = MaterialTheme.typography,
-            shapes = MaterialTheme.shapes
-        ) {
-            AddBookmarkDialog(
-                currentProgressMs = bookmarkProgressMs,
-                lyricTitle = lyricBookmarkTitle,
-                onSave = { title ->
-                    bookmarksViewModel.addBookmark(song, title, bookmarkProgressMs)
-                    showSaveBookmarkDialog = false
-                },
-                onDismiss = { showSaveBookmarkDialog = false }
             )
         }
     }
@@ -873,20 +845,6 @@ fun FullPlayerContent(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(playerOnAccentColor.copy(alpha = 0.7f))
-                                    .clickable { showSaveBookmarkDialog = true },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Bookmark,
-                                    contentDescription = stringResource(R.string.audio_bookmarks_cd_add),
-                                    tint = playerAccentColor
-                                )
-                            }
                             Box(
                                 modifier = Modifier
                                     .size(42.dp)
@@ -1460,7 +1418,15 @@ private fun FullPlayerPortraitContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceAround
     ) {
-        albumCoverSection(Modifier.weight(1f, fill = false).aspectRatio(1f))
+        // 封面占据全部剩余高度，1:1 正方形贴底；多余空间留在封面之上，下方组件整体下沉
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            albumCoverSection(Modifier.aspectRatio(1f))
+        }
 
         lyricsSection()
 

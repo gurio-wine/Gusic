@@ -288,6 +288,11 @@ fun LyricsSheet(
     }
     val lyricsAlignment by lyricsAlignmentFlow.collectAsStateWithLifecycle(initialValue = "left")
 
+    val lyricsFontScaleFlow = remember(context) {
+        context.dataStore.data.map { it[floatPreferencesKey("lyrics_font_scale")] ?: 1f }
+    }
+    val lyricsFontScale by lyricsFontScaleFlow.collectAsStateWithLifecycle(initialValue = 1f)
+
     val showLyricsTranslationFlow = remember(context) {
         context.dataStore.data.map { it[booleanPreferencesKey("show_lyrics_translation")] ?: true }
     }
@@ -450,8 +455,8 @@ fun LyricsSheet(
     )
     
     val scaledTextStyle = lyricsTextStyle.copy(
-        fontSize = lyricsTextStyle.fontSize * fontScale,
-        lineHeight = lyricsTextStyle.lineHeight * fontScale
+        fontSize = lyricsTextStyle.fontSize * fontScale * lyricsFontScale,
+        lineHeight = lyricsTextStyle.lineHeight * fontScale * lyricsFontScale
     )
 
     fun resetImmersiveTimer() {
@@ -977,6 +982,14 @@ fun LyricsSheet(
                         coroutineScope.launch {
                             context.dataStore.edit { preferences ->
                                 preferences[stringPreferencesKey("lyrics_alignment")] = newAlignment
+                            }
+                        }
+                    },
+                    lyricsFontScale = lyricsFontScale,
+                    onLyricsFontScaleChange = { newScale ->
+                        coroutineScope.launch {
+                            context.dataStore.edit { preferences ->
+                                preferences[floatPreferencesKey("lyrics_font_scale")] = newScale
                             }
                         }
                     },

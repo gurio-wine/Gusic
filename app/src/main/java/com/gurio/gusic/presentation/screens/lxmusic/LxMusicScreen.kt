@@ -2570,6 +2570,8 @@ private fun LxBoardPage(
                                     MaterialTheme.colorScheme.onPrimary
                                 else MaterialTheme.colorScheme.onSecondaryContainer,
                                 fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false,
                             )
                         }
                     }

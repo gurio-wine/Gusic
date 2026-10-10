@@ -129,6 +129,9 @@ internal class TencentAccountApi(
             if (strMediaMid.isNotBlank()) extra["strMediaMid"] = strMediaMid
             if (albumMid.isNotBlank()) extra["albumMid"] = albumMid
             if (numericId.isNotBlank()) extra["songId"] = numericId
+            (track.str("type") ?: outer.str("type"))?.let { type ->
+                if (type.isNotBlank()) extra["songType"] = type
+            }
             val artistIds = singers.map { it.second }.filter(String::isNotBlank).joinToString(",")
             if (artistIds.isNotEmpty()) extra["artistIds"] = artistIds
             return LxSong(
@@ -211,6 +214,28 @@ internal class TencentAccountApi(
     }
 
     suspend fun fetchLikedSongs(): List<LxSong>? = fetchDissSongs(liked = true, disstid = null)
+
+    /**
+     * 红心开关：web 端实际调用 music.musicasset.PlaylistDetailWrite 的
+     * AddSonglist/DelSonglist，dirId=201 即“我喜欢”，v_songInfo 用数字 songId。
+     */
+    suspend fun applySongLike(songId: Long, songType: Int, like: Boolean): Boolean =
+        withContext(Dispatchers.IO) {
+            val (cookie, _) = loginCookie() ?: return@withContext false
+            val param = JsonObject().apply {
+                addProperty("dirId", 201L)
+                add("v_songInfo", JsonArray().apply {
+                    add(JsonObject().apply {
+                        addProperty("songType", songType)
+                        addProperty("songId", songId)
+                    })
+                })
+            }
+            val method = if (like) "AddSonglist" else "DelSonglist"
+            val block = musicuCall(cookie, "req_1", "music.musicasset.PlaylistDetailWrite", method, param)
+                ?: return@withContext false
+            block.get("code")?.takeIf { it.isJsonPrimitive }?.asInt == 0
+        }
 
     suspend fun fetchPlaylistSongs(disstid: String): List<LxSong>? {
         if (disstid.isBlank() || disstid.any { !it.isDigit() }) return null

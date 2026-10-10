@@ -24,11 +24,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         JellyfinSongEntity::class,
         JellyfinPlaylistEntity::class,
         ListenBrainzPendingListenEntity::class,
-        AudioBookmarkEntity::class,
         OfflineTrackEntity::class,
         LibraryItemIdentityEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = true
 )
 abstract class GusicDatabase : RoomDatabase() {
@@ -43,7 +42,6 @@ abstract class GusicDatabase : RoomDatabase() {
     abstract fun navidromeDao(): NavidromeDao
     abstract fun jellyfinDao(): JellyfinDao
     abstract fun listenBrainzDao(): ListenBrainzDao
-    abstract fun audioBookmarkDao(): AudioBookmarkDao
     abstract fun offlineTrackDao(): OfflineTrackDao
     abstract fun libraryItemIdentityDao(): LibraryItemIdentityDao
 

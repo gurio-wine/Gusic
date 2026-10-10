@@ -18,6 +18,9 @@
 
     <string name="lyrics_more_appearance">Appearance</string>
     <string name="lyrics_more_alignment">Alignment</string>
+    <string name="lyrics_more_font_size">Font size</string>
+    <string name="lyrics_more_font_size_decrease">Decrease font size</string>
+    <string name="lyrics_more_font_size_increase">Increase font size</string>
     <string name="lyrics_more_controls">Controls</string>
     <string name="lyrics_more_dialog_reset_title">Reset lyrics?</string>
     <string name="lyrics_more_dialog_reset_message">Are you sure you want to reset the lyrics for this song?</string>

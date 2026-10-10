@@ -15,12 +15,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.FormatAlignLeft
 import androidx.compose.material.icons.automirrored.rounded.FormatAlignRight
 import androidx.compose.material.icons.rounded.Abc
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.FormatAlignCenter
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Translate
@@ -28,6 +32,7 @@ import androidx.compose.material.icons.rounded.BrightnessHigh
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -71,6 +76,8 @@ fun LyricsMoreBottomSheet(
     onKeepScreenOnChange: (Boolean) -> Unit,
     lyricsAlignment: String,
     onLyricsAlignmentChange: (String) -> Unit,
+    lyricsFontScale: Float,
+    onLyricsFontScaleChange: (Float) -> Unit,
     hasTranslatedLyrics: Boolean,
     hasRomanizedLyrics: Boolean,
     showTranslation: Boolean,
@@ -276,6 +283,52 @@ fun LyricsMoreBottomSheet(
                             imageVector = Icons.AutoMirrored.Rounded.FormatAlignRight,
                             contentDesc = stringResource(R.string.cd_lyrics_align_right)
                         )
+                    }
+
+                    Text(
+                        text = stringResource(R.string.lyrics_more_font_size),
+                        color = contentColor,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        FilledTonalIconButton(
+                            onClick = {
+                                val next = ((lyricsFontScale - 0.1f) * 10).toInt() / 10f
+                                if (next >= 0.7f) onLyricsFontScaleChange(next)
+                            },
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Remove,
+                                contentDescription = stringResource(R.string.lyrics_more_font_size_decrease)
+                            )
+                        }
+                        Text(
+                            text = "${(lyricsFontScale * 100).toInt()}%",
+                            color = contentColor,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilledTonalIconButton(
+                            onClick = {
+                                val next = ((lyricsFontScale + 0.1f) * 10).toInt() / 10f
+                                if (next <= 1.8f) onLyricsFontScaleChange(next)
+                            },
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Add,
+                                contentDescription = stringResource(R.string.lyrics_more_font_size_increase)
+                            )
+                        }
                     }
                 }
             }

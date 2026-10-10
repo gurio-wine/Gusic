@@ -19,7 +19,6 @@ import com.gurio.gusic.data.database.FavoritesDao
 import com.gurio.gusic.data.database.LyricsDao
 import com.gurio.gusic.data.database.LocalPlaylistDao
 import com.gurio.gusic.data.database.ListenBrainzDao
-import com.gurio.gusic.data.database.AudioBookmarkDao
 import com.gurio.gusic.data.database.MIGRATION_1_2
 import com.gurio.gusic.data.database.MIGRATION_2_3
 import com.gurio.gusic.data.database.MIGRATION_3_4
@@ -30,6 +29,7 @@ import com.gurio.gusic.data.database.MIGRATION_7_8
 import com.gurio.gusic.data.database.MIGRATION_8_9
 import com.gurio.gusic.data.database.MIGRATION_9_10
 import com.gurio.gusic.data.database.MIGRATION_10_11
+import com.gurio.gusic.data.database.MIGRATION_11_12
 import com.gurio.gusic.data.database.MusicDao
 import com.gurio.gusic.data.database.OfflineTrackDao
 import com.gurio.gusic.data.database.GusicDatabase
@@ -50,8 +50,6 @@ import com.gurio.gusic.data.media.SongMetadataEditor
 import com.gurio.gusic.data.network.deezer.DeezerApiService
 import com.gurio.gusic.data.network.lyrics.LrcLibApiService
 import com.gurio.gusic.data.repository.ArtistImageRepository
-import com.gurio.gusic.data.repository.AudioBookmarkRepository
-import com.gurio.gusic.data.repository.AudioBookmarkRepositoryImpl
 import com.gurio.gusic.data.lxmusic.LxMusicRepository
 import com.gurio.gusic.data.repository.LyricsRepository
 import com.gurio.gusic.data.repository.LyricsRepositoryImpl
@@ -153,6 +151,7 @@ object AppModule {
                 MIGRATION_8_9,
                 MIGRATION_9_10,
                 MIGRATION_10_11,
+                MIGRATION_11_12,
             )
             .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
 
@@ -227,12 +226,6 @@ object AppModule {
     @Provides
     fun provideListenBrainzDao(database: GusicDatabase): ListenBrainzDao {
         return database.listenBrainzDao()
-    }
-
-    @Singleton
-    @Provides
-    fun provideAudioBookmarkDao(database: GusicDatabase): AudioBookmarkDao {
-        return database.audioBookmarkDao()
     }
 
     @Singleton
@@ -346,14 +339,6 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAudioBookmarkRepository(
-        audioBookmarkRepositoryImpl: AudioBookmarkRepositoryImpl
-    ): AudioBookmarkRepository {
-        return audioBookmarkRepositoryImpl
-    }
-
-    @Singleton
-    @Provides
     fun provideSongMetadataEditor(
         @ApplicationContext context: Context,
         musicDao: MusicDao,

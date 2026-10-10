@@ -401,7 +401,7 @@ constructor(
 
     val persistentShuffleEnabledFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
-                preferences[PreferencesKeys.PERSISTENT_SHUFFLE_ENABLED] ?: false
+                preferences[PreferencesKeys.PERSISTENT_SHUFFLE_ENABLED] ?: true
             }
 
     suspend fun setPersistentShuffleEnabled(enabled: Boolean) {
@@ -982,7 +982,7 @@ constructor(
 
     val showQueueHistoryFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
-                preferences[PreferencesKeys.SHOW_QUEUE_HISTORY] ?: false
+                preferences[PreferencesKeys.SHOW_QUEUE_HISTORY] ?: true
             }
 
     suspend fun setShowQueueHistory(show: Boolean) {

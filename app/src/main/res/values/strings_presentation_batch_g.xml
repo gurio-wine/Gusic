@@ -474,4 +474,18 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>Album cover is now a taller 1:1 square and lower controls moved down</item>
         <item>Mini player now shows the artist beside the song title</item>
     </string-array>
+    <!-- Gusic 26.10.11.003：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101103_whats_new">
+        <item>QQ Music songs can now be favorited and synced to your QQ liked list</item>
+        <item>Playback notification: close button removed, cycle-mode button added in front</item>
+        <item>Lyrics more sheet: font size control added</item>
+        <item>Player cover is now a true 1:1 square filling the freed space, lower controls shifted down</item>
+    </string-array>
+    <!-- Gusic 26.10.11.003：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101103_changes">
+        <item>Chart name chips no longer get clipped and adapt to text width</item>
+        <item>Removed shuffle, filter and sort buttons from the Mine page</item>
+        <item>Completely removed the bookmarks feature</item>
+        <item>Remember shuffle state and show queue history are now on by default</item>
+    </string-array>
 </resources>

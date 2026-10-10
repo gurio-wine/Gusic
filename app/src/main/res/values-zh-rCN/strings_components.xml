@@ -18,6 +18,9 @@
 
     <string name="lyrics_more_appearance">外观</string>
     <string name="lyrics_more_alignment">对齐方式</string>
+    <string name="lyrics_more_font_size">字体大小</string>
+    <string name="lyrics_more_font_size_decrease">减小字体</string>
+    <string name="lyrics_more_font_size_increase">增大字体</string>
     <string name="lyrics_more_controls">控制选项</string>
     <string name="lyrics_more_dialog_reset_title">重置歌词？</string>
     <string name="lyrics_more_dialog_reset_message">确定要重置这首歌的歌词吗？</string>

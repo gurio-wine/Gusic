@@ -34,8 +34,6 @@ import androidx.navigation.navArgument
 import com.gurio.gusic.data.preferences.LaunchTab
 import com.gurio.gusic.data.preferences.UserPreferencesRepository
 import com.gurio.gusic.presentation.screens.AlbumDetailScreen
-import com.gurio.gusic.presentation.screens.AudioBookmarkFolderScreen
-import com.gurio.gusic.presentation.screens.AudioBookmarksScreen
 import com.gurio.gusic.presentation.screens.CloudDownloadsScreen
 import com.gurio.gusic.presentation.screens.AccountsScreen
 import com.gurio.gusic.presentation.screens.ArtistDetailScreen
@@ -640,33 +638,6 @@ fun AppNavigation(
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     CloudDownloadsScreen(onBack = { navController.popBackStack() })
                 }
-            }
-            composable(
-                Screen.AudioBookmarks.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
-            ) {
-                AudioBookmarksScreen(
-                    navController = navController,
-                    playerViewModel = playerViewModel,
-                    onOpenSidebar = onOpenSidebar
-                )
-            }
-            composable(
-                Screen.AudioBookmarkFolder.route,
-                arguments = listOf(navArgument("songId") { type = NavType.StringType }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
-            ) { backStackEntry ->
-                AudioBookmarkFolderScreen(
-                    songId = backStackEntry.arguments?.getString("songId").orEmpty(),
-                    navController = navController,
-                    playerViewModel = playerViewModel
-                )
             }
         }
     }
