@@ -1,3 +1,4 @@
+import com.android.build.api.variant.FilterConfiguration
 import java.util.Properties
 
 plugins {
@@ -182,6 +183,26 @@ android {
         abi.enableSplit = true
         density.enableSplit = true
         language.enableSplit = true
+    }
+}
+
+// APK 输出命名规则：gusic-<abi>-[v<版本>].apk，如 gusic-v8a-[v26.10.08.001].apk。
+// arm64-v8a→v8a、armeabi-v7a→v7a；不分 ABI 的构建省略 abi 段（gusic-[v…].apk）。
+androidComponents {
+    onVariants { variant ->
+        val appVersionName = (project.findProperty("APP_VERSION_NAME") as? String) ?: "0.1.0"
+        variant.outputs.forEach { output ->
+            val abi = output.filters
+                .firstOrNull { it.filterType == FilterConfiguration.FilterType.ABI }
+                ?.identifier
+            val abiSegment = when (abi) {
+                "arm64-v8a" -> "-v8a"
+                "armeabi-v7a" -> "-v7a"
+                null -> ""
+                else -> "-$abi"
+            }
+            output.outputFileName.set("gusic${abiSegment}-[v$appVersionName].apk")
+        }
     }
 }
 

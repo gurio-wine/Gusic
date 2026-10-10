@@ -26,6 +26,10 @@ For every public release:
 3. Move the relevant `CHANGELOG.md` entries from `Unreleased` to the release version.
 4. Tag the release as `v<APP_VERSION_NAME>`, for example `v26.10.08.001`.
 
+## APK Naming
+
+Gradle output APKs are named `gusic-<abi>-[v<APP_VERSION_NAME>].apk` — for example `gusic-v8a-[v26.10.08.001].apk` (`v8a` = `arm64-v8a`, `v7a` = `armeabi-v7a`). A build without ABI splits omits the ABI segment: `gusic-[v26.10.08.001].apk`. The rule is implemented in `app/build.gradle.kts` (`androidComponents` output naming), so every variant, including CI alpha and PR builds, follows it; CI workflows upload and publish APKs under these names unchanged.
+
 ## Required Local Checks
 
 Run these before tagging:
