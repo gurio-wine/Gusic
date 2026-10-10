@@ -510,6 +510,7 @@
     <string name="lx_qr_status_scanned">Scanned, please confirm on your phone</string>
     <string name="lx_qr_status_expired">QR code expired</string>
     <string name="lx_qr_refresh">Refresh QR code</string>
+    <string name="lx_qr_switch_web">Use web page login</string>
     <string name="lx_msg_login_failed">Login failed, please try again</string>
 
     <!-- Batch Download -->

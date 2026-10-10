@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 class LxScriptPolicyTest {
     @Test
     fun `default source membership is explicit and does not include every bundled source`() {
-        val defaultPath = LxScriptPolicy.HELLO_WORLD_SOURCE_PATH
+        val defaultPath = LxScriptPolicy.GUSIC_BUILTIN_SOURCE_PATH
         val otherBundledPath = "lxmusic/sources/community.js"
 
         assertThat(LxScriptPolicy.isDefaultSource(defaultPath, isImported = false)).isTrue()
@@ -19,7 +19,7 @@ class LxScriptPolicyTest {
         val unrelated = "/data/user/0/app/files/lxmusic_imported/disabled.js"
 
         assertThat(LxScriptPolicy.normalizeDisabledPaths(setOf(
-            LxScriptPolicy.HELLO_WORLD_SOURCE_PATH,
+            LxScriptPolicy.GUSIC_BUILTIN_SOURCE_PATH,
             unrelated,
         ))).containsExactly(unrelated)
     }
@@ -28,7 +28,7 @@ class LxScriptPolicyTest {
     fun `enabling imported script clears only its own disabled state`() {
         val importedPath = "/data/user/0/app/files/lxmusic_imported/new.js"
         val otherDisabledPath = "/data/user/0/app/files/lxmusic_imported/other.js"
-        val defaultPath = LxScriptPolicy.HELLO_WORLD_SOURCE_PATH
+        val defaultPath = LxScriptPolicy.GUSIC_BUILTIN_SOURCE_PATH
 
         assertThat(LxScriptPolicy.enableImportedPath(
             setOf(importedPath, otherDisabledPath, defaultPath),
@@ -39,7 +39,7 @@ class LxScriptPolicyTest {
     @Test
     fun `default scripts cannot be disabled or deleted while imported scripts can`() {
         val defaultScript = LxScriptMeta(
-            assetPath = LxScriptPolicy.HELLO_WORLD_SOURCE_PATH,
+            assetPath = LxScriptPolicy.GUSIC_BUILTIN_SOURCE_PATH,
             name = "Gusic内置-1",
             isDefault = true,
         )
@@ -51,8 +51,10 @@ class LxScriptPolicyTest {
 
         assertThat(LxScriptPolicy.canDisable(defaultScript)).isFalse()
         assertThat(LxScriptPolicy.canDelete(defaultScript)).isFalse()
+        assertThat(LxScriptPolicy.isUserVisible(defaultScript)).isFalse()
         assertThat(LxScriptPolicy.canDisable(importedScript)).isTrue()
         assertThat(LxScriptPolicy.canDelete(importedScript)).isTrue()
+        assertThat(LxScriptPolicy.isUserVisible(importedScript)).isTrue()
     }
 
     @Test

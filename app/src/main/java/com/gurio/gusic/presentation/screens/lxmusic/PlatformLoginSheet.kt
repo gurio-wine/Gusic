@@ -257,6 +257,7 @@ fun TencentQrLoginDialog(
     onCreateQr: (LxTxQrType, (ByteArray?, String?) -> Unit) -> Unit,
     onPoll: (LxTxQrType, String, (LxTxQrPoll) -> Unit) -> Unit,
     onLogin: (String, (ok: Boolean, error: String?) -> Unit) -> Unit,
+    onSwitchToWebLogin: () -> Unit = {},
 ) {
     var qrType by remember { mutableStateOf(LxTxQrType.QQ) }
     var qrBytes by remember { mutableStateOf<ByteArray?>(null) }
@@ -425,6 +426,10 @@ fun TencentQrLoginDialog(
                     Button(onClick = { if (!creating) requestQr(qrType) }) {
                         Text(stringResource(R.string.lx_qr_refresh))
                     }
+                }
+                Spacer(Modifier.height(12.dp))
+                TextButton(onClick = { if (!creating && !loggingIn) onSwitchToWebLogin() }) {
+                    Text(stringResource(R.string.lx_qr_switch_web))
                 }
             }
         }
@@ -595,9 +600,26 @@ fun KuwoLoginDialog(
     onDismiss = onDismiss,
     onValidate = onValidate,
     userAgentOverride = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "(KHTML, like Gecko) Chrome/124.0.0 Safari/537.36",
     detectByMarkers = true,
     autoClickSelector = ".reg_text",
+)
+
+@Composable
+fun TencentWebLoginDialog(
+    onDismiss: () -> Unit,
+    onValidate: (cookie: String, callback: (ok: Boolean, error: String?) -> Unit) -> Unit,
+) = PlatformLoginDialog(
+    loginUrl = "https://y.qq.com/",
+    hostMatch = "qq.com",
+    loginMarkers = listOf("qm_keyst="),
+    loginPagePath = "",
+    titleRes = R.string.lx_title_qq_login,
+    onDismiss = onDismiss,
+    onValidate = onValidate,
+    userAgentOverride = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+        "(KHTML, like Gecko) Chrome/124.0.0 Safari/537.36",
+    detectByMarkers = true,
 )
 
 private const val POLL_INTERVAL_MS = 700L

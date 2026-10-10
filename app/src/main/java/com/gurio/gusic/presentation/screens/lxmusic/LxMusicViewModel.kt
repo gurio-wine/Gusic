@@ -62,7 +62,14 @@ class LxMusicViewModel @Inject constructor(
     private val cloudOfflineRepository: CloudOfflineRepository,
 ) : ViewModel() {
 
+    // Built-in fallback sources stay functional but hidden: the script list is user-managed only.
     val scripts: StateFlow<List<LxScriptMeta>> = repository.scripts
+        .map { list -> list.filter(LxScriptPolicy::isUserVisible) }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            repository.scripts.value.filter(LxScriptPolicy::isUserVisible),
+        )
     val loaded: StateFlow<Map<String, LxScriptCapabilities>> = repository.loaded
 
     val accountWritesEnabled: Boolean = repository.accountWritesEnabled

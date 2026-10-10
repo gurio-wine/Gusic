@@ -462,6 +462,7 @@
 <string name="lx_qr_status_scanned">已掃碼，請在手機上確認</string>
 <string name="lx_qr_status_expired">二維碼已過期</string>
 <string name="lx_qr_refresh">重新整理二維碼</string>
+<string name="lx_qr_switch_web">使用網頁登入</string>
 <string name="lx_msg_login_failed">登入失敗，請重試</string>
 
 <!-- Batch Download -->

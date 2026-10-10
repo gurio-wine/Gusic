@@ -2219,7 +2219,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/LxMusicScreen.kt"
-            line="333"
+            line="334"
             column="30"/>
     </issue>
 
@@ -2230,7 +2230,7 @@
         errorLine2="                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/LxMusicScreen.kt"
-            line="334"
+            line="335"
             column="18"/>
     </issue>
 
@@ -2241,7 +2241,7 @@
         errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/LxMusicScreen.kt"
-            line="349"
+            line="350"
             column="29"/>
     </issue>
 
@@ -2252,7 +2252,7 @@
         errorLine2="                                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/LxMusicScreen.kt"
-            line="357"
+            line="358"
             column="52"/>
     </issue>
 
@@ -2263,7 +2263,7 @@
         errorLine2="                                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/LxMusicScreen.kt"
-            line="376"
+            line="377"
             column="52"/>
     </issue>
 
@@ -2274,7 +2274,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/LxMusicScreen.kt"
-            line="826"
+            line="827"
             column="30"/>
     </issue>
 
@@ -2285,7 +2285,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/LxMusicScreen.kt"
-            line="837"
+            line="838"
             column="30"/>
     </issue>
 
@@ -2296,7 +2296,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/LxMusicScreen.kt"
-            line="909"
+            line="910"
             column="30"/>
     </issue>
 
@@ -2307,7 +2307,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/LxMusicScreen.kt"
-            line="917"
+            line="918"
             column="30"/>
     </issue>
 
@@ -2593,7 +2593,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/LxMusicScreen.kt"
-            line="440"
+            line="441"
             column="13"/>
     </issue>
 
@@ -2736,7 +2736,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/LxMusicScreen.kt"
-            line="2271"
+            line="2287"
             column="5"/>
     </issue>
 
@@ -6485,12 +6485,23 @@
 
     <issue
         id="MissingTranslation"
+        message="&quot;lx_qr_switch_web&quot; is not translated in &quot;ar&quot; (Arabic), &quot;de&quot; (German), &quot;ru&quot; (Russian), &quot;ko&quot; (Korean), &quot;nb&quot; (Norwegian Bokmål), &quot;in&quot; (Indonesian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;lx_qr_switch_web&quot;>Use web page login&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="513"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
         message="&quot;lx_msg_login_failed&quot; is not translated in &quot;ar&quot; (Arabic), &quot;de&quot; (German), &quot;ru&quot; (Russian), &quot;ko&quot; (Korean), &quot;nb&quot; (Norwegian Bokmål), &quot;in&quot; (Indonesian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish), &quot;tr&quot; (Turkish)"
         errorLine1="    &lt;string name=&quot;lx_msg_login_failed&quot;>Login failed, please try again&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="513"
+            line="514"
             column="13"/>
     </issue>
 
@@ -6501,7 +6512,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="516"
+            line="517"
             column="13"/>
     </issue>
 
@@ -6512,7 +6523,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="517"
+            line="518"
             column="13"/>
     </issue>
 
@@ -6523,7 +6534,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="518"
+            line="519"
             column="13"/>
     </issue>
 
@@ -6534,7 +6545,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="519"
+            line="520"
             column="13"/>
     </issue>
 
@@ -6545,7 +6556,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="520"
+            line="521"
             column="13"/>
     </issue>
 
@@ -6556,7 +6567,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="521"
+            line="522"
             column="13"/>
     </issue>
 
@@ -6567,7 +6578,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="524"
+            line="525"
             column="13"/>
     </issue>
 
@@ -6578,7 +6589,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="525"
+            line="526"
             column="13"/>
     </issue>
 
@@ -6589,7 +6600,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="526"
+            line="527"
             column="13"/>
     </issue>
 
@@ -6600,7 +6611,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="527"
+            line="528"
             column="13"/>
     </issue>
 
@@ -6611,7 +6622,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="530"
+            line="531"
             column="13"/>
     </issue>
 
@@ -6622,7 +6633,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="531"
+            line="532"
             column="13"/>
     </issue>
 
@@ -6633,7 +6644,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="532"
+            line="533"
             column="13"/>
     </issue>
 
@@ -6644,7 +6655,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="535"
+            line="536"
             column="13"/>
     </issue>
 
@@ -6655,7 +6666,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="536"
+            line="537"
             column="13"/>
     </issue>
 
@@ -7788,7 +7799,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="516"
+            line="517"
             column="5"/>
     </issue>
 
@@ -7799,7 +7810,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="518"
+            line="519"
             column="5"/>
     </issue>
 
@@ -9027,7 +9038,7 @@
         errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/LxMusicScreen.kt"
-            line="2238"
+            line="2254"
             column="32"/>
     </issue>
 
@@ -9038,7 +9049,7 @@
         errorLine2="                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/LxMusicScreen.kt"
-            line="2239"
+            line="2255"
             column="19"/>
     </issue>
 
@@ -9357,7 +9368,7 @@
         errorLine2="                                 ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/PlatformLoginSheet.kt"
-            line="267"
+            line="268"
             column="34"/>
     </issue>
 
@@ -9368,7 +9379,7 @@
         errorLine2="                                ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/gurio/gusic/presentation/screens/lxmusic/PlatformLoginSheet.kt"
-            line="447"
+            line="452"
             column="33"/>
     </issue>
 
@@ -10061,7 +10072,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="524"
+            line="525"
             column="13"/>
     </issue>
 
@@ -10072,7 +10083,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="525"
+            line="526"
             column="13"/>
     </issue>
 
@@ -10083,7 +10094,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="526"
+            line="527"
             column="13"/>
     </issue>
 
@@ -10094,7 +10105,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="527"
+            line="528"
             column="13"/>
     </issue>
 
@@ -10105,7 +10116,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="530"
+            line="531"
             column="13"/>
     </issue>
 
@@ -10116,7 +10127,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="531"
+            line="532"
             column="13"/>
     </issue>
 
@@ -10127,7 +10138,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="532"
+            line="533"
             column="13"/>
     </issue>
 
@@ -10138,7 +10149,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="536"
+            line="537"
             column="13"/>
     </issue>
 
@@ -10149,7 +10160,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="538"
+            line="539"
             column="13"/>
     </issue>
 

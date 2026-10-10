@@ -153,10 +153,11 @@ data class LxScriptMeta(
 )
 
 object LxScriptPolicy {
-    const val HELLO_WORLD_SOURCE_PATH = "lxmusic/sources/hello_world.js"
+    // Hidden owner-authorized fallback source; always active and never shown or user-manageable.
+    const val GUSIC_BUILTIN_SOURCE_PATH = "lxmusic/sources/gusic_builtin_1.js"
 
     // Add future bundled defaults here; non-default bundled scripts remain user-manageable.
-    val DEFAULT_SOURCE_ASSET_PATHS = listOf(HELLO_WORLD_SOURCE_PATH)
+    val DEFAULT_SOURCE_ASSET_PATHS = listOf(GUSIC_BUILTIN_SOURCE_PATH)
 
     fun isDefaultSource(assetPath: String, isImported: Boolean): Boolean =
         !isImported && assetPath in DEFAULT_SOURCE_ASSET_PATHS
@@ -170,6 +171,8 @@ object LxScriptPolicy {
     fun canDisable(meta: LxScriptMeta): Boolean = !meta.isDefault
 
     fun canDelete(meta: LxScriptMeta): Boolean = !meta.isDefault
+
+    fun isUserVisible(meta: LxScriptMeta): Boolean = !meta.isDefault
 }
 
 data class LxSourceInfo(

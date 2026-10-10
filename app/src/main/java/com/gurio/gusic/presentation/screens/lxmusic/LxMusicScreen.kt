@@ -250,6 +250,7 @@ fun LxMusicScreen(
     var showPlatformOrderSheet by remember { mutableStateOf(false) }
     var showLoginDialog by remember { mutableStateOf(false) }
     var showTxLoginDialog by remember { mutableStateOf(false) }
+    var showTxWebLoginDialog by remember { mutableStateOf(false) }
     var showKgLoginDialog by remember { mutableStateOf(false) }
     var showKwLoginDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -1657,6 +1658,21 @@ fun LxMusicScreen(
                 viewModel.loginTencentByQr(cookie) { ok, error ->
                     callback(ok, error)
                     if (ok) showTxLoginDialog = false
+                }
+            },
+            onSwitchToWebLogin = {
+                showTxLoginDialog = false
+                clearAllWebViewSession { showTxWebLoginDialog = true }
+            },
+        )
+    }
+    if (showTxWebLoginDialog) {
+        TencentWebLoginDialog(
+            onDismiss = { showTxWebLoginDialog = false },
+            onValidate = { cookie, callback ->
+                viewModel.validateAndLoginTencent(cookie) { ok, error ->
+                    callback(ok, error)
+                    if (ok) showTxWebLoginDialog = false
                 }
             },
         )
