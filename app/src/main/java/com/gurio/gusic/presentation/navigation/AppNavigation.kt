@@ -235,8 +235,7 @@ fun AppNavigation(
                 },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    LxMusicScreen(playerViewModel = playerViewModel,
-                        onSettingsClick = { navController.navigateSafely(Screen.Settings.route) })
+                    LxMusicScreen(playerViewModel = playerViewModel)
                 }
             }
             composable(

@@ -500,4 +500,16 @@
         <item>“我的”页删除“文件夹”分类，“我喜欢”移到第一位</item>
         <item>播放通知循环模式按钮保持最前</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101105_whats_new">
+        <item>播放页底部空隙真正修复：控制按钮贴到屏幕最底部</item>
+        <item>QQ 收藏解析强化：先按歌名歌手搜索匹配，不再轻易提示缺少信息</item>
+        <item>通知循环模式按钮移到最前面（传输控制之前）</item>
+        <item>播放页顶栏“正在播放”替换为平台彩色标签</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101105_changes">
+        <item>“排行榜”模块按钮文字不再被裁切</item>
+        <item>歌词字号：100% 相当于旧版 70% 的大小，整体变小</item>
+        <item>歌词对齐默认居中</item>
+        <item>删除发现页顶部的设置入口</item>
+    </string-array>
 </resources>

@@ -284,9 +284,9 @@ fun LyricsSheet(
     val context = LocalContext.current
 
     val lyricsAlignmentFlow = remember(context) {
-        context.dataStore.data.map { it[stringPreferencesKey("lyrics_alignment")] ?: "left" }
+        context.dataStore.data.map { it[stringPreferencesKey("lyrics_alignment")] ?: "center" }
     }
-    val lyricsAlignment by lyricsAlignmentFlow.collectAsStateWithLifecycle(initialValue = "left")
+    val lyricsAlignment by lyricsAlignmentFlow.collectAsStateWithLifecycle(initialValue = "center")
 
     val lyricsFontScaleFlow = remember(context) {
         context.dataStore.data.map { it[floatPreferencesKey("lyrics_font_scale")] ?: 1f }
@@ -455,8 +455,9 @@ fun LyricsSheet(
     )
     
     val scaledTextStyle = lyricsTextStyle.copy(
-        fontSize = lyricsTextStyle.fontSize * fontScale * lyricsFontScale,
-        lineHeight = lyricsTextStyle.lineHeight * fontScale * lyricsFontScale
+        // 整体偏大：百分比 100% 对应旧版 70% 的视觉大小
+        fontSize = lyricsTextStyle.fontSize * fontScale * lyricsFontScale * 0.7f,
+        lineHeight = lyricsTextStyle.lineHeight * fontScale * lyricsFontScale * 0.7f
     )
 
     fun resetImmersiveTimer() {

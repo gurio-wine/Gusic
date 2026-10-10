@@ -2820,7 +2820,8 @@ class MusicService : MediaSessionService() {
         val playModeButton = CommandButton.Builder(playModeIcon)
             .setDisplayName(getString(R.string.presentation_batch_e_cd_toggle_repeat))
             .setSessionCommand(SessionCommand(MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_PLAY_MODE, Bundle.EMPTY))
-            .setSlots(CommandButton.SLOT_OVERFLOW)
+            // SLOT_BACK：排在通知传输控制（上一首/播放/下一首）之前，即最前面
+            .setSlots(CommandButton.SLOT_BACK)
             .build()
 
         val likeButton = CommandButton.Builder(

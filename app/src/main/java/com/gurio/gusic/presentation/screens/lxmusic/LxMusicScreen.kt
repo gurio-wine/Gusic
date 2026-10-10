@@ -213,7 +213,6 @@ private object LxMoodHolder {
 fun LxMusicScreen(
     context: android.content.Context = LocalContext.current,
     playerViewModel: PlayerViewModel,
-    onSettingsClick: () -> Unit = {},
     viewModel: LxMusicViewModel = hiltViewModel(
         viewModelStoreOwner = LocalContext.current as androidx.activity.ComponentActivity
     ),
@@ -493,7 +492,7 @@ fun LxMusicScreen(
                 },
                 actions = {
                     FilledIconButton(
-                        modifier = Modifier.padding(end = 4.dp),
+                        modifier = Modifier.padding(end = 14.dp),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -501,21 +500,6 @@ fun LxMusicScreen(
                         onClick = { showScriptSheet = true },
                     ) {
                         Icon(Icons.Rounded.Build, contentDescription = stringResource(R.string.lx_desc_script_management))
-                    }
-                    FilledIconButton(
-                        modifier = Modifier.padding(end = 14.dp),
-                        shape = CircleShape,
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        ),
-                        onClick = onSettingsClick,
-                    ) {
-                        Icon(
-                            painter = painterResource(com.gurio.gusic.R.drawable.rounded_settings_24),
-                            contentDescription = stringResource(R.string.lx_desc_settings),
-                            modifier = Modifier.size(22.dp),
-                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -2014,20 +1998,20 @@ private fun LxModuleButton(
         modifier = modifier,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
             Icon(
                 icon,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(16.dp),
                 tint = if (selected)
                     MaterialTheme.colorScheme.onPrimary
                 else
                     MaterialTheme.colorScheme.onSecondaryContainer,
             )
-            Spacer(Modifier.width(5.dp))
+            Spacer(Modifier.width(4.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
@@ -2038,7 +2022,7 @@ private fun LxModuleButton(
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 softWrap = false,
-                overflow = TextOverflow.Clip,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -2550,11 +2534,9 @@ private fun LxBoardPage(
             contentAlignment = Alignment.CenterEnd,
         ) {
             androidx.compose.foundation.lazy.LazyRow(
-                // 收窄到右侧操作胶囊左边，初始与滚动全程 chip 都不会被胶囊盖住（此前只靠
-                // contentPadding 预留，首屏最后一个 chip 仍会被悬浮胶囊截断）
-                modifier = Modifier.fillMaxWidth().padding(end = 162.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(start = 10.dp, end = 8.dp),
+                contentPadding = PaddingValues(start = 10.dp, end = 162.dp),
             ) {
                     items(browseState.boards, key = { it.id }) { board ->
                         Surface(

@@ -500,4 +500,16 @@
         <item>「我的」頁刪除「資料夾」分類，「我喜歡」移到第一位</item>
         <item>播放通知循環模式按鈕保持最前</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101105_whats_new">
+        <item>播放頁底部空隙真正修復：控制按鈕貼到螢幕最底部</item>
+        <item>QQ 收藏解析強化：先按歌名歌手搜尋匹配，不再輕易提示缺少資訊</item>
+        <item>通知循環模式按鈕移到最前面（傳輸控制之前）</item>
+        <item>播放頁頂欄「正在播放」替換為平台彩色標籤</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101105_changes">
+        <item>「排行榜」模組按鈕文字不再被裁切</item>
+        <item>歌詞字號：100% 相當於舊版 70% 的大小，整體變小</item>
+        <item>歌詞對齊預設置中</item>
+        <item>刪除發現頁頂部的設定入口</item>
+    </string-array>
 </resources>

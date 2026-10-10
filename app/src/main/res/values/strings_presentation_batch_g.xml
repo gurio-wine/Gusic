@@ -500,4 +500,16 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>Mine page: Folders category removed, Liked moved to first</item>
         <item>Playback notification cycle-mode button stays in front</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101105_whats_new">
+        <item>Player bottom gap truly fixed: controls now sit flush at the screen bottom</item>
+        <item>QQ favorite resolution reinforced: matches by song name and artist before failing</item>
+        <item>Notification cycle-mode button moved to the very front, before transport controls</item>
+        <item>Player top bar now shows the colored platform tag instead of "Now Playing"</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101105_changes">
+        <item>"Charts" module button label no longer clipped</item>
+        <item>Lyrics font scale: 100% now equals the old 70% size, overall smaller</item>
+        <item>Lyrics alignment defaults to center</item>
+        <item>Removed the settings entry from the Discover top bar</item>
+    </string-array>
 </resources>

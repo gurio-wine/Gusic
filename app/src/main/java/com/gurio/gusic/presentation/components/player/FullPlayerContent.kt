@@ -795,14 +795,32 @@ fun FullPlayerContent(
                         if (!isOutputConnecting) {
                             AnimatedVisibility(visible = (!isExternalOutputActive)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        modifier = Modifier.padding(start = 18.dp),
-                                        text = stringResource(R.string.setcat_now_playing),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        style = MaterialTheme.typography.labelLargeEmphasized,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
+                                    val lxSource = currentSong?.lxMusicSource
+                                    if (lxSource != null) {
+                                        // 在线歌：顶栏显示带品牌色的平台文本标签（与歌曲行一致）
+                                        Text(
+                                            text = LxSources.labelRes(lxSource)?.let { res -> stringResource(res) }
+                                                ?: LxSources.shortLabel(lxSource),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = LxSources.onBrandColor(lxSource),
+                                            maxLines = 1,
+                                            modifier = Modifier
+                                                .padding(start = 18.dp)
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(LxSources.brandColor(lxSource))
+                                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                                        )
+                                    } else {
+                                        Text(
+                                            modifier = Modifier.padding(start = 18.dp),
+                                            text = stringResource(R.string.setcat_now_playing),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            style = MaterialTheme.typography.labelLargeEmphasized,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
 
                                     if (currentSong != null && currentSong.contentUriString.startsWith("http")) {
                                         Icon(
@@ -1161,6 +1179,8 @@ private fun FullPlayerControlsSection(
         switchOnDragRelease = loadingTweaks.switchOnDragRelease,
         isSheetDragGestureActive = isSheetDragGestureActive,
         sharedBoundsModifier = Modifier.fillMaxWidth().height(182.dp),
+        // 182dp 容器是折叠态共享边界动画的尺寸；展开态内容约 96dp，贴底放置避免底部留白
+        sharedBoundsContentAlignment = Alignment.BottomCenter,
         expansionFractionProvider = expansionFractionProvider,
         isExpandedOverride = currentSheetState == PlayerSheetState.EXPANDED,
         normalStartThreshold = 0.42f,
@@ -2157,6 +2177,7 @@ private fun DelayedContent(
     switchOnDragRelease: Boolean,
     isSheetDragGestureActive: Boolean,
     sharedBoundsModifier: Modifier = Modifier,
+    sharedBoundsContentAlignment: Alignment = Alignment.TopStart,
     expansionFractionProvider: () -> Float,
     isExpandedOverride: Boolean = false,
     normalStartThreshold: Float,
@@ -2275,7 +2296,7 @@ private fun DelayedContent(
     )
 
     if (shouldDelay) {
-        Box(modifier = sharedBoundsModifier) {
+        Box(modifier = sharedBoundsModifier, contentAlignment = sharedBoundsContentAlignment) {
             val shouldComposeContent = isDelayGateOpen
 
             if (shouldComposeContent) {
@@ -2297,7 +2318,8 @@ private fun DelayedContent(
         }
     } else {
         Box(
-            modifier = sharedBoundsModifier.graphicsLayer { alpha = baseAlphaProvider() }
+            modifier = sharedBoundsModifier.graphicsLayer { alpha = baseAlphaProvider() },
+            contentAlignment = sharedBoundsContentAlignment
         ) {
             content()
         }

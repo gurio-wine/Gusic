@@ -2095,22 +2095,29 @@ class LxMusicRepository @Inject constructor(
         accountExtension.txApplySongLike(songId, songType, like)
 
     /**
-     * 收藏 tx 歌曲前解析红心接口需要的数字 songId/songType：
-     * 先走 songmid 歌曲详情，查不到再用「歌名 歌手」搜索按 songmid 匹配。
+     * 收藏 tx 歌曲前解析红心接口需要的数字 songId/songType。
+     * 搜索结果本身带数字 id，先按「歌名 歌手」精确匹配 songmid，再退到只搜歌名，
+     * 最后走 songmid 歌曲详情接口。
      */
     suspend fun txResolveSongLikeInfo(song: Song): Pair<Long, Int>? = withContext(Dispatchers.IO) {
         val songmid = song.lxMusicSongMid?.takeIf(String::isNotBlank) ?: return@withContext null
-        accountExtension.txResolveSongLikeInfo(songmid)?.let { return@withContext it }
-        val keyword = listOfNotNull(
-            song.title.takeIf { it.isNotBlank() },
-            song.artist.takeIf { it.isNotBlank() },
-        ).joinToString(" ").takeIf { it.isNotBlank() } ?: return@withContext null
-        runCatching { searchQQ(keyword, 1) }.getOrNull()
-            ?.firstOrNull { it.songmid == songmid }
-            ?.let { match ->
-                match.extraFields["songId"]?.toLongOrNull()
-                    ?.let { id -> id to (match.extraFields["songType"]?.toIntOrNull() ?: 0) }
+        val title = song.title.takeIf { it.isNotBlank() }
+        val artist = song.artist.takeIf { it.isNotBlank() }
+        val keywords = listOfNotNull(
+            listOfNotNull(title, artist).joinToString(" ").takeIf { it.isNotBlank() },
+            title,
+        ).distinct()
+
+        for (keyword in keywords) {
+            val match = runCatching { searchQQ(keyword, 1) }.getOrNull()
+                ?.firstOrNull { it.songmid == songmid && it.extraFields["songId"] != null }
+            if (match != null) {
+                return@withContext match.extraFields["songId"]!!.toLong() to
+                    (match.extraFields["songType"]?.toIntOrNull() ?: 0)
             }
+        }
+
+        accountExtension.txResolveSongLikeInfo(songmid)
     }
 
     suspend fun kgSetSongLike(
