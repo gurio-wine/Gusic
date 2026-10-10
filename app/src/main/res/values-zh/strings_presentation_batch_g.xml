@@ -439,4 +439,15 @@
         <item>發佈的 APK 按 gusic-&lt;abi&gt;-[v&lt;版本&gt;].apk 命名</item>
         <item>平台登入 Cookie 不再隨雲備份與裝置遷移匯出</item>
     </string-array>
+    <!-- Gusic 26.10.11：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v261011_whats_new">
+        <item>關於頁頂部圖示改為應用前景圖樣式</item>
+        <item>平台登入頁所有平台直接平鋪顯示</item>
+        <item>QQ音樂登入移除掃碼，點開即網頁登入</item>
+    </string-array>
+    <!-- Gusic 26.10.11：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v261011_changes">
+        <item>發現頁預設順序調整為 QQ音樂、網易雲音樂、酷狗音樂、酷我音樂</item>
+        <item>順序調整中可隱藏平台，預設隱藏未登入平台，至少保留 QQ音樂</item>
+    </string-array>
 </resources>

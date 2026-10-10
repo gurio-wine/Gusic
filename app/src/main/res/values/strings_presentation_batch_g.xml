@@ -439,4 +439,15 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>Released APKs are named gusic-&lt;abi&gt;-[v&lt;version&gt;].apk.</item>
         <item>Platform login cookies are excluded from cloud backup and device transfer.</item>
     </string-array>
+    <!-- Gusic 26.10.11：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v261011_whats_new">
+        <item>About page header now shows the app icon foreground style.</item>
+        <item>All platforms are listed directly on the account login page.</item>
+        <item>QQ Music login opens the web page login directly.</item>
+    </string-array>
+    <!-- Gusic 26.10.11：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v261011_changes">
+        <item>Discover now defaults to QQ Music, NetEase Cloud Music, Kugou, Kuwo order.</item>
+        <item>Platforms can be hidden in the reorder sheet; logged-out ones are hidden by default and QQ Music always stays visible.</item>
+    </string-array>
 </resources>

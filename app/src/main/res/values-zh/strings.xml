@@ -456,14 +456,8 @@
 <string name="lx_title_kuwo_login">酷我音樂登入</string>
 <string name="lx_msg_login_success">登入成功</string>
 <string name="lx_msg_verifying_login">正在驗證登入…</string>
-<string name="lx_qr_tab_qq">QQ</string>
-<string name="lx_qr_scan_hint_qq">請開啟手機 QQ 掃碼登入</string>
-<string name="lx_qr_scan_hint_wechat">請開啟微信掃碼登入</string>
-<string name="lx_qr_status_wait">等待掃碼</string>
-<string name="lx_qr_status_scanned">已掃碼，請在手機上確認</string>
-<string name="lx_qr_status_expired">二維碼已過期</string>
-<string name="lx_qr_refresh">重新整理二維碼</string>
-<string name="lx_qr_switch_web">使用網頁登入</string>
+<string name="lx_platform_hidden_hint">拖動調整順序；點眼睛可隱藏平台，發現頁不再顯示，至少保留一個</string>
+<string name="cd_toggle_platform_visibility">顯示或隱藏平台</string>
 <string name="lx_msg_login_failed">登入失敗，請重試</string>
 
 <!-- Batch Download -->

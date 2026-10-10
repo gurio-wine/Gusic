@@ -129,6 +129,7 @@ constructor(
         val LIBRARY_TABS_ORDER = stringPreferencesKey("library_tabs_order")
         val LX_PLATFORM_NAME_STYLE = stringPreferencesKey("lx_platform_name_style")
         val LX_PLATFORM_ORDER = stringPreferencesKey("lx_platform_order")
+        val LX_HIDDEN_PLATFORMS = stringPreferencesKey("lx_hidden_platforms")
         val IS_FOLDER_FILTER_ACTIVE = booleanPreferencesKey("is_folder_filter_active")
         val IS_FOLDERS_PLAYLIST_VIEW = booleanPreferencesKey("is_folders_playlist_view")
         val HIDE_LOCAL_MEDIA = booleanPreferencesKey("hide_local_media")
@@ -1615,6 +1616,18 @@ constructor(
 
     suspend fun resetLxPlatformOrder() {
         dataStore.edit { preferences -> preferences.remove(PreferencesKeys.LX_PLATFORM_ORDER) }
+    }
+
+    /** null 表示用户未自定义，此时按"隐藏未登录平台（QQ 音乐保底显示）"动态计算。 */
+    val lxHiddenPlatformsFlow: Flow<String?> = dataStore.data
+        .map { preferences -> preferences[PreferencesKeys.LX_HIDDEN_PLATFORMS] }
+
+    suspend fun saveLxHiddenPlatforms(hiddenJson: String) {
+        dataStore.edit { preferences -> preferences[PreferencesKeys.LX_HIDDEN_PLATFORMS] = hiddenJson }
+    }
+
+    suspend fun resetLxHiddenPlatforms() {
+        dataStore.edit { preferences -> preferences.remove(PreferencesKeys.LX_HIDDEN_PLATFORMS) }
     }
 
     suspend fun migrateTabOrder() {

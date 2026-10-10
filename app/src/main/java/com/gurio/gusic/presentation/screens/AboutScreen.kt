@@ -426,9 +426,10 @@ private fun AboutHeroCard(
                         color = MaterialTheme.colorScheme.primaryContainer,
                     ) {
                         Image(
-                            painter = painterResource(R.drawable.gusic_about_icon),
+                            // 自适应图标前景（自带透明边距，中央约 61% 为音符内容）
+                            painter = painterResource(R.mipmap.ic_launcher_foreground),
                             contentDescription = null,
-                            modifier = Modifier.padding(10.dp).size(28.dp),
+                            modifier = Modifier.size(44.dp),
                             contentScale = ContentScale.Fit,
                         )
                     }

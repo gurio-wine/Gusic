@@ -249,7 +249,6 @@ fun LxMusicScreen(
     var scriptToDelete by remember { mutableStateOf<LxScriptMeta?>(null) }
     var showPlatformOrderSheet by remember { mutableStateOf(false) }
     var showLoginDialog by remember { mutableStateOf(false) }
-    var showTxLoginDialog by remember { mutableStateOf(false) }
     var showTxWebLoginDialog by remember { mutableStateOf(false) }
     var showKgLoginDialog by remember { mutableStateOf(false) }
     var showKwLoginDialog by remember { mutableStateOf(false) }
@@ -295,9 +294,19 @@ fun LxMusicScreen(
         return resourceId?.let { stringResource(it) } ?: source
     }
 
-    val orderedSearchTabs = remember(platformOrder) {
+    val effectiveHiddenPlatforms by viewModel.effectiveHiddenPlatforms.collectAsStateWithLifecycle()
+
+    val orderedSearchTabs = remember(platformOrder, effectiveHiddenPlatforms) {
         val orderMap = platformOrder.withIndex().associate { it.value to it.index }
-        searchTabs.sortedBy { (src, _) -> orderMap[src] ?: Int.MAX_VALUE }
+        searchTabs.filter { it.first !in effectiveHiddenPlatforms }
+            .sortedBy { (src, _) -> orderMap[src] ?: Int.MAX_VALUE }
+            .ifEmpty { listOf("tx" to R.string.lx_source_qq) }
+    }
+    // 当前选中的平台被隐藏时回退到第一个可见平台
+    LaunchedEffect(orderedSearchTabs, selectedSource) {
+        if (orderedSearchTabs.none { it.first == selectedSource }) {
+            orderedSearchTabs.firstOrNull()?.let { viewModel.selectSource(it.first) }
+        }
     }
     val mineState by viewModel.mineState.collectAsStateWithLifecycle()
     val preferredQuality by viewModel.preferredQuality.collectAsStateWithLifecycle()
@@ -1337,62 +1346,51 @@ fun LxMusicScreen(
                         }
                     }
                 }
-                var loginExpanded by remember { mutableStateOf(false) }
+                PlatformLoginRow(
+                    title = platformName("tx"),
+                    statusText = platformStatusText(tencentCookie, tencentCookieValid, tencentNickname),
+                    avatarUrl = if (!tencentCookie.isNullOrBlank() && tencentCookieValid) tencentAvatar else null,
+                    trailing = {
+                        Icon(Icons.Rounded.ChevronRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    },
+                    onClick = { clearAllWebViewSession { showTxWebLoginDialog = true } },
+                )
+                Spacer(Modifier.height(8.dp))
                 PlatformLoginRow(
                     title = platformName("wy"),
                     statusText = loginStatusText,
                     avatarUrl = if (!neteaseCookie.isNullOrBlank() && neteaseCookieValid) neteaseAvatar else null,
                     trailing = {
-                        IconButton(onClick = { loginExpanded = !loginExpanded }) {
-                            Icon(
-                                if (loginExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
+                        Icon(Icons.Rounded.ChevronRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                     },
                     onClick = {
                         clearNeteaseWebViewSession { showLoginDialog = true }
                     },
                 )
-                AnimatedVisibility(visible = loginExpanded) {
-                    Column {
-                        Spacer(Modifier.height(8.dp))
-                        PlatformLoginRow(
-                            title = platformName("tx"),
-                            statusText = platformStatusText(tencentCookie, tencentCookieValid, tencentNickname),
-                            avatarUrl = if (!tencentCookie.isNullOrBlank() && tencentCookieValid) tencentAvatar else null,
-                            trailing = {
-                                Icon(Icons.Rounded.ChevronRight, contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                            },
-                            onClick = { clearAllWebViewSession { showTxLoginDialog = true } },
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        PlatformLoginRow(
-                            title = platformName("kg"),
-                            statusText = platformStatusText(kugouCookie, kugouCookieValid, kugouNickname, appLoggedIn = kugouLoggedIn),
-                            avatarUrl = if (kugouLoggedIn) kugouAvatar else null,
-                            trailing = {
-                                Icon(Icons.Rounded.ChevronRight, contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                            },
-                            onClick = { clearAllWebViewSession { showKgLoginDialog = true } },
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        PlatformLoginRow(
-                            title = platformName("kw"),
-                            statusText = platformStatusText(kuwoCookie, kuwoCookieValid, kuwoNickname),
-                            avatarUrl = if (!kuwoCookie.isNullOrBlank() && kuwoCookieValid) kuwoAvatar else null,
-                            trailing = {
-                                Icon(Icons.Rounded.ChevronRight, contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                            },
-                            onClick = { clearAllWebViewSession { showKwLoginDialog = true } },
-                        )
-                    }
-                }
+                Spacer(Modifier.height(8.dp))
+                PlatformLoginRow(
+                    title = platformName("kg"),
+                    statusText = platformStatusText(kugouCookie, kugouCookieValid, kugouNickname, appLoggedIn = kugouLoggedIn),
+                    avatarUrl = if (kugouLoggedIn) kugouAvatar else null,
+                    trailing = {
+                        Icon(Icons.Rounded.ChevronRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    },
+                    onClick = { clearAllWebViewSession { showKgLoginDialog = true } },
+                )
+                Spacer(Modifier.height(8.dp))
+                PlatformLoginRow(
+                    title = platformName("kw"),
+                    statusText = platformStatusText(kuwoCookie, kuwoCookieValid, kuwoNickname),
+                    avatarUrl = if (!kuwoCookie.isNullOrBlank() && kuwoCookieValid) kuwoAvatar else null,
+                    trailing = {
+                        Icon(Icons.Rounded.ChevronRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    },
+                    onClick = { clearAllWebViewSession { showKwLoginDialog = true } },
+                )
 
                 Spacer(Modifier.height(12.dp))
 
@@ -1624,6 +1622,8 @@ fun LxMusicScreen(
         ReorderPlatformsSheet(
             platforms = platformOrder.toImmutableList(),
             platformName = { platformName(it) },
+            hiddenPlatforms = effectiveHiddenPlatforms,
+            onToggleHidden = { viewModel.togglePlatformHidden(it) },
             onReorder = { viewModel.savePlatformOrder(it) },
             onReset = { viewModel.resetPlatformOrder() },
             onDismiss = { showPlatformOrderSheet = false },
@@ -1646,23 +1646,6 @@ fun LxMusicScreen(
                     callback(ok, error)
                     if (ok) showLoginDialog = false
                 }
-            },
-        )
-    }
-    if (showTxLoginDialog) {
-        TencentQrLoginDialog(
-            onDismiss = { showTxLoginDialog = false },
-            onCreateQr = { type, callback -> viewModel.txQrCreate(type, callback) },
-            onPoll = { type, session, callback -> viewModel.txQrPoll(type, session, callback) },
-            onLogin = { cookie, callback ->
-                viewModel.loginTencentByQr(cookie) { ok, error ->
-                    callback(ok, error)
-                    if (ok) showTxLoginDialog = false
-                }
-            },
-            onSwitchToWebLogin = {
-                showTxLoginDialog = false
-                clearAllWebViewSession { showTxWebLoginDialog = true }
             },
         )
     }

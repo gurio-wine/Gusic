@@ -469,14 +469,6 @@
 <string name="lx_title_kuwo_login">酷我音乐登录</string>
 <string name="lx_msg_login_success">登录成功</string>
 <string name="lx_msg_verifying_login">正在验证登录…</string>
-<string name="lx_qr_tab_qq">QQ</string>
-<string name="lx_qr_scan_hint_qq">请打开手机 QQ 扫码登录</string>
-<string name="lx_qr_scan_hint_wechat">请打开微信扫码登录</string>
-<string name="lx_qr_status_wait">等待扫码</string>
-<string name="lx_qr_status_scanned">已扫码，请在手机上确认</string>
-<string name="lx_qr_status_expired">二维码已过期</string>
-<string name="lx_qr_refresh">刷新二维码</string>
-<string name="lx_qr_switch_web">使用网页登录</string>
 <string name="lx_msg_login_failed">登录失败，请重试</string>
 
 <!-- Batch Download -->
@@ -501,6 +493,8 @@
 <!-- 平台顺序 -->
 <string name="lx_platform_order_title">平台顺序</string>
 <string name="lx_platform_order_subtitle">调整搜索页平台标签顺序</string>
+<string name="lx_platform_hidden_hint">拖动调整顺序；点眼睛可隐藏平台，发现页不再显示，至少保留一个</string>
+<string name="cd_toggle_platform_visibility">显示或隐藏平台</string>
 
     <string name="lx_brand_title">Lx音乐</string>
     <string-array name="lx_mood_0_6">

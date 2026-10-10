@@ -20,12 +20,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DragIndicator
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -62,6 +65,8 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 fun ReorderPlatformsSheet(
     platforms: ImmutableList<String>,
     platformName: @Composable (String) -> String,
+    hiddenPlatforms: Set<String> = emptySet(),
+    onToggleHidden: (String) -> Unit = {},
     onReorder: (List<String>) -> Unit,
     onReset: () -> Unit,
     onDismiss: () -> Unit
@@ -127,17 +132,21 @@ fun ReorderPlatformsSheet(
     ) {
         Scaffold(
             topBar = {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 26.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(horizontal = 26.dp, vertical = 8.dp)
                 ) {
                     Text(
                         stringResource(R.string.lx_platform_order_title),
                         style = MaterialTheme.typography.displaySmall,
                         fontFamily = RoundedSans
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.lx_platform_hidden_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             },
@@ -189,6 +198,9 @@ fun ReorderPlatformsSheet(
                                         )
                                     }
                                 }
+                                val hidden = platform in hiddenPlatforms
+                                // 至少保留一个可见平台：仅剩一个可见时禁止再隐藏它
+                                val canHide = hidden || platforms.size - hiddenPlatforms.size > 1
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -205,11 +217,23 @@ fun ReorderPlatformsSheet(
                                             contentDescription = stringResource(R.string.cd_drag_handle),
                                             modifier = Modifier.draggableHandle()
                                         )
-                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Spacer(Modifier.width(16.dp))
                                         Text(
                                             text = platformName(platform),
-                                            style = MaterialTheme.typography.bodyLarge
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = if (hidden) MaterialTheme.colorScheme.onSurfaceVariant
+                                                else MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(1f)
                                         )
+                                        IconButton(onClick = { onToggleHidden(platform) }, enabled = canHide) {
+                                            Icon(
+                                                imageVector = if (hidden) Icons.Rounded.VisibilityOff
+                                                else Icons.Rounded.Visibility,
+                                                contentDescription = stringResource(R.string.cd_toggle_platform_visibility),
+                                                tint = if (hidden) MaterialTheme.colorScheme.onSurfaceVariant
+                                                else MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
                                 }
                             }

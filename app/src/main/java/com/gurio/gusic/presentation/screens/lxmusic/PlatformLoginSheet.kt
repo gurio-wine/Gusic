@@ -1,7 +1,6 @@
 package com.gurio.gusic.presentation.screens.lxmusic
 
 import android.annotation.SuppressLint
-import android.graphics.BitmapFactory
 import android.webkit.CookieManager
 import android.webkit.WebStorage
 import android.webkit.WebView
@@ -9,7 +8,6 @@ import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -45,7 +43,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -59,8 +56,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.gurio.gusic.R
-import com.gurio.gusic.data.lxmusic.LxTxQrPoll
-import com.gurio.gusic.data.lxmusic.LxTxQrType
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -245,191 +240,6 @@ private fun PlatformLoginDialog(
                             Text(stringResource(R.string.lx_msg_verifying_login), style = MaterialTheme.typography.bodyMedium)
                         }
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun TencentQrLoginDialog(
-    onDismiss: () -> Unit,
-    onCreateQr: (LxTxQrType, (ByteArray?, String?) -> Unit) -> Unit,
-    onPoll: (LxTxQrType, String, (LxTxQrPoll) -> Unit) -> Unit,
-    onLogin: (String, (ok: Boolean, error: String?) -> Unit) -> Unit,
-    onSwitchToWebLogin: () -> Unit = {},
-) {
-    var qrType by remember { mutableStateOf(LxTxQrType.QQ) }
-    var qrBytes by remember { mutableStateOf<ByteArray?>(null) }
-    var qrSession by remember { mutableStateOf<String?>(null) }
-    var status by remember { mutableStateOf(LxTxQrPoll.Status.PENDING) }
-    var creating by remember { mutableStateOf(false) }
-    var loggingIn by remember { mutableStateOf(false) }
-    var generation by remember { mutableStateOf(0) }
-
-    fun requestQr(type: LxTxQrType) {
-        creating = true
-        qrBytes = null
-        qrSession = null
-        status = LxTxQrPoll.Status.PENDING
-        generation++
-        val gen = generation
-        onCreateQr(type) { bytes, session ->
-            if (gen != generation) return@onCreateQr
-            creating = false
-            if (bytes == null || session == null) {
-                status = LxTxQrPoll.Status.ERROR
-            } else {
-                qrBytes = bytes
-                qrSession = session
-            }
-        }
-    }
-
-    LaunchedEffect(qrType) { requestQr(qrType) }
-
-    LaunchedEffect(qrSession) {
-        val session = qrSession ?: return@LaunchedEffect
-        val gen = generation
-        while (isActive && gen == generation) {
-            delay(2000)
-            if (loggingIn) continue
-            onPoll(qrType, session) { result ->
-                if (gen != generation) return@onPoll
-                when (result.status) {
-                    LxTxQrPoll.Status.SUCCESS -> {
-                        val cookie = result.cookie
-                        if (cookie.isNullOrBlank()) {
-                            status = LxTxQrPoll.Status.ERROR
-                        } else {
-                            loggingIn = true
-                            onLogin(cookie) { ok, _ ->
-                                loggingIn = false
-                                if (!ok) status = LxTxQrPoll.Status.ERROR
-                            }
-                        }
-                    }
-                    LxTxQrPoll.Status.EXPIRED -> status = LxTxQrPoll.Status.EXPIRED
-                    LxTxQrPoll.Status.ERROR -> status = LxTxQrPoll.Status.ERROR
-                    else -> status = result.status
-                }
-            }
-        }
-    }
-
-    val qrBitmap = remember(qrBytes) {
-        qrBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size)?.asImageBitmap() }
-    }
-
-    Dialog(
-        onDismissRequest = { if (!loggingIn) onDismiss() },
-        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
-                .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = { if (!loggingIn) onDismiss() }) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.lx_desc_back))
-                }
-                Icon(
-                    Icons.Rounded.Cloud,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(Modifier.size(8.dp))
-                Text(
-                    text = stringResource(R.string.lx_title_qq_login),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                )
-                if (loggingIn) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.padding(end = 16.dp).size(22.dp),
-                        strokeWidth = 2.dp,
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                LxTxQrType.entries.forEach { type ->
-                    val selected = qrType == type
-                    TextButton(onClick = { if (!loggingIn && !creating) { qrType = type } }) {
-                        Text(
-                            text = stringResource(
-                                if (type == LxTxQrType.QQ) R.string.lx_qr_tab_qq else R.string.lx_source_wechat
-                            ),
-                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Spacer(Modifier.size(12.dp))
-                }
-            }
-
-            Column(
-                modifier = Modifier.fillMaxSize().padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Box(
-                    modifier = Modifier.size(240.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    when {
-                        creating -> CircularProgressIndicator()
-                        qrBitmap != null -> Image(
-                            bitmap = qrBitmap,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                        else -> Text(
-                            text = stringResource(R.string.lx_msg_login_failed),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = stringResource(
-                        when (status) {
-                            LxTxQrPoll.Status.SCANNED -> R.string.lx_qr_status_scanned
-                            LxTxQrPoll.Status.EXPIRED -> R.string.lx_qr_status_expired
-                            LxTxQrPoll.Status.ERROR -> R.string.lx_msg_login_failed
-                            else -> if (qrType == LxTxQrType.QQ) R.string.lx_qr_scan_hint_qq
-                                else R.string.lx_qr_scan_hint_wechat
-                        }
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = when (status) {
-                        LxTxQrPoll.Status.EXPIRED, LxTxQrPoll.Status.ERROR -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.onSurface
-                    },
-                )
-                if (status == LxTxQrPoll.Status.EXPIRED || status == LxTxQrPoll.Status.ERROR) {
-                    Spacer(Modifier.height(12.dp))
-                    Button(onClick = { if (!creating) requestQr(qrType) }) {
-                        Text(stringResource(R.string.lx_qr_refresh))
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                TextButton(onClick = { if (!creating && !loggingIn) onSwitchToWebLogin() }) {
-                    Text(stringResource(R.string.lx_qr_switch_web))
                 }
             }
         }

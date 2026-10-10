@@ -20,8 +20,6 @@ import com.gurio.gusic.data.lxmusic.LxQualities
 import com.gurio.gusic.data.lxmusic.LxSong
 import com.gurio.gusic.data.lxmusic.LxSongMapper
 import com.gurio.gusic.data.lxmusic.LxSources
-import com.gurio.gusic.data.lxmusic.LxTxQrPoll
-import com.gurio.gusic.data.lxmusic.LxTxQrType
 import com.gurio.gusic.data.lxmusic.netease.NeteaseCookieStore
 import com.gurio.gusic.data.lxmusic.netease.NeteaseOfficialApi
 import com.gurio.gusic.data.offline.CloudOfflineRepository
@@ -404,7 +402,9 @@ class LxMusicViewModel @Inject constructor(
         const val ACCOUNT_INFO_TTL_MS = 24L * 60 * 60 * 1000
         const val ACCOUNT_INFO_NON_VIP_TTL_MS = 60L * 60 * 1000
         const val MINE_COOKIE_CHECK_TTL_MS = 60L * 60 * 1000
-        val DEFAULT_PLATFORM_ORDER = listOf("wy", "kw", "tx", "kg")
+        // 默认顺序：QQ音乐 → 网易云 → 酷狗 → 酷我
+        val DEFAULT_PLATFORM_ORDER = listOf("tx", "wy", "kg", "kw")
+        const val GUARANTEED_PLATFORM = "tx"
     }
 
     fun loadScript(assetPath: String) {
@@ -616,6 +616,39 @@ class LxMusicViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DEFAULT_PLATFORM_ORDER)
 
+    /**
+     * 发现页生效的隐藏平台集合。
+     * 用户未自定义时按"隐藏未登录平台，QQ 音乐保底显示"动态计算；自定义后按存储集合。
+     */
+    val effectiveHiddenPlatforms: StateFlow<Set<String>> = combine(
+        userPreferencesRepository.lxHiddenPlatformsFlow,
+        neteaseLoggedIn,
+        tencentLoggedIn,
+        kugouLoggedIn,
+        kuwoLoggedIn,
+    ) { savedJson, wy, tx, kg, kw ->
+        val saved = savedJson?.let {
+            runCatching {
+                kotlinx.serialization.json.Json.decodeFromString<Set<String>>(it)
+            }.getOrNull()
+        }
+        saved ?: run {
+            val loggedIn = mapOf("wy" to wy, "tx" to tx, "kg" to kg, "kw" to kw)
+            DEFAULT_PLATFORM_ORDER.filter { it != GUARANTEED_PLATFORM && loggedIn[it] != true }.toSet()
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    /** 切换平台在发现页的显示/隐藏；不允许隐藏到只剩零个。 */
+    fun togglePlatformHidden(platform: String) {
+        viewModelScope.launch {
+            val current = effectiveHiddenPlatforms.value
+            val next = if (platform in current) current - platform else current + platform
+            if (next.size >= DEFAULT_PLATFORM_ORDER.size) return@launch
+            val json = kotlinx.serialization.json.Json.encodeToString(next)
+            userPreferencesRepository.saveLxHiddenPlatforms(json)
+        }
+    }
+
     fun setPlatformNameStyle(style: String) {
         if (style == platformNameStyle.value) return
         viewModelScope.launch {
@@ -633,6 +666,7 @@ class LxMusicViewModel @Inject constructor(
     fun resetPlatformOrder() {
         viewModelScope.launch {
             userPreferencesRepository.resetLxPlatformOrder()
+            userPreferencesRepository.resetLxHiddenPlatforms()
         }
     }
 
@@ -1369,33 +1403,6 @@ class LxMusicViewModel @Inject constructor(
             rawCookie = rawCookie,
             source = LxSources.TENCENT,
             hasMarker = { it.contains("qm_keyst=") || it.contains("qqmusic_key=") },
-            saveCookie = tencentCookieStore::setCookie,
-            saveProfile = tencentCookieStore::setProfile,
-            fetchProfile = { repository.fetchTxProfile() },
-            fetchLikedIds = { repository.fetchTxLikedSongIds() },
-            updateLikedIds = repository::setTxLikedSongIds,
-            onResult = onResult,
-        )
-
-    fun txQrCreate(type: LxTxQrType, onResult: (ByteArray?, String?) -> Unit) {
-        viewModelScope.launch {
-            val r = runCatching { repository.txQrCreate(type) }.getOrNull()
-            onResult(r?.first, r?.second)
-        }
-    }
-
-    fun txQrPoll(type: LxTxQrType, session: String, onResult: (LxTxQrPoll) -> Unit) {
-        viewModelScope.launch {
-            onResult(runCatching { repository.txQrPoll(type, session) }
-                .getOrElse { LxTxQrPoll(LxTxQrPoll.Status.ERROR) })
-        }
-    }
-
-    fun loginTencentByQr(rawCookie: String, onResult: (ok: Boolean, error: String?) -> Unit) =
-        validateAndLoginPlatform(
-            rawCookie = rawCookie,
-            source = LxSources.TENCENT,
-            hasMarker = { it.contains("qqmusic_key=") || it.contains("p_skey=") || it.contains("skey=") },
             saveCookie = tencentCookieStore::setCookie,
             saveProfile = tencentCookieStore::setProfile,
             fetchProfile = { repository.fetchTxProfile() },

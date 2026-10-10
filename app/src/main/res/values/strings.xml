@@ -504,14 +504,6 @@
     <string name="lx_title_kuwo_login">Kuwo Music login</string>
     <string name="lx_msg_login_success">Login successful</string>
     <string name="lx_msg_verifying_login">Verifying login…</string>
-    <string name="lx_qr_tab_qq">QQ</string>
-    <string name="lx_qr_scan_hint_qq">Open QQ on your phone and scan the QR code</string>
-    <string name="lx_qr_scan_hint_wechat">Open WeChat on your phone and scan the QR code</string>
-    <string name="lx_qr_status_wait">Waiting for scan</string>
-    <string name="lx_qr_status_scanned">Scanned, please confirm on your phone</string>
-    <string name="lx_qr_status_expired">QR code expired</string>
-    <string name="lx_qr_refresh">Refresh QR code</string>
-    <string name="lx_qr_switch_web">Use web page login</string>
     <string name="lx_msg_login_failed">Login failed, please try again</string>
 
     <!-- Batch Download -->
@@ -536,6 +528,8 @@
     <!-- 平台顺序 -->
     <string name="lx_platform_order_title">Platform Order</string>
     <string name="lx_platform_order_subtitle">Reorder search page platform tabs</string>
+    <string name="lx_platform_hidden_hint">Drag to reorder. Tap the eye to hide a platform from Discover; at least one stays visible.</string>
+    <string name="cd_toggle_platform_visibility">Show or hide platform</string>
 
     <string name="lx_brand_title">Lx Music</string>
     <string-array name="lx_mood_0_6">
