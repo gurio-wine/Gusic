@@ -132,27 +132,36 @@ internal fun MiniPlayerContentInternal(
                 color = LocalMaterialTheme.current.onPrimaryContainer.copy(alpha = 0.7f)
             )
 
-            AutoScrollingText(
-                text = when {
-                    isOutputConnecting -> "正在连接设备..."
-                    isPreparingPlayback -> "正在解析播放链接..."
-                    isBuffering -> "正在缓冲..."
-                    else -> song.title
-                },
-                style = titleStyle,
-                gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
-                canScroll = canScroll
-            )
-            AutoScrollingText(
-                text = if (!currentLyricLine.isNullOrBlank()) {
-                    "${song.displayArtist}  ·  $currentLyricLine"
-                } else {
-                    song.displayArtist
-                },
-                style = artistStyle,
-                gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
-                canScroll = canScroll
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AutoScrollingText(
+                    text = when {
+                        isOutputConnecting -> "正在连接设备..."
+                        isPreparingPlayback -> "正在解析播放链接..."
+                        isBuffering -> "正在缓冲..."
+                        else -> song.title
+                    },
+                    style = titleStyle,
+                    gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
+                    canScroll = canScroll,
+                    modifier = Modifier.weight(2f, fill = false)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                AutoScrollingText(
+                    text = song.displayArtist,
+                    style = artistStyle,
+                    gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
+                    canScroll = canScroll,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+            }
+            if (!currentLyricLine.isNullOrBlank()) {
+                AutoScrollingText(
+                    text = currentLyricLine,
+                    style = artistStyle,
+                    gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
+                    canScroll = canScroll
+                )
+            }
         }
         Spacer(modifier = Modifier.width(8.dp))
 

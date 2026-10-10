@@ -547,7 +547,8 @@ class LxMusicRepository @Inject constructor(
             add("comm", JsonObject().apply {
                 addProperty("uin", "0")
                 addProperty("format", "json")
-                addProperty("ct", 24)
+                // 搜索接口要求 ct=19；ct=24 会被业务层软风控返回空列表
+                addProperty("ct", 19)
                 addProperty("cv", 0)
             })
             add("req_1", JsonObject().apply {

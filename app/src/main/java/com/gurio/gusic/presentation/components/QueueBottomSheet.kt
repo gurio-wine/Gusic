@@ -48,9 +48,6 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Repeat
-import androidx.compose.material.icons.rounded.RepeatOne
-import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
@@ -122,7 +119,6 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.gurio.gusic.R
 import com.gurio.gusic.data.model.Song
@@ -194,15 +190,11 @@ fun QueueBottomSheet(
     currentMediaItemIndex: Int = -1,
     isVisible: Boolean,
     isPlaying: Boolean,
-    repeatMode: Int,
-    isShuffleOn: Boolean,
     onDismiss: () -> Unit,
     onSongInfoClick: (Song) -> Unit,
     onPlaySong: (Song, Int) -> Unit,
     onRemoveSong: (String) -> Unit,
     onReorder: (from: Int, to: Int) -> Unit,
-    onToggleRepeat: () -> Unit,
-    onToggleShuffle: () -> Unit,
     onClearQueue: () -> Unit,
     activeTimerValueDisplay: androidx.compose.runtime.State<String?>,
     activeTimerDurationMinutes: androidx.compose.runtime.State<Int?>,
@@ -879,11 +871,7 @@ fun QueueBottomSheet(
                         derivedStateOf { activeTimerValueDisplay.value != null }
                     }
                     QueueControlsToolbar(
-                        isShuffleOn = isShuffleOn,
-                        repeatMode = repeatMode,
                         isTimerActive = isTimerActiveDerived,
-                        onToggleShuffle = onToggleShuffle,
-                        onToggleRepeat = onToggleRepeat,
                         onTimerClick = { showTimerOptions = true }
                     )
 
@@ -1317,11 +1305,7 @@ private fun QueueSourceBadge(
 
 @Composable
 private fun QueueControlsToolbar(
-    isShuffleOn: Boolean,
-    repeatMode: Int,
     isTimerActive: androidx.compose.runtime.State<Boolean>,
-    onToggleShuffle: () -> Unit,
-    onToggleRepeat: () -> Unit,
     onTimerClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1354,32 +1338,6 @@ private fun QueueControlsToolbar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            FilledTonalIconButton(
-                onClick = onToggleShuffle,
-                colors = if (isShuffleOn) activeColors else inactiveColors,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Shuffle,
-                    contentDescription = stringResource(R.string.presentation_batch_e_cd_toggle_shuffle),
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            FilledTonalIconButton(
-                onClick = onToggleRepeat,
-                colors = if (repeatMode != Player.REPEAT_MODE_OFF) activeColors else inactiveColors,
-                modifier = Modifier.size(48.dp)
-            ) {
-                val repeatIcon = when (repeatMode) {
-                    Player.REPEAT_MODE_ONE -> Icons.Rounded.RepeatOne
-                    else -> Icons.Rounded.Repeat
-                }
-                Icon(
-                    imageVector = repeatIcon,
-                    contentDescription = stringResource(R.string.presentation_batch_e_cd_toggle_repeat),
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
             FilledTonalIconButton(
                 onClick = onTimerClick,
                 colors = if (isTimerActive.value) activeColors else inactiveColors,

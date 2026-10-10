@@ -79,8 +79,6 @@ internal fun UnifiedPlayerQueueLayer(
     onPlaySong: (Song, Int) -> Unit,
     onRemoveSong: (String) -> Unit,
     onReorder: (Int, Int) -> Unit,
-    onToggleRepeat: () -> Unit,
-    onToggleShuffle: () -> Unit,
     onClearQueue: () -> Unit,
     onSetPredefinedTimer: (Int) -> Unit,
     onSetEndOfTrackTimer: (Boolean) -> Unit,
@@ -144,10 +142,6 @@ internal fun UnifiedPlayerQueueLayer(
                     onPlaySong = onPlaySong,
                     onRemoveSong = onRemoveSong,
                     onReorder = onReorder,
-                    repeatMode = infrequentPlayerState.repeatMode,
-                    isShuffleOn = infrequentPlayerState.isShuffleEnabled,
-                    onToggleRepeat = onToggleRepeat,
-                    onToggleShuffle = onToggleShuffle,
                     onClearQueue = onClearQueue,
                     activeTimerValueDisplay = activeTimerValueDisplay,
                     activeTimerDurationMinutes = activeTimerDurationMinutes,
@@ -508,8 +502,6 @@ internal fun UnifiedPlayerQueueAndSongInfoHost(
             val onReorderQueue = remember(playerViewModel) {
                 { from: Int, to: Int -> playerViewModel.reorderQueueItem(from, to) }
             }
-            val onToggleRepeat = remember(playerViewModel) { { playerViewModel.cycleRepeatMode() } }
-            val onToggleShuffle = remember(playerViewModel) { { playerViewModel.toggleShuffle() } }
             val onClearQueue = remember(playerViewModel) { { playerViewModel.clearQueueExceptCurrent() } }
             val onSetPredefinedTimer = remember(playerViewModel) {
                 { minutes: Int -> playerViewModel.setSleepTimer(minutes) }
@@ -564,8 +556,6 @@ internal fun UnifiedPlayerQueueAndSongInfoHost(
                 onPlaySong = onPlayQueueSong,
                 onRemoveSong = onRemoveQueueSong,
                 onReorder = onReorderQueue,
-                onToggleRepeat = onToggleRepeat,
-                onToggleShuffle = onToggleShuffle,
                 onClearQueue = onClearQueue,
                 onSetPredefinedTimer = onSetPredefinedTimer,
                 onSetEndOfTrackTimer = onSetEndOfTrackTimer,

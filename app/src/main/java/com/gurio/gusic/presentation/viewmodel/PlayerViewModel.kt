@@ -3535,6 +3535,10 @@ class PlayerViewModel @Inject constructor(
         playbackStateHolder.cycleRepeatMode()
     }
 
+    fun setRepeatMode(mode: Int) {
+        playbackStateHolder.setRepeatMode(mode)
+    }
+
     private suspend fun setFavoriteStatusEverywhere(songId: String, isFavorite: Boolean) {
         musicRepository.setFavoriteStatus(songId, isFavorite)
     }

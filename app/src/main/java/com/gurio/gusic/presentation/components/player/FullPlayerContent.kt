@@ -26,6 +26,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -210,8 +211,6 @@ fun FullPlayerContent(
     currentPlaybackQueue: ImmutableList<Song>,
     currentQueueSourceName: String,
     currentMediaItemIndex: Int = -1,
-    isShuffleEnabled: Boolean,
-    shuffleTransitionInProgress: Boolean,
     repeatMode: Int,
     allowRealtimeUpdates: Boolean = true,
     expansionFractionProvider: () -> Float,
@@ -240,7 +239,6 @@ fun FullPlayerContent(
     onQueueDrag: (Float) -> Unit,
     onQueueRelease: (Float, Float) -> Unit,
     onShuffleToggle: () -> Unit,
-    onRepeatToggle: () -> Unit,
     onFavoriteToggle: () -> Unit
 ) {
     var retainedSong by remember { mutableStateOf(currentSong) }
@@ -644,16 +642,23 @@ fun FullPlayerContent(
             onPlayPause = onPlayPause,
             onNext = onNextWithOptimisticCarousel,
             transportPlayPauseColors = transportPlayPauseColors,
-            transportSkipColors = transportSkipButtonColors,
-            isShuffleEnabledProvider = isShuffleEnabledProvider,
-            shuffleTransitionInProgress = shuffleTransitionInProgress,
-            repeatModeProvider = repeatModeProvider,
-            isFavoriteProvider = isFavoriteProvider,
-            favoriteEnabledProvider = favoriteEnabledProvider,
-            onShuffleToggle = onShuffleToggle,
-            onRepeatToggle = onRepeatToggle,
-            onFavoriteToggle = onFavoriteToggle
+            transportSkipColors = transportSkipButtonColors
         )
+    }
+
+    // 三档播放模式：列表循环 → 单曲循环 → 随机循环，循环切换
+    val onCyclePlayMode = {
+        when {
+            isShuffleEnabledProvider() -> {
+                onShuffleToggle()
+                playerViewModel.setRepeatMode(Player.REPEAT_MODE_ALL)
+            }
+            repeatModeProvider() == Player.REPEAT_MODE_ONE -> {
+                playerViewModel.setRepeatMode(Player.REPEAT_MODE_ALL)
+                onShuffleToggle()
+            }
+            else -> playerViewModel.setRepeatMode(Player.REPEAT_MODE_ONE)
+        }
     }
 
     val portraitSongMetadataSection: @Composable () -> Unit = {
@@ -677,7 +682,13 @@ fun FullPlayerContent(
             chipContentColor = playerAccentColor,
             onQueueClick = onSongMetadataQueueClick,
             onArtistClick = onSongMetadataArtistClick,
-            isPlayingProvider = isPlayingProvider
+            isPlayingProvider = isPlayingProvider,
+            isShuffleEnabledProvider = isShuffleEnabledProvider,
+            repeatModeProvider = repeatModeProvider,
+            isFavoriteProvider = isFavoriteProvider,
+            favoriteEnabledProvider = favoriteEnabledProvider,
+            onCyclePlayMode = onCyclePlayMode,
+            onFavoriteToggle = onFavoriteToggle
         )
     }
 
@@ -719,7 +730,13 @@ fun FullPlayerContent(
             chipContentColor = playerAccentColor,
             onQueueClick = onSongMetadataQueueClick,
             onArtistClick = onSongMetadataArtistClick,
-            isPlayingProvider = isPlayingProvider
+            isPlayingProvider = isPlayingProvider,
+            isShuffleEnabledProvider = isShuffleEnabledProvider,
+            repeatModeProvider = repeatModeProvider,
+            isFavoriteProvider = isFavoriteProvider,
+            favoriteEnabledProvider = favoriteEnabledProvider,
+            onCyclePlayMode = onCyclePlayMode,
+            onFavoriteToggle = onFavoriteToggle
         )
     }
 
@@ -1021,14 +1038,7 @@ fun FullPlayerContent(
                 immersiveLyricsEnabled = immersiveLyricsEnabled,
                 immersiveLyricsTimeout = immersiveLyricsTimeout,
                 isImmersiveTemporarilyDisabled = isImmersiveTemporarilyDisabled,
-                onSetImmersiveTemporarilyDisabled = { playerViewModel.setImmersiveTemporarilyDisabled(it) },
-                isShuffleEnabled = isShuffleEnabled,
-                repeatMode = repeatMode,
-                isFavoriteProvider = isFavoriteProvider,
-                favoriteEnabledProvider = favoriteEnabledProvider,
-                onShuffleToggle = onShuffleToggle,
-                onRepeatToggle = onRepeatToggle,
-                onFavoriteToggle = onFavoriteToggle
+                onSetImmersiveTemporarilyDisabled = { playerViewModel.setImmersiveTemporarilyDisabled(it) }
             )
         }
     }
@@ -1178,15 +1188,7 @@ private fun FullPlayerControlsSection(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     transportPlayPauseColors: TransportButtonColors,
-    transportSkipColors: TransportButtonColors,
-    isShuffleEnabledProvider: () -> Boolean,
-    shuffleTransitionInProgress: Boolean,
-    repeatModeProvider: () -> Int,
-    isFavoriteProvider: () -> Boolean,
-    favoriteEnabledProvider: () -> Boolean = { true },
-    onShuffleToggle: () -> Unit,
-    onRepeatToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit
+    transportSkipColors: TransportButtonColors
 ) {
     val stableControlAnimationSpec = remember {
         tween<Float>(durationMillis = 240, easing = FastOutSlowInEasing)
@@ -1234,24 +1236,6 @@ private fun FullPlayerControlsSection(
                 colorNextButton = transportSkipColors.container,
                 tintPreviousIcon = transportSkipColors.content,
                 tintNextIcon = transportSkipColors.content
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            BottomToggleRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 66.dp, max = 86.dp)
-                    .padding(horizontal = 26.dp, vertical = 0.dp)
-                    .padding(bottom = 6.dp),
-                isShuffleEnabled = isShuffleEnabledProvider(),
-                isShuffleTransitionInProgress = shuffleTransitionInProgress,
-                repeatMode = repeatModeProvider(),
-                isFavoriteProvider = isFavoriteProvider,
-                favoriteEnabled = favoriteEnabledProvider(),
-                onShuffleToggle = onShuffleToggle,
-                onRepeatToggle = onRepeatToggle,
-                onFavoriteToggle = onFavoriteToggle
             )
         }
     }
@@ -1392,7 +1376,13 @@ private fun FullPlayerSongMetadataSection(
     chipContentColor: Color,
     onQueueClick: () -> Unit,
     onArtistClick: () -> Unit,
-    isPlayingProvider: () -> Boolean = { true }
+    isPlayingProvider: () -> Boolean = { true },
+    isShuffleEnabledProvider: () -> Boolean = { false },
+    repeatModeProvider: () -> Int = { Player.REPEAT_MODE_ALL },
+    isFavoriteProvider: () -> Boolean = { false },
+    favoriteEnabledProvider: () -> Boolean = { true },
+    onCyclePlayMode: () -> Unit = {},
+    onFavoriteToggle: () -> Unit = {}
 ) {
     val shouldDelay = loadingTweaks.delayAll || loadingTweaks.delaySongMetadata
 
@@ -1439,7 +1429,13 @@ private fun FullPlayerSongMetadataSection(
             showQueueButton = isLandscape,
             onClickQueue = onQueueClick,
             onClickArtist = onArtistClick,
-            isPlayingProvider = isPlayingProvider
+            isPlayingProvider = isPlayingProvider,
+            isShuffleEnabledProvider = isShuffleEnabledProvider,
+            repeatModeProvider = repeatModeProvider,
+            isFavoriteProvider = isFavoriteProvider,
+            favoriteEnabledProvider = favoriteEnabledProvider,
+            onCyclePlayMode = onCyclePlayMode,
+            onFavoriteToggle = onFavoriteToggle
         )
     }
 }
@@ -1464,7 +1460,7 @@ private fun FullPlayerPortraitContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceAround
     ) {
-        albumCoverSection(Modifier.weight(1f, fill = false))
+        albumCoverSection(Modifier.weight(1f, fill = false).aspectRatio(1f))
 
         lyricsSection()
 
@@ -1548,7 +1544,13 @@ private fun SongMetadataDisplaySection(
     onClickQueue: () -> Unit,
     onClickArtist: () -> Unit,
     modifier: Modifier = Modifier,
-    isPlayingProvider: () -> Boolean = { true }
+    isPlayingProvider: () -> Boolean = { true },
+    isShuffleEnabledProvider: () -> Boolean = { false },
+    repeatModeProvider: () -> Int = { Player.REPEAT_MODE_ALL },
+    isFavoriteProvider: () -> Boolean = { false },
+    favoriteEnabledProvider: () -> Boolean = { true },
+    onCyclePlayMode: () -> Unit = {},
+    onFavoriteToggle: () -> Unit = {}
 ) {
     Row(
         modifier
@@ -1629,6 +1631,43 @@ private fun SongMetadataDisplaySection(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val playModeIcon = when {
+                    isShuffleEnabledProvider() -> R.drawable.rounded_shuffle_24
+                    repeatModeProvider() == Player.REPEAT_MODE_ONE -> R.drawable.rounded_repeat_one_24
+                    else -> R.drawable.rounded_repeat_24
+                }
+                Box(
+                    modifier = Modifier
+                        .size(height = 42.dp, width = 50.dp)
+                        .clip(RoundedCornerShape(21.dp))
+                        .background(chipColor)
+                        .clickable { onCyclePlayMode() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(playModeIcon),
+                        contentDescription = stringResource(R.string.presentation_batch_e_cd_toggle_repeat),
+                        tint = chipContentColor
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .graphicsLayer { alpha = if (favoriteEnabledProvider()) 1f else 0.45f }
+                        .size(height = 42.dp, width = 50.dp)
+                        .clip(RoundedCornerShape(21.dp))
+                        .background(chipColor)
+                        .clickable { onFavoriteToggle() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(
+                            if (isFavoriteProvider()) R.drawable.round_favorite_24
+                            else R.drawable.rounded_favorite_24
+                        ),
+                        contentDescription = stringResource(R.string.presentation_batch_h_cd_favorite),
+                        tint = chipContentColor
+                    )
+                }
                 Box(
                     modifier = Modifier
                         .graphicsLayer {
@@ -1679,25 +1718,66 @@ private fun SongMetadataDisplaySection(
                 }
             }
         } else {
-            FilledIconButton(
-                modifier = Modifier
-                    .graphicsLayer {
-                        val s = lyricsButtonScale()
-                        scaleX = s
-                        scaleY = s
-                    }
-                    .size(width = 48.dp, height = 48.dp)
-                    .onGloballyPositioned { onLyricsButtonBoundsChange(it.boundsInRoot()) },
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = chipColor,
-                    contentColor = chipContentColor
-                ),
-                onClick = onClickLyrics,
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.rounded_lyrics_24),
-                    contentDescription = stringResource(R.string.presentation_batch_g_player_cd_lyrics)
-                )
+                val playModeIcon = when {
+                    isShuffleEnabledProvider() -> R.drawable.rounded_shuffle_24
+                    repeatModeProvider() == Player.REPEAT_MODE_ONE -> R.drawable.rounded_repeat_one_24
+                    else -> R.drawable.rounded_repeat_24
+                }
+                FilledIconButton(
+                    modifier = Modifier.size(width = 48.dp, height = 48.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = chipColor,
+                        contentColor = chipContentColor
+                    ),
+                    onClick = onCyclePlayMode,
+                ) {
+                    Icon(
+                        painter = painterResource(playModeIcon),
+                        contentDescription = stringResource(R.string.presentation_batch_e_cd_toggle_repeat)
+                    )
+                }
+                FilledIconButton(
+                    modifier = Modifier
+                        .graphicsLayer { alpha = if (favoriteEnabledProvider()) 1f else 0.45f }
+                        .size(width = 48.dp, height = 48.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = chipColor,
+                        contentColor = chipContentColor
+                    ),
+                    onClick = onFavoriteToggle,
+                ) {
+                    Icon(
+                        painter = painterResource(
+                            if (isFavoriteProvider()) R.drawable.round_favorite_24
+                            else R.drawable.rounded_favorite_24
+                        ),
+                        contentDescription = stringResource(R.string.presentation_batch_h_cd_favorite)
+                    )
+                }
+                FilledIconButton(
+                    modifier = Modifier
+                        .graphicsLayer {
+                            val s = lyricsButtonScale()
+                            scaleX = s
+                            scaleY = s
+                        }
+                        .size(width = 48.dp, height = 48.dp)
+                        .onGloballyPositioned { onLyricsButtonBoundsChange(it.boundsInRoot()) },
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = chipColor,
+                        contentColor = chipContentColor
+                    ),
+                    onClick = onClickLyrics,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.rounded_lyrics_24),
+                        contentDescription = stringResource(R.string.presentation_batch_g_player_cd_lyrics)
+                    )
+                }
             }
         }
     }
@@ -2758,104 +2838,3 @@ private fun expressiveSkipButtonColors(colorScheme: ColorScheme): TransportButto
     )
 }
 
-@Composable
-private fun BottomToggleRow(
-    modifier: Modifier,
-    isShuffleEnabled: Boolean,
-    isShuffleTransitionInProgress: Boolean,
-    repeatMode: Int,
-    isFavoriteProvider: () -> Boolean,
-    favoriteEnabled: Boolean = true,
-    onShuffleToggle: () -> Unit,
-    onRepeatToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit
-) {
-    val isFavorite = isFavoriteProvider()
-    val rowCorners = 60.dp
-    val inactiveBg = LocalMaterialTheme.current.onSurface.copy(alpha = 0.07f)
-    val inactiveContentColor = LocalMaterialTheme.current.onSurface
-
-
-    Box(
-        modifier = modifier.background(
-            color = LocalMaterialTheme.current.surfaceContainerLowest.copy(alpha = 0.7f),
-            shape = AbsoluteSmoothCornerShape(
-                cornerRadiusBL = rowCorners,
-                smoothnessAsPercentTR = 60,
-                cornerRadiusBR = rowCorners,
-                smoothnessAsPercentBL = 60,
-                cornerRadiusTL = rowCorners,
-                smoothnessAsPercentBR = 60,
-                cornerRadiusTR = rowCorners,
-                smoothnessAsPercentTL = 60
-            )
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(6.dp)
-                .clip(
-                    AbsoluteSmoothCornerShape(
-                        cornerRadiusBL = rowCorners,
-                        smoothnessAsPercentTR = 60,
-                        cornerRadiusBR = rowCorners,
-                        smoothnessAsPercentBL = 60,
-                        cornerRadiusTL = rowCorners,
-                        smoothnessAsPercentBR = 60,
-                        cornerRadiusTR = rowCorners,
-                        smoothnessAsPercentTL = 60
-                    )
-                )
-                .background(Color.Transparent),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val commonModifier = Modifier.weight(1f)
-
-            ToggleSegmentButton(
-                modifier = commonModifier,
-                active = isShuffleEnabled,
-                enabled = !isShuffleTransitionInProgress,
-                activeColor = LocalMaterialTheme.current.primaryFixed,
-                activeCornerRadius = rowCorners,
-                activeContentColor = LocalMaterialTheme.current.onPrimaryFixed,
-                inactiveColor = inactiveBg,
-                inactiveContentColor = inactiveContentColor,
-                onClick = onShuffleToggle,
-                iconId = R.drawable.rounded_shuffle_24,
-                contentDesc = "Shuffle"
-            )
-            val repeatActive = repeatMode != Player.REPEAT_MODE_OFF
-            val repeatIcon = when (repeatMode) {
-                Player.REPEAT_MODE_ONE -> R.drawable.rounded_repeat_one_24
-                Player.REPEAT_MODE_ALL -> R.drawable.rounded_repeat_24
-                else -> R.drawable.rounded_repeat_24
-            }
-            ToggleSegmentButton(
-                modifier = commonModifier,
-                active = repeatActive,
-                activeColor = LocalMaterialTheme.current.secondaryFixed,
-                activeCornerRadius = rowCorners,
-                activeContentColor = LocalMaterialTheme.current.onSecondaryFixed,
-                inactiveColor = inactiveBg,
-                inactiveContentColor = inactiveContentColor,
-                onClick = onRepeatToggle,
-                iconId = repeatIcon,
-                contentDesc = "Repeat"
-            )
-            ToggleSegmentButton(
-                modifier = commonModifier.graphicsLayer { alpha = if (favoriteEnabled) 1f else 0.45f },
-                active = isFavorite,
-                activeColor = LocalMaterialTheme.current.tertiaryFixed,
-                activeCornerRadius = rowCorners,
-                activeContentColor = LocalMaterialTheme.current.onTertiaryFixed,
-                inactiveColor = inactiveBg,
-                inactiveContentColor = inactiveContentColor,
-                onClick = onFavoriteToggle,
-                iconId = if (isFavorite) R.drawable.round_favorite_24 else R.drawable.rounded_favorite_24,
-                contentDesc = "Favorite"
-            )
-        }
-    }
-}

@@ -225,13 +225,6 @@ fun LyricsSheet(
     isImmersiveTemporarilyDisabled: Boolean,
     onSetImmersiveTemporarilyDisabled: (Boolean) -> Unit,
     onSaveLyricsToFile: (Song, Lyrics, Boolean) -> Unit,
-    isShuffleEnabled: Boolean,
-    repeatMode: Int,
-    isFavoriteProvider: () -> Boolean,
-    favoriteEnabledProvider: () -> Boolean = { true },
-    onShuffleToggle: () -> Unit,
-    onRepeatToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit,
     modifier: Modifier = Modifier,
     swipeThreshold: Dp = 100.dp,
     highlightZoneFraction: Float = 0.08f,
@@ -1008,22 +1001,6 @@ fun LyricsSheet(
                         }
                     },
                     immersiveLyricsEnabled = immersiveLyricsEnabled,
-                    isShuffleEnabled = isShuffleEnabled,
-                    repeatMode = repeatMode,
-                    isFavoriteProvider = isFavoriteProvider,
-                    favoriteEnabledProvider = favoriteEnabledProvider,
-                    onShuffleToggle = {
-                        resetImmersiveTimer()
-                        onShuffleToggle()
-                    },
-                    onRepeatToggle = {
-                        resetImmersiveTimer()
-                        onRepeatToggle()
-                    },
-                    onFavoriteToggle = {
-                        resetImmersiveTimer()
-                        onFavoriteToggle()
-                    },
                 )
             }
         }

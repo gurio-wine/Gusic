@@ -52,7 +52,6 @@ import androidx.compose.runtime.setValue
 import com.gurio.gusic.R
 import com.gurio.gusic.data.model.Lyrics
 import com.gurio.gusic.presentation.components.ToggleSegmentButton
-import com.gurio.gusic.presentation.components.player.BottomToggleRow
 import androidx.compose.ui.text.style.TextOverflow
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -79,13 +78,6 @@ fun LyricsMoreBottomSheet(
     onShowTranslationChange: (Boolean) -> Unit,
     onShowRomanizationChange: (Boolean) -> Unit,
     immersiveLyricsEnabled: Boolean,
-    isShuffleEnabled: Boolean,
-    repeatMode: Int,
-    isFavoriteProvider: () -> Boolean,
-    favoriteEnabledProvider: () -> Boolean = { true },
-    onShuffleToggle: () -> Unit,
-    onRepeatToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     accentColor: Color = MaterialTheme.colorScheme.primary,
@@ -522,29 +514,8 @@ fun LyricsMoreBottomSheet(
                     }
                 }
             }
-            
-            Spacer(modifier = Modifier.height(8.dp))
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .padding(vertical = 0.dp, horizontal = 0.dp)
-            ) {
-                 BottomToggleRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(74.dp)
-                        .padding(horizontal = 20.dp),
-                    isShuffleEnabled = isShuffleEnabled,
-                    repeatMode = repeatMode,
-                    isFavoriteProvider = isFavoriteProvider,
-                    favoriteEnabled = favoriteEnabledProvider(),
-                    onShuffleToggle = onShuffleToggle,
-                    onRepeatToggle = onRepeatToggle,
-                    onFavoriteToggle = onFavoriteToggle
-                )
-            }
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }

@@ -462,4 +462,16 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>Default launch tab is now Discover</item>
         <item>Library navigation is fixed to compact pill + grid; the tab-row mode and its setting are removed</item>
     </string-array>
+    <!-- Gusic 26.10.11.002：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101102_whats_new">
+        <item>Further fixed QQ Music search returning no results</item>
+        <item>Play screen now has a single three-mode cycle button: list loop, single loop and shuffle</item>
+        <item>Cycle and favorite buttons now sit left of the lyrics button with a matching style</item>
+    </string-array>
+    <!-- Gusic 26.10.11.002：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101102_changes">
+        <item>Cycle and favorite controls removed from the lyrics more sheet and the queue sheet</item>
+        <item>Album cover is now a taller 1:1 square and lower controls moved down</item>
+        <item>Mini player now shows the artist beside the song title</item>
+    </string-array>
 </resources>

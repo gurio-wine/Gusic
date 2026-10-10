@@ -198,7 +198,6 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                     val onShuffleToggle = remember(playerViewModel) {
                         { playerViewModel.toggleShuffle() }
                     }
-                    val onRepeatToggle = remember(playerViewModel) { playerViewModel::cycleRepeatMode }
                     val onFavoriteToggle = remember(playerViewModel) { playerViewModel::toggleFavorite }
 
                     FullPlayerContent(
@@ -206,8 +205,6 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         currentPlaybackQueue = currentPlaybackQueue,
                         currentQueueSourceName = currentQueueSourceName,
                         currentMediaItemIndex = infrequentPlayerState.currentMediaItemIndex,
-                        isShuffleEnabled = infrequentPlayerState.isShuffleEnabled,
-                        shuffleTransitionInProgress = infrequentPlayerState.isShuffleTransitionInProgress,
                         repeatMode = infrequentPlayerState.repeatMode,
                         allowRealtimeUpdates = fullPlayerRuntimePolicy.allowRealtimeUpdates,
                         expansionFractionProvider = expansionFractionProvider,
@@ -236,7 +233,6 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         onQueueDrag = onQueueDrag,
                         onQueueRelease = onQueueRelease,
                         onShuffleToggle = onShuffleToggle,
-                        onRepeatToggle = onRepeatToggle,
                         onFavoriteToggle = onFavoriteToggle
                     )
                 }
@@ -292,7 +288,6 @@ internal fun UnifiedPlayerPrewarmLayer(
                 val onNext = remember(playerViewModel) { playerViewModel::nextSong }
                 val onPrevious = remember(playerViewModel) { playerViewModel::previousSong }
                 val onShuffleToggle = remember(playerViewModel) { { playerViewModel.toggleShuffle() } }
-                val onRepeatToggle = remember(playerViewModel) { playerViewModel::cycleRepeatMode }
                 val onFavoriteToggle = remember(playerViewModel) { playerViewModel::toggleFavorite }
 
                 FullPlayerContent(
@@ -300,8 +295,6 @@ internal fun UnifiedPlayerPrewarmLayer(
                     currentPlaybackQueue = currentPlaybackQueue,
                     currentQueueSourceName = currentQueueSourceName,
                     currentMediaItemIndex = infrequentPlayerState.currentMediaItemIndex,
-                    isShuffleEnabled = infrequentPlayerState.isShuffleEnabled,
-                    shuffleTransitionInProgress = infrequentPlayerState.isShuffleTransitionInProgress,
                     repeatMode = infrequentPlayerState.repeatMode,
                     allowRealtimeUpdates = false,
                     expansionFractionProvider = { 1f },
@@ -328,7 +321,6 @@ internal fun UnifiedPlayerPrewarmLayer(
                     onPrevious = onPrevious,
                     onCollapse = {},
                     onShuffleToggle = onShuffleToggle,
-                    onRepeatToggle = onRepeatToggle,
                     onFavoriteToggle = onFavoriteToggle
                 )
             }

@@ -462,4 +462,16 @@
         <item>預設啟動頁改為「發現」</item>
         <item>曲庫導航固定為緊湊膠囊+網格，移除「標題欄」方式與對應設定項</item>
     </string-array>
+    <!-- Gusic 26.10.11.002：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101102_whats_new">
+        <item>進一步修復 QQ 音樂搜尋無結果的問題</item>
+        <item>播放頁循環按鈕合併為一個，支援列表循環、單曲循環、隨機循環三檔切換</item>
+        <item>循環與收藏按鈕移至歌詞按鈕左側，樣式與歌詞按鈕統一</item>
+    </string-array>
+    <!-- Gusic 26.10.11.002：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101102_changes">
+        <item>歌詞更多面板與播放佇列不再顯示循環、收藏按鈕</item>
+        <item>專輯封面改為 1:1 比例並加高，下方組件整體下移</item>
+        <item>懸浮播放器歌手名移至歌名右側顯示</item>
+    </string-array>
 </resources>
