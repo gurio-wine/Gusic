@@ -129,7 +129,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/pixelplayer_glance_widget_info" />
+                android:resource="@xml/gusic_glance_widget_info" />
         </receiver>
 
         <receiver

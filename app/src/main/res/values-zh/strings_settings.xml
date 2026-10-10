@@ -202,8 +202,8 @@
     <string name="setcat_trigger_crash_title">觸發測試崩潰</string>
     <string name="setcat_trigger_crash_subtitle">模擬程序崩潰，用於測試崩潰上報系統</string>
     <string name="setcat_application">應用信息</string>
-    <string name="setcat_about_pixelplayer_title">關於 Gusic</string>
-    <string name="setcat_about_pixelplayer_subtitle">版本、致謝等更多信息</string>
+    <string name="setcat_about_gusic_title">關於 Gusic</string>
+    <string name="setcat_about_gusic_subtitle">版本、致謝等更多信息</string>
 
     <string name="backup_summary_none">未選擇任何備份模塊</string>
     <string name="backup_summary_all">已選擇全部模塊</string>

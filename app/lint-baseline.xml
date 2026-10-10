@@ -183,7 +183,7 @@
         errorLine1="    android:targetCellWidth=&quot;4&quot;"
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/xml/pixelplayer_glance_widget_info.xml"
+            file="src/main/res/xml/gusic_glance_widget_info.xml"
             line="5"
             column="5"/>
     </issue>
@@ -194,7 +194,7 @@
         errorLine1="    android:targetCellHeight=&quot;2&quot;"
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/xml/pixelplayer_glance_widget_info.xml"
+            file="src/main/res/xml/gusic_glance_widget_info.xml"
             line="6"
             column="5"/>
     </issue>
@@ -7211,9 +7211,9 @@
 
     <issue
         id="MissingTranslation"
-        message="&quot;setcat_about_pixelplayer_title&quot; is not translated in &quot;ar&quot; (Arabic), &quot;de&quot; (German), &quot;ru&quot; (Russian), &quot;ko&quot; (Korean), &quot;nb&quot; (Norwegian Bokmål), &quot;in&quot; (Indonesian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish), &quot;tr&quot; (Turkish)"
-        errorLine1="    &lt;string name=&quot;setcat_about_pixelplayer_title&quot;>About Gusic&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        message="&quot;setcat_about_gusic_title&quot; is not translated in &quot;ar&quot; (Arabic), &quot;de&quot; (German), &quot;ru&quot; (Russian), &quot;ko&quot; (Korean), &quot;nb&quot; (Norwegian Bokmål), &quot;in&quot; (Indonesian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;setcat_about_gusic_title&quot;>About Gusic&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings_settings.xml"
             line="227"

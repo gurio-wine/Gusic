@@ -656,8 +656,8 @@ object SettingsRegistry {
             SettingSpec(
                 id = "about_app",
                 itemKey = "item_about_app",
-                titleRes = R.string.setcat_about_pixelplayer_title,
-                subtitleRes = R.string.setcat_about_pixelplayer_subtitle,
+                titleRes = R.string.setcat_about_gusic_title,
+                subtitleRes = R.string.setcat_about_gusic_subtitle,
                 category = SettingsCategory.ABOUT,
                 subscreenRoute = Screen.SettingsCategory.createRoute("about"),
                 type = SettingType.NAVIGABLE_CARD,

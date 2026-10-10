@@ -34,6 +34,19 @@ class M3uManagerTest {
     }
 
     @Test
+    fun `parser accepts the gusic playlist id marker`() {
+        val songs = listOf(song("1", "/Music/Album/one.flac"))
+
+        val result = M3uManager.parseContent(
+            "#EXTM3U\n#GUSIC-PLAYLIST-ID:playlist-7\n/Music/Album/one.flac",
+            songs,
+        )
+
+        assertThat(result.playlistId).isEqualTo("playlist-7")
+        assertThat(result.songIds).containsExactly("1")
+    }
+
+    @Test
     fun `generator emits stable identity and cloud uri fallback`() {
         val playlist = Playlist(
             id = "playlist-42",
@@ -47,7 +60,7 @@ class M3uManagerTest {
 
         val content = M3uManager.generateContent(playlist, songs)
 
-        assertThat(content).contains("#PIXELPLAYER-PLAYLIST-ID:playlist-42")
+        assertThat(content).contains("#GUSIC-PLAYLIST-ID:playlist-42")
         assertThat(content).contains("/Music/one.flac")
         assertThat(content).contains("navidrome://song-cloud")
     }
