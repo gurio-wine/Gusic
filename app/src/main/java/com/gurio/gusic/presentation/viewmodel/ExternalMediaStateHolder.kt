@@ -1,6 +1,5 @@
 package com.gurio.gusic.presentation.viewmodel
 
-import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
@@ -19,10 +18,7 @@ import java.io.File
 import javax.inject.Inject
 
 data class ExternalSongLoadResult(
-    val song: Song,
-    val relativePath: String?,
-    val bucketId: Long?,
-    val displayName: String?
+    val song: Song
 )
 
 class ExternalMediaStateHolder @Inject constructor(
@@ -31,121 +27,17 @@ class ExternalMediaStateHolder @Inject constructor(
 
     suspend fun buildExternalQueue(
         result: ExternalSongLoadResult,
-        originalUri: Uri
-    ): List<Song> {
-        val continuation = loadAdditionalSongsFromFolder(result, originalUri)
-        if (continuation.isEmpty()) {
-            return listOf(result.song)
-        }
+        @Suppress("UNUSED_PARAMETER") originalUri: Uri
+    ): List<Song> = listOf(result.song)
 
-        val queue = mutableListOf(result.song)
-        continuation.forEach { song ->
-            if (queue.none { it.id == song.id }) {
-                queue.add(song)
-            }
-        }
-
-        return queue
-    }
-
-    private suspend fun loadAdditionalSongsFromFolder(
-        reference: ExternalSongLoadResult,
-        originalUri: Uri
-    ): List<Song> = withContext(Dispatchers.IO) {
-        val relativePath = reference.relativePath
-        val bucketId = reference.bucketId
-        if (relativePath.isNullOrEmpty() && bucketId == null) {
-            return@withContext emptyList()
-        }
-
-        val selection: String
-        val selectionArgs: Array<String>
-        if (bucketId != null) {
-            selection = "${MediaStore.Audio.Media.BUCKET_ID} = ?"
-            selectionArgs = arrayOf(bucketId.toString())
-        } else {
-            selection = "${MediaStore.Audio.Media.RELATIVE_PATH} = ?"
-            selectionArgs = arrayOf(relativePath!!)
-        }
-
-        val resolver = context.contentResolver
-        val projection = arrayOf(
-            MediaStore.Audio.Media._ID,
-            MediaStore.Audio.Media.DISPLAY_NAME
-        )
-
-        val siblings = mutableListOf<Pair<Uri, String?>>()
-        try {
-            resolver.query(
-                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                projection,
-                selection,
-                selectionArgs,
-                "LOWER(${MediaStore.Audio.Media.DISPLAY_NAME}) ASC"
-            )?.use { cursor ->
-                val idIndex = cursor.getColumnIndex(MediaStore.Audio.Media._ID)
-                val nameIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME)
-                if (idIndex != -1) {
-                    while (cursor.moveToNext()) {
-                        val mediaId = cursor.getLong(idIndex)
-                        val mediaUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, mediaId)
-                        val siblingName = if (nameIndex != -1) cursor.getString(nameIndex) else null
-                        siblings.add(mediaUri to siblingName)
-                    }
-                }
-            }
-        } catch (securityException: SecurityException) {
-            Timber.w(securityException, "Unable to load sibling songs for uri: $originalUri")
-            return@withContext emptyList()
-        } catch (illegalArgumentException: IllegalArgumentException) {
-            Timber.w(illegalArgumentException, "Invalid query while loading sibling songs for uri: $originalUri")
-            return@withContext emptyList()
-        }
-
-        if (siblings.isEmpty()) return@withContext emptyList()
-
-        val normalizedTargetUri = originalUri.toString()
-        val normalizedDisplayName = reference.displayName?.lowercase()?.trim()
-
-        val startIndex = siblings.indexOfFirst { (itemUri, displayName) ->
-            itemUri == originalUri ||
-                itemUri.toString() == normalizedTargetUri ||
-                (normalizedDisplayName != null && displayName?.lowercase()?.trim() == normalizedDisplayName)
-        }
-
-        val candidates = if (startIndex != -1) {
-            siblings.drop(startIndex + 1)
-        } else {
-            siblings.filterNot { (itemUri, displayName) ->
-                itemUri == originalUri ||
-                    itemUri.toString() == normalizedTargetUri ||
-                    (normalizedDisplayName != null && displayName?.lowercase()?.trim() == normalizedDisplayName)
-            }
-        }
-
-        if (candidates.isEmpty()) return@withContext emptyList()
-
-        val resolved = mutableListOf<Song>()
-        for ((candidateUri, _) in candidates) {
-            val additional = buildExternalSongFromUri(candidateUri, captureFolderInfo = false)
-            val song = additional?.song ?: continue
-            if (song.id != reference.song.id) {
-                resolved.add(song)
-            }
-        }
-
-        resolved
-    }
 
     suspend fun buildExternalSongFromUri(
         uri: Uri,
-        captureFolderInfo: Boolean = true
+        @Suppress("UNUSED_PARAMETER") captureFolderInfo: Boolean = true
     ): ExternalSongLoadResult? = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
 
         var displayName: String? = null
-        var relativePath: String? = null
-        var bucketId: Long? = null
         var storeTitle: String? = null
         var storeArtist: String? = null
         var storeAlbum: String? = null
@@ -159,8 +51,6 @@ class ExternalMediaStateHolder @Inject constructor(
         val projection = arrayOf(
             MediaStore.Audio.Media._ID,
             OpenableColumns.DISPLAY_NAME,
-            MediaStore.Audio.Media.RELATIVE_PATH,
-            MediaStore.Audio.Media.BUCKET_ID,
             MediaStore.Audio.Media.DURATION,
             MediaStore.Audio.Media.TITLE,
             MediaStore.Audio.Media.ARTIST,
@@ -179,12 +69,6 @@ class ExternalMediaStateHolder @Inject constructor(
 
                     val displayNameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                     if (displayNameIndex != -1) displayName = cursor.getString(displayNameIndex)
-
-                    val relativePathIndex = cursor.getColumnIndex(MediaStore.Audio.Media.RELATIVE_PATH)
-                    if (relativePathIndex != -1) relativePath = cursor.getString(relativePathIndex)
-
-                    val bucketIdIndex = cursor.getColumnIndex(MediaStore.Audio.Media.BUCKET_ID)
-                    if (bucketIdIndex != -1) bucketId = cursor.getLong(bucketIdIndex)
 
                     val durationIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DURATION)
                     if (durationIndex != -1) storeDuration = cursor.getLong(durationIndex)
@@ -268,12 +152,7 @@ class ExternalMediaStateHolder @Inject constructor(
             sampleRate = metadata.sampleRate
         )
         
-        ExternalSongLoadResult(
-            song = song,
-            relativePath = if (captureFolderInfo) relativePath else null,
-            bucketId = if (captureFolderInfo) bucketId else null,
-            displayName = displayName
-        )
+        ExternalSongLoadResult(song = song)
     }
 
     private fun Uri.mediaStoreAudioId(): Long? {

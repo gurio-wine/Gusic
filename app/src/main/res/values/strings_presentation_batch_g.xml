@@ -185,7 +185,9 @@
 
 "Extract Artists from Title" detects patterns like (feat. Artist) in song titles.
 
-Backslash (\) can be used to escape character delimiters.</string>
+Backslash (\) can be used to escape character delimiters.
+
+These preferences are used when Gusic edits a song’s artist metadata. They do not rescan or reprocess existing songs, and SAF imports keep the artist metadata read from the selected files.</string>
     <string name="presentation_batch_g_artist_example_arrow"> → </string>
     <string name="presentation_batch_g_artist_examples_title">Examples</string>
     <string name="presentation_batch_g_artist_ex_1_in">\"Artist1/Artist2\"</string>

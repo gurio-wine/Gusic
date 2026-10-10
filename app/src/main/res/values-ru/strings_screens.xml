@@ -200,7 +200,7 @@
     <string name="skip_not_now">Пропустить / Пока нет</string>
     <string name="tab_albums">АЛЬБОМЫ</string>
     <string name="tab_artists">ИСПОЛНИТЕЛИ</string>
-    <string name="tab_library">Медиатека</string>
+    <string name="tab_library">Моё</string>
     <string name="tab_songs">ТРЕКИ</string>
     <string name="toast_added_to_queue">Добавлено в очередь</string>
     <string name="toast_crash_log_copied">Журнал сбоя скопирован в буфер обмена</string>

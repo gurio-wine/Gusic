@@ -29,11 +29,20 @@ import com.gurio.gusic.data.database.MIGRATION_6_7
 import com.gurio.gusic.data.database.MIGRATION_7_8
 import com.gurio.gusic.data.database.MIGRATION_8_9
 import com.gurio.gusic.data.database.MIGRATION_9_10
+import com.gurio.gusic.data.database.MIGRATION_10_11
 import com.gurio.gusic.data.database.MusicDao
 import com.gurio.gusic.data.database.OfflineTrackDao
 import com.gurio.gusic.data.database.PixelPlayerDatabase
 import com.gurio.gusic.data.database.SearchHistoryDao
 import com.gurio.gusic.data.database.TransitionDao
+import com.gurio.gusic.data.library.AndroidSafDocumentIdentityReader
+import com.gurio.gusic.data.library.ContentResolverPersistedUriPermissionStore
+import com.gurio.gusic.data.library.ContentResolverSafAudioMetadataReader
+import com.gurio.gusic.data.library.PersistedUriPermissionStore
+import com.gurio.gusic.data.library.RoomSafSongPersistence
+import com.gurio.gusic.data.library.SafAudioMetadataReader
+import com.gurio.gusic.data.library.SafDocumentIdentityReader
+import com.gurio.gusic.data.library.SafSongPersistence
 import com.gurio.gusic.data.preferences.UserPreferencesRepository
 import com.gurio.gusic.data.preferences.PlaylistPreferencesRepository
 import com.gurio.gusic.data.preferences.dataStore
@@ -143,6 +152,7 @@ object AppModule {
                 MIGRATION_7_8,
                 MIGRATION_8_9,
                 MIGRATION_9_10,
+                MIGRATION_10_11,
             )
             .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
 
@@ -282,16 +292,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideSongRepository(
-        @ApplicationContext context: Context,
-        mediaStoreObserver: com.gurio.gusic.data.observer.MediaStoreObserver,
-        favoritesDao: FavoritesDao,
         userPreferencesRepository: UserPreferencesRepository,
         musicDao: MusicDao
     ): SongRepository {
         return MediaStoreSongRepository(
-            context = context,
-            mediaStoreObserver = mediaStoreObserver,
-            favoritesDao = favoritesDao,
             userPreferencesRepository = userPreferencesRepository,
             musicDao = musicDao
         )
@@ -516,6 +520,30 @@ object AppModule {
     /**
      * Provides the artist image repository.
      */
+    @Provides
+    @Singleton
+    fun providePersistedUriPermissionStore(
+        implementation: ContentResolverPersistedUriPermissionStore,
+    ): PersistedUriPermissionStore = implementation
+
+    @Provides
+    @Singleton
+    fun provideSafAudioMetadataReader(
+        implementation: ContentResolverSafAudioMetadataReader,
+    ): SafAudioMetadataReader = implementation
+
+    @Provides
+    @Singleton
+    fun provideSafDocumentIdentityReader(
+        implementation: AndroidSafDocumentIdentityReader,
+    ): SafDocumentIdentityReader = implementation
+
+    @Provides
+    @Singleton
+    fun provideSafSongPersistence(
+        implementation: RoomSafSongPersistence,
+    ): SafSongPersistence = implementation
+
     @Provides
     @Singleton
     fun provideArtistImageRepository(

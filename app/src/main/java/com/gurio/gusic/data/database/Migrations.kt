@@ -231,3 +231,48 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
         db.execSQL("ALTER TABLE `songs` ADD COLUMN `lx_extra_fields_json` TEXT")
     }
 }
+
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+                CREATE TABLE IF NOT EXISTS `library_item_identities` (
+                    `row_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `item_type` TEXT NOT NULL,
+                    `source_namespace` TEXT NOT NULL,
+                    `native_id` TEXT NOT NULL,
+                    `entity_id` INTEGER NOT NULL,
+                    `locator_uri` TEXT,
+                    `has_persisted_read_grant` INTEGER NOT NULL DEFAULT 0,
+                    `is_missing` INTEGER NOT NULL DEFAULT 0,
+                    `last_seen_at` INTEGER NOT NULL DEFAULT 0
+                )
+            """.trimIndent(),
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS " +
+                "`index_library_item_identities_item_type_source_namespace_native_id` " +
+                "ON `library_item_identities` (`item_type`, `source_namespace`, `native_id`)"
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS " +
+                "`index_library_item_identities_item_type_entity_id` " +
+                "ON `library_item_identities` (`item_type`, `entity_id`)"
+        )
+        db.execSQL(
+            "INSERT INTO `library_item_identities` " +
+                "(`item_type`, `source_namespace`, `native_id`, `entity_id`) " +
+                "SELECT 'song', 'legacy', CAST(`id` AS TEXT), `id` FROM `songs`"
+        )
+        db.execSQL(
+            "INSERT INTO `library_item_identities` " +
+                "(`item_type`, `source_namespace`, `native_id`, `entity_id`) " +
+                "SELECT 'album', 'legacy', CAST(`id` AS TEXT), `id` FROM `albums`"
+        )
+        db.execSQL(
+            "INSERT INTO `library_item_identities` " +
+                "(`item_type`, `source_namespace`, `native_id`, `entity_id`) " +
+                "SELECT 'artist', 'legacy', CAST(`id` AS TEXT), `id` FROM `artists`"
+        )
+    }
+}

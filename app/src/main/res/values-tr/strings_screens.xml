@@ -200,7 +200,7 @@
     <string name="skip_not_now">Şimdilik atla</string>
     <string name="tab_albums">ALBÜMLER</string>
     <string name="tab_artists">SANATÇILAR</string>
-    <string name="tab_library">Kitaplık</string>
+    <string name="tab_library">Benim</string>
     <string name="tab_songs">ŞARKILAR</string>
     <string name="toast_added_to_queue">Sıraya eklendi</string>
     <string name="toast_crash_log_copied">Çökme günlüğü panoya kopyalandı</string>

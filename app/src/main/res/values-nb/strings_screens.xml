@@ -200,7 +200,7 @@
     <string name="skip_not_now">Hopp over</string>
     <string name="tab_albums">ALBUM</string>
     <string name="tab_artists">ARTISTER</string>
-    <string name="tab_library">Bibliotek</string>
+    <string name="tab_library">Mitt</string>
     <string name="tab_songs">SANGER</string>
     <string name="toast_added_to_queue">Lagt til i kø</string>
     <string name="toast_crash_log_copied">Krasj-logg kopiert til utklippstavlen</string>

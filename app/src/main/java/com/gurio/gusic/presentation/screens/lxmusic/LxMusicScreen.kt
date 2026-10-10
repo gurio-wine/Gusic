@@ -99,7 +99,6 @@ import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
@@ -248,7 +247,6 @@ fun LxMusicScreen(
     var urlInput by remember { mutableStateOf("") }
     var urlImporting by remember { mutableStateOf(false) }
     var scriptToDelete by remember { mutableStateOf<LxScriptMeta?>(null) }
-    var showPlatformNameDialog by remember { mutableStateOf(false) }
     var showPlatformOrderSheet by remember { mutableStateOf(false) }
     var showLoginDialog by remember { mutableStateOf(false) }
     var showTxLoginDialog by remember { mutableStateOf(false) }
@@ -282,32 +280,18 @@ fun LxMusicScreen(
     val kuwoVipType by viewModel.kuwoVipType.collectAsStateWithLifecycle()
     val currentSourceLoggedIn by viewModel.currentSourceLoggedIn.collectAsStateWithLifecycle()
 
-    val platformNameStyle by viewModel.platformNameStyle.collectAsStateWithLifecycle()
     val platformOrder by viewModel.platformOrder.collectAsStateWithLifecycle()
 
     @Composable
     fun platformName(source: String): String {
-        val aliasResId = when (source) {
-            "wy" -> R.string.lx_source_alias_netease
-            "kw" -> R.string.lx_source_alias_kuwo
-            "tx" -> R.string.lx_source_alias_qq
-            "kg" -> R.string.lx_source_alias_kugou
-            else -> null
-        }
-        val originalResId = when (source) {
+        val resourceId = when (source) {
             "wy" -> R.string.lx_source_netease
             "kw" -> R.string.lx_source_kuwo
             "tx" -> R.string.lx_source_qq
             "kg" -> R.string.lx_source_kugou
             else -> null
         }
-        return if (platformNameStyle == "alias" && aliasResId != null) {
-            stringResource(aliasResId)
-        } else if (originalResId != null) {
-            stringResource(originalResId)
-        } else {
-            source
-        }
+        return resourceId?.let { stringResource(it) } ?: source
     }
 
     val orderedSearchTabs = remember(platformOrder) {
@@ -335,7 +319,7 @@ fun LxMusicScreen(
         }
 
     var showBatchDownloadDialog by remember { mutableStateOf(false) }
-    var batchDownloadQuality by remember { mutableStateOf(LxQualities.Q320) }
+    var batchDownloadQuality by remember { mutableStateOf(LxQualities.MASTER) }
 
    
     suspend fun ensureScriptOrToast(song: com.gurio.gusic.data.lxmusic.LxSong): Boolean {
@@ -441,7 +425,7 @@ fun LxMusicScreen(
         scripts.firstOrNull { it.assetPath == activeScript }?.name
     }
 
-    val brandTitle = stringResource(R.string.lx_brand_title)
+    val brandTitle = stringResource(R.string.tab_online)
     val moodWord = remember {
         LxMoodHolder.word ?: run {
             val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
@@ -1374,44 +1358,38 @@ fun LxMusicScreen(
                 AnimatedVisibility(visible = loginExpanded) {
                     Column {
                         Spacer(Modifier.height(8.dp))
-                        if (viewModel.accountWritesEnabled) {
-                            PlatformLoginRow(
-                                title = platformName("tx"),
-                                statusText = platformStatusText(tencentCookie, tencentCookieValid, tencentNickname),
-                                avatarUrl = if (!tencentCookie.isNullOrBlank() && tencentCookieValid) tencentAvatar else null,
-                                trailing = {
-                                    Icon(Icons.Rounded.ChevronRight, contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                                },
-                                onClick = { clearAllWebViewSession { showTxLoginDialog = true } },
-                            )
-                            Spacer(Modifier.height(8.dp))
-                        }
-                        if (viewModel.accountWritesEnabled) {
-                            PlatformLoginRow(
-                                title = platformName("kg"),
-                                statusText = platformStatusText(kugouCookie, kugouCookieValid, kugouNickname, appLoggedIn = kugouLoggedIn),
-                                avatarUrl = if (kugouLoggedIn) kugouAvatar else null,
-                                trailing = {
-                                    Icon(Icons.Rounded.ChevronRight, contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                                },
-                                onClick = { clearAllWebViewSession { showKgLoginDialog = true } },
-                            )
-                            Spacer(Modifier.height(8.dp))
-                        }
-                        if (viewModel.accountWritesEnabled) {
-                            PlatformLoginRow(
-                                title = platformName("kw"),
-                                statusText = platformStatusText(kuwoCookie, kuwoCookieValid, kuwoNickname),
-                                avatarUrl = if (!kuwoCookie.isNullOrBlank() && kuwoCookieValid) kuwoAvatar else null,
-                                trailing = {
-                                    Icon(Icons.Rounded.ChevronRight, contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                                },
-                                onClick = { clearAllWebViewSession { showKwLoginDialog = true } },
-                            )
-                        }
+                        PlatformLoginRow(
+                            title = platformName("tx"),
+                            statusText = platformStatusText(tencentCookie, tencentCookieValid, tencentNickname),
+                            avatarUrl = if (!tencentCookie.isNullOrBlank() && tencentCookieValid) tencentAvatar else null,
+                            trailing = {
+                                Icon(Icons.Rounded.ChevronRight, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                            },
+                            onClick = { clearAllWebViewSession { showTxLoginDialog = true } },
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        PlatformLoginRow(
+                            title = platformName("kg"),
+                            statusText = platformStatusText(kugouCookie, kugouCookieValid, kugouNickname, appLoggedIn = kugouLoggedIn),
+                            avatarUrl = if (kugouLoggedIn) kugouAvatar else null,
+                            trailing = {
+                                Icon(Icons.Rounded.ChevronRight, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                            },
+                            onClick = { clearAllWebViewSession { showKgLoginDialog = true } },
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        PlatformLoginRow(
+                            title = platformName("kw"),
+                            statusText = platformStatusText(kuwoCookie, kuwoCookieValid, kuwoNickname),
+                            avatarUrl = if (!kuwoCookie.isNullOrBlank() && kuwoCookieValid) kuwoAvatar else null,
+                            trailing = {
+                                Icon(Icons.Rounded.ChevronRight, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                            },
+                            onClick = { clearAllWebViewSession { showKwLoginDialog = true } },
+                        )
                     }
                 }
 
@@ -1497,50 +1475,6 @@ fun LxMusicScreen(
                 }
 
                 Spacer(Modifier.height(12.dp))
-
-                val nameStyleLabel = if (platformNameStyle == "alias") {
-                    stringResource(R.string.lx_platform_name_style_alias)
-                } else {
-                    stringResource(R.string.lx_platform_name_style_original)
-                }
-                Surface(
-                    onClick = { showPlatformNameDialog = true },
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            Icons.Rounded.DragHandle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.lx_platform_name_style_title),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = nameStyleLabel,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Icon(
-                            Icons.Rounded.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                }
 
                 Spacer(Modifier.height(24.dp))
             }
@@ -1680,67 +1614,6 @@ fun LxMusicScreen(
                     ) {
                         Icon(Icons.Rounded.Check, contentDescription = stringResource(R.string.lx_desc_delete))
                     }
-                }
-            },
-        )
-    }
-
-    if (showPlatformNameDialog) {
-        AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            onDismissRequest = { showPlatformNameDialog = false },
-            title = { Text(stringResource(R.string.lx_platform_name_style_title)) },
-            text = {
-                Column {
-                    listOf("original", "alias").forEach { style ->
-                        val selected = platformNameStyle == style
-                        Surface(
-                            onClick = {
-                                viewModel.setPlatformNameStyle(style)
-                                showPlatformNameDialog = false
-                            },
-                            color = if (selected) MaterialTheme.colorScheme.primaryContainer
-                                    else MaterialTheme.colorScheme.surfaceContainerHigh,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 2.dp),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                androidx.compose.material3.RadioButton(
-                                    selected = selected,
-                                    onClick = null,
-                                    colors = androidx.compose.material3.RadioButtonDefaults.colors(
-                                        selectedColor = MaterialTheme.colorScheme.primary,
-                                    ),
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = if (style == "original") {
-                                        stringResource(R.string.lx_platform_name_style_original)
-                                    } else {
-                                        stringResource(R.string.lx_platform_name_style_alias)
-                                    },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                FilledTonalIconButton(
-                    onClick = { showPlatformNameDialog = false },
-                    shape = lxDialogCancelShape,
-                    modifier = Modifier
-                        .shadow(2.dp, lxDialogCancelShape)
-                        .size(42.dp),
-                ) {
-                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.lx_desc_cancel))
                 }
             },
         )
@@ -1926,7 +1799,7 @@ private fun ScriptRow(
             .clip(shape)
             .combinedClickable(
                 onClick = { if (isEnabled && !isPreferred) onSetPreferred() },
-                onLongClick = onDelete,
+                onLongClick = { if (!meta.isDefault) onDelete() },
             ),
     ) {
         Row(
@@ -1963,34 +1836,36 @@ private fun ScriptRow(
                     )
                 }
             }
-            Switch(
-                checked = isEnabled,
-                onCheckedChange = { checked ->
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onToggle(checked)
-                },
-                thumbContent = {
-                    AnimatedContent(
-                        targetState = isEnabled,
-                        transitionSpec = { fadeIn(tween(100)) togetherWith fadeOut(tween(100)) },
-                        label = "script_switch_thumb_icon",
-                    ) { isChecked ->
-                        Icon(
-                            imageVector = if (isChecked) Icons.Rounded.Check else Icons.Rounded.Close,
-                            contentDescription = null,
-                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                        )
-                    }
-                },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                    checkedIconColor = MaterialTheme.colorScheme.primary,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurface,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    uncheckedIconColor = MaterialTheme.colorScheme.surfaceVariant,
-                ),
-            )
+            if (!meta.isDefault) {
+                Switch(
+                    checked = isEnabled,
+                    onCheckedChange = { checked ->
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onToggle(checked)
+                    },
+                    thumbContent = {
+                        AnimatedContent(
+                            targetState = isEnabled,
+                            transitionSpec = { fadeIn(tween(100)) togetherWith fadeOut(tween(100)) },
+                            label = "script_switch_thumb_icon",
+                        ) { isChecked ->
+                            Icon(
+                                imageVector = if (isChecked) Icons.Rounded.Check else Icons.Rounded.Close,
+                                contentDescription = null,
+                                modifier = Modifier.size(SwitchDefaults.IconSize),
+                            )
+                        }
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        checkedIconColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurface,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        uncheckedIconColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
+                )
+            }
         }
     }
 }

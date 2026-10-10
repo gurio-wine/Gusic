@@ -28,10 +28,7 @@ import com.gurio.gusic.data.preferences.CollagePattern
 import com.gurio.gusic.data.preferences.FullPlayerLoadingTweaks
 import com.gurio.gusic.data.preferences.ThemePreferencesRepository
 import com.gurio.gusic.data.repository.LyricsRepository
-import com.gurio.gusic.data.repository.MusicRepository
 import com.gurio.gusic.data.model.LyricsSourcePreference
-import com.gurio.gusic.data.worker.SyncManager
-import com.gurio.gusic.data.worker.SyncProgress
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.Channel
@@ -182,9 +179,7 @@ class SettingsViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val themePreferencesRepository: ThemePreferencesRepository,
     private val colorSchemeProcessor: ColorSchemeProcessor,
-    private val syncManager: SyncManager,
     private val lyricsRepository: LyricsRepository,
-    private val musicRepository: MusicRepository,
     private val backupManager: BackupManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -206,20 +201,6 @@ class SettingsViewModel @Inject constructor(
     val isCurrentDirectoryResolved = fileExplorerStateHolder.isCurrentDirectoryResolved
     private var hasPendingDirectoryRuleChanges = false
     private var latestDirectoryRuleUpdateJob: Job? = null
-
-    val isSyncing: StateFlow<Boolean> = syncManager.isSyncing
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false
-        )
-
-    val syncProgress: StateFlow<SyncProgress> = syncManager.syncProgress
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = SyncProgress()
-        )
 
     private val _dataTransferEvents = Channel<String>(Channel.BUFFERED)
     val dataTransferEvents: Flow<String> = _dataTransferEvents.receiveAsFlow()
@@ -515,7 +496,6 @@ class SettingsViewModel @Inject constructor(
         hasPendingDirectoryRuleChanges = false
         viewModelScope.launch {
             latestDirectoryRuleUpdateJob?.join()
-            syncManager.forceRefresh()
         }
     }
 
@@ -868,32 +848,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun refreshLibrary() {
-        viewModelScope.launch {
-            if (isSyncing.value) return@launch
-            syncManager.forceRefresh()
-        }
-    }
-
-
-
-
-    /**
-     * Performs a full library rescan - rescans all files from scratch.
-     * Use when songs are missing or metadata is incorrect.
-     */
-    fun fullSyncLibrary() {
-        viewModelScope.launch {
-            if (isSyncing.value) return@launch
-            syncManager.fullSync()
-        }
-    }
-
     fun setMinSongDuration(durationMs: Int) {
         viewModelScope.launch {
             if (durationMs == _uiState.value.minSongDuration) return@launch
             userPreferencesRepository.setMinSongDuration(durationMs)
-            syncManager.fullSync(deepScan = false)
         }
     }
 
@@ -924,18 +882,6 @@ class SettingsViewModel @Inject constructor(
     fun setImmersiveLyricsTimeout(timeout: Long) {
         viewModelScope.launch {
             userPreferencesRepository.setImmersiveLyricsTimeout(timeout)
-        }
-    }
-
-    /**
-     * Rebuilds local MediaStore-backed songs from scratch while preserving cloud sources.
-     * Local imported lyrics, favorites, and user metadata edits are removed for rebuilt songs.
-     * Use when local library data is corrupted or as a last resort.
-     */
-    fun rebuildDatabase() {
-        viewModelScope.launch {
-            if (isSyncing.value) return@launch
-            syncManager.rebuildDatabase()
         }
     }
 
@@ -1119,16 +1065,12 @@ class SettingsViewModel @Inject constructor(
             when (result) {
                 is RestoreResult.Success -> {
                     _dataTransferEvents.send(context.getString(R.string.data_restored_successfully))
-                    syncManager.sync()
                 }
                 is RestoreResult.PartialFailure -> {
                     val failedNames = result.failed.entries.joinToString { "${it.key.label}: ${it.value}" }
                     _dataTransferEvents.send(
                         context.getString(R.string.restore_partial_unresolved_format, failedNames),
                     )
-                    if (result.succeeded.isNotEmpty() || !result.rolledBack) {
-                        syncManager.sync()
-                    }
                 }
                 is RestoreResult.TotalFailure -> {
                     _dataTransferEvents.send(context.getString(R.string.restore_failed_format, result.error))

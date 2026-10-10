@@ -16,7 +16,7 @@ import coil.ImageLoaderFactory
 import com.gurio.gusic.data.diagnostics.AdvancedPerformanceDiagnosticsController
 import com.gurio.gusic.data.diagnostics.MainThreadWatchdog
 import com.gurio.gusic.data.preferences.UserPreferencesRepository
-import com.gurio.gusic.data.playlist.M3uSyncCoordinator
+import com.gurio.gusic.data.playlist.LegacyM3uSyncRetirer
 import com.gurio.gusic.data.repository.ArtistImageRepository
 import com.gurio.gusic.presentation.viewmodel.LibraryStateHolder
 import com.gurio.gusic.presentation.viewmodel.ThemeStateHolder
@@ -72,7 +72,7 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
     lateinit var advancedPerformanceDiagnosticsController: dagger.Lazy<AdvancedPerformanceDiagnosticsController>
 
     @Inject
-    lateinit var m3uSyncCoordinator: dagger.Lazy<M3uSyncCoordinator>
+    lateinit var legacyM3uSyncRetirer: dagger.Lazy<LegacyM3uSyncRetirer>
 
     private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -96,7 +96,6 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
     private val appLifecycleObserver = object : DefaultLifecycleObserver {
         override fun onStart(owner: LifecycleOwner) {
             libraryStateHolder.get().restoreAfterTrimIfNeeded()
-            m3uSyncCoordinator.get().onAppForeground()
             advancedPerformanceDiagnosticsController.get().onAppForeground()
         }
 
@@ -127,6 +126,9 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
             Timber.plant(ReleaseTree())
         }
 
+        // Retire queued automatic folder sync before any other startup work can schedule tasks.
+        legacyM3uSyncRetirer.get().cancelQueuedWork()
+
         if (BuildConfig.DEBUG) {
             MainThreadWatchdog(File(filesDir, "logs/watchdog")).start()
         }
@@ -146,8 +148,6 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
         ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
 
         syncManager.get().start()
-
-        m3uSyncCoordinator.get().start()
 
         advancedPerformanceDiagnosticsController.get().start(startupScope)
 

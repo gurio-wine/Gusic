@@ -15,6 +15,8 @@ import com.gurio.gusic.data.lxmusic.LxPlaylist
 import com.gurio.gusic.data.lxmusic.LxPlaylistTag
 import com.gurio.gusic.data.lxmusic.LxScriptCapabilities
 import com.gurio.gusic.data.lxmusic.LxScriptMeta
+import com.gurio.gusic.data.lxmusic.LxScriptPolicy
+import com.gurio.gusic.data.lxmusic.LxQualities
 import com.gurio.gusic.data.lxmusic.LxSong
 import com.gurio.gusic.data.lxmusic.LxSongMapper
 import com.gurio.gusic.data.lxmusic.LxSources
@@ -341,10 +343,8 @@ class LxMusicViewModel @Inject constructor(
 
             if (savedActiveScript != null && savedActiveScript !in disabledScripts) {
                 repository.loadAllScripts(activeScriptPath = savedActiveScript)
-            } else if (savedActiveScript == null && disabledScripts.isEmpty()) {
-                if (repository.scripts.value.any { !it.isImported }) {
-                    repository.loadAllScripts(activeScriptPath = null)
-                }
+            } else if (repository.scripts.value.any { it.isDefault }) {
+                repository.loadAllScripts(activeScriptPath = null)
             }
 
             val allCaps = repository.loaded.value
@@ -420,9 +420,10 @@ class LxMusicViewModel @Inject constructor(
     }
 
     fun unloadScript(assetPath: String) {
+        if (repository.scripts.value.any { it.assetPath == assetPath && it.isDefault }) return
         viewModelScope.launch {
             val cur = userPreferencesRepository.lxMusicDisabledScriptsFlow.first()
-            val newDisabled = cur + assetPath
+            val newDisabled = LxScriptPolicy.normalizeDisabledPaths(cur + assetPath)
             userPreferencesRepository.setLxMusicDisabledScripts(newDisabled)
             repository.unload(assetPath)
             if (_activeScript.value == assetPath) {
@@ -519,7 +520,6 @@ class LxMusicViewModel @Inject constructor(
         val disabled = runCatching {
             userPreferencesRepository.lxMusicDisabledScriptsFlow.first()
         }.getOrElse { emptySet() }
-        if (disabled.isNotEmpty()) return null
         repository.ensureDefaultScriptLoaded()
         val path = repository.activeScriptPath()
         if (path != null && path !in disabled) {
@@ -591,7 +591,7 @@ class LxMusicViewModel @Inject constructor(
     }
 
     val preferredQuality: StateFlow<String> = userPreferencesRepository.lxMusicPreferredQualityFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "320k")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LxQualities.DEFAULT_PREFERRED)
 
 
     val platformNameStyle: StateFlow<String> = userPreferencesRepository.lxPlatformNameStyleFlow

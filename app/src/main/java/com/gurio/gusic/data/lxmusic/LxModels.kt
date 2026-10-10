@@ -46,6 +46,9 @@ object LxQualities {
     const val FLAC24 = "flac24bit"
     const val ATMOS = "atmos"
     const val MASTER = "master"
+    const val DEFAULT_PREFERRED = MASTER
+
+    fun preferredOrDefault(savedQuality: String?): String = savedQuality ?: DEFAULT_PREFERRED
 
     val ALL = listOf(MASTER, ATMOS, FLAC24, FLAC, Q320, Q128)
 }
@@ -146,7 +149,28 @@ data class LxScriptMeta(
     val author: String = "",
     val description: String = "",
     val isImported: Boolean = false,
+    val isDefault: Boolean = false,
 )
+
+object LxScriptPolicy {
+    const val HELLO_WORLD_SOURCE_PATH = "lxmusic/sources/hello_world.js"
+
+    // Add future bundled defaults here; non-default bundled scripts remain user-manageable.
+    val DEFAULT_SOURCE_ASSET_PATHS = listOf(HELLO_WORLD_SOURCE_PATH)
+
+    fun isDefaultSource(assetPath: String, isImported: Boolean): Boolean =
+        !isImported && assetPath in DEFAULT_SOURCE_ASSET_PATHS
+
+    fun normalizeDisabledPaths(paths: Set<String>): Set<String> =
+        paths - DEFAULT_SOURCE_ASSET_PATHS.toSet()
+
+    fun enableImportedPath(disabledPaths: Set<String>, assetPath: String): Set<String> =
+        normalizeDisabledPaths(disabledPaths - assetPath)
+
+    fun canDisable(meta: LxScriptMeta): Boolean = !meta.isDefault
+
+    fun canDelete(meta: LxScriptMeta): Boolean = !meta.isDefault
+}
 
 data class LxSourceInfo(
     val source: String,

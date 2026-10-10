@@ -587,7 +587,7 @@ private fun FileExplorerItem(
             ) {
                 Text(
                     text = when {
-                        audioCount < 0 -> "Scanning..."
+                        audioCount < 0 -> "Song count unavailable"
                         audioCount == 1 -> "1 song"
                         audioCount > 99 -> "99+ songs"
                         else -> "$audioCount songs"

@@ -170,7 +170,7 @@
     <string name="searched_for_x_format">تم البحث عن \"%s\"</string>
     <string name="searching_lyrics">جاري البحث عن كلمات الأغنية…</string>
     <string name="service_processing_action">جاري معالجة إجراء التشغيل…</string>
-    <string name="setcat_find_duplicates_subtitle">افحص مكتبتك بحثاً عن المسارات التي تظهر أكثر من مرة.</string>
+    <string name="setcat_find_duplicates_subtitle">ابحث عن تطابقات العنوان والفنان بين المقاطع المحفوظة محلياً في المكتبة.</string>
     <string name="setcat_find_duplicates_title">البحث عن المسارات المكررة</string>
     <string name="setcat_playback_speed">سرعة التشغيل</string>
     <string name="shortcut_playlist_short">قائمة التشغيل</string>

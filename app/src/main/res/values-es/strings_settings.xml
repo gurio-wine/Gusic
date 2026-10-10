@@ -82,7 +82,7 @@
     <string name="setcat_auto_hide_delay_label">Retraso de ocultación automática</string>
     <string name="setcat_auto_rotate_patterns_subtitle">Ciclar a través de los patrones de collage cada vez que visitas el Inicio.</string>
     <string name="setcat_auto_rotate_patterns_title">Rotar patrones automáticamente</string>
-    <string name="setcat_auto_scan_lrc_subtitle">Buscar y asignar automáticamente archivos .lrc en la misma carpeta durante la sincronización de la biblioteca.</string>
+    <string name="setcat_auto_scan_lrc_subtitle">Durante el mantenimiento, busca y asigna archivos .lrc junto a las canciones que ya están en la biblioteca. No descubre ni importa música nueva.</string>
     <string name="setcat_auto_scan_lrc_title">Escanear archivos .lrc automáticamente</string>
     <string name="setcat_background_playback">Reproducción en segundo plano</string>
     <string name="setcat_carousel_no_peek">Sin vista lateral</string>
@@ -244,7 +244,8 @@
     <string name="settings_search_section_top_matches">Mejores coincidencias</string>
     <string name="settings_top_bar_title">Ajustes</string>
     <string name="sync_indicator_rebuilding">Reconstruyendo base de datos</string>
-    <string name="tab_home">Inicio</string>
+    <string name="tab_home">Recomendado</string>
+    <string name="tab_online">Descubrir</string>
     <string name="toast_daily_mix_regeneration_started">Regeneración de Daily Mix iniciada</string>
     <string name="toast_full_rescan_started">Reescaneo completo iniciado…</string>
     <string name="toast_library_sync_finished">Sincronización de la biblioteca terminada</string>

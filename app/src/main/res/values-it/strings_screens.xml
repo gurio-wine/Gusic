@@ -200,7 +200,7 @@
     <string name="skip_not_now">Salta / Non ora</string>
     <string name="tab_albums">ALBUM</string>
     <string name="tab_artists">ARTISTI</string>
-    <string name="tab_library">Libreria</string>
+    <string name="tab_library">La mia</string>
     <string name="tab_songs">BRANI</string>
     <string name="toast_added_to_queue">Aggiunto alla coda</string>
     <string name="toast_crash_log_copied">Log crash copiato negli appunti</string>

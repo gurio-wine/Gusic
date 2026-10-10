@@ -4,7 +4,6 @@ package com.gurio.gusic.presentation.screens
 import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -150,13 +149,6 @@ fun SetupScreen(
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val uiState by setupViewModel.uiState.collectAsStateWithLifecycle()
-    val currentPath by setupViewModel.currentPath.collectAsStateWithLifecycle()
-    val directoryChildren by setupViewModel.currentDirectoryChildren.collectAsStateWithLifecycle()
-    val availableStorages by setupViewModel.availableStorages.collectAsStateWithLifecycle()
-    val selectedStorageIndex by setupViewModel.selectedStorageIndex.collectAsStateWithLifecycle()
-    val isExplorerPriming by setupViewModel.isExplorerPriming.collectAsStateWithLifecycle()
-    val isExplorerReady by setupViewModel.isExplorerReady.collectAsStateWithLifecycle()
-    val isCurrentDirectoryResolved by setupViewModel.isCurrentDirectoryResolved.collectAsStateWithLifecycle()
     var selectedBackupUri by remember { mutableStateOf<Uri?>(null) }
     
     var showCornerRadiusOverlay by remember { mutableStateOf(false) }
@@ -187,9 +179,11 @@ fun SetupScreen(
 
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
-    val currentPage = pages[pagerState.currentPage]
-    val isNextButtonEnabled = isPermissionGateSatisfied(context, currentPage, uiState)
-    var previousPageIndex by remember { mutableStateOf(0) }
+    val currentPermissionGate = setupPermissionGateForPage(pages[pagerState.currentPage])
+    val canAdvanceFromCurrentPage = setupPermissionGateSatisfied(
+        gate = currentPermissionGate,
+        granted = uiState.notificationsPermissionGranted
+    )
     val navigateToPage: (Int) -> Unit = { targetPage ->
         scope.launch {
             val boundedPage = targetPage.coerceIn(0, pages.lastIndex)
@@ -199,7 +193,6 @@ fun SetupScreen(
         }
     }
 
-    val directorySelectionPageIndex = remember(pages) { pages.indexOf(SetupPage.DirectorySelection) }
     val finishPageIndex = remember(pages) { pages.indexOf(SetupPage.Finish) }
 
     LaunchedEffect(setupViewModel, lifecycleOwner) {
@@ -224,29 +217,6 @@ fun SetupScreen(
         }
     }
 
-    LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage > previousPageIndex) {
-            val blockedPageIndex = firstBlockedForwardPageIndex(
-                pages = pages,
-                fromPageIndex = previousPageIndex,
-                toPageIndex = pagerState.currentPage,
-                context = context,
-                uiState = uiState
-            )
-            if (blockedPageIndex != null) {
-                setupViewModel.checkPermissions(context)
-                pagerState.scrollToPage(blockedPageIndex)
-                previousPageIndex = blockedPageIndex
-                Toast.makeText(context, context.getString(R.string.toast_grant_permission_first), Toast.LENGTH_SHORT).show()
-                return@LaunchedEffect
-            }
-        }
-        previousPageIndex = pagerState.currentPage
-
-        if (pagerState.currentPage == directorySelectionPageIndex) {
-            setupViewModel.loadMusicDirectories()
-        }
-    }
     BackHandler {
         if (pagerState.currentPage > 0) {
             navigateToPage(pagerState.currentPage - 1)
@@ -257,25 +227,16 @@ fun SetupScreen(
             SetupBottomBar(
                 pagerState = pagerState,
                 animated = (pagerState.currentPage != 0),
-                isNextButtonEnabled = isNextButtonEnabled,
-                isFinishButtonEnabled = uiState.allPermissionsGranted,
+                isNextButtonEnabled = canAdvanceFromCurrentPage,
+                isFinishButtonEnabled = true,
                 onNextClicked = {
-                    val page = pages[pagerState.currentPage]
-                    if (isPermissionGateSatisfied(context, page, uiState)) {
+                    if (canAdvanceFromCurrentPage) {
                         navigateToPage(pagerState.currentPage + 1)
-                    } else {
-                        setupViewModel.checkPermissions(context)
-                        Toast.makeText(context, context.getString(R.string.toast_grant_permission_first), Toast.LENGTH_SHORT).show()
                     }
                 },
                 onFinishClicked = {
-                    if (allRequiredPermissionsGrantedNow(context)) {
-                        setupViewModel.setSetupComplete()
-                        onSetupComplete()
-                    } else {
-                        setupViewModel.checkPermissions(context)
-                        Toast.makeText(context, context.getString(R.string.toast_grant_all_permissions), Toast.LENGTH_SHORT).show()
-                    }
+                    setupViewModel.setSetupComplete()
+                    onSetupComplete()
                 }
             )
         }
@@ -301,10 +262,6 @@ fun SetupScreen(
             ) {
                 when (page) {
                     SetupPage.Welcome -> WelcomePage()
-                    SetupPage.MediaPermission -> MediaPermissionPage(
-                        uiState = uiState,
-                        onPermissionStateUpdated = { setupViewModel.checkPermissions(context) }
-                    )
                     SetupPage.BackupRestore -> BackupRestorePage(
                         uiState = uiState,
                         onImportClicked = { backupPickerLauncher.launch("*/*") },
@@ -314,32 +271,10 @@ fun SetupScreen(
                             navigateToPage(pagerState.currentPage + 1)
                         }
                     )
-                    SetupPage.DirectorySelection -> DirectorySelectionPage(
-                        uiState = uiState,
-                        currentPath = currentPath,
-                        directoryChildren = directoryChildren,
-                        availableStorages = availableStorages,
-                        selectedStorageIndex = selectedStorageIndex,
-                        isExplorerPriming = isExplorerPriming,
-                        isExplorerReady = isExplorerReady,
-                        isCurrentDirectoryResolved = isCurrentDirectoryResolved,
-                        isAtRoot = setupViewModel.isAtRoot(),
-                        explorerRoot = setupViewModel.explorerRoot(),
-                        onOpenExplorer = setupViewModel::openExplorer,
-                        onNavigateTo = setupViewModel::loadDirectory,
-                        onNavigateUp = setupViewModel::navigateUp,
-                        onRefresh = setupViewModel::refreshCurrentDirectory,
-                        onPrimeExplorer = setupViewModel::primeExplorer,
-                        onSkip = {
-                            navigateToPage(pagerState.currentPage + 1)
-                        },
-                        onToggleAllowed = setupViewModel::toggleDirectoryAllowed,
-                        onSelectionFinished = setupViewModel::applyPendingDirectoryRuleChanges,
-                        onStorageSelected = setupViewModel::selectStorage
-                    )
                     SetupPage.NotificationsPermission -> NotificationsPermissionPage(
                         uiState = uiState,
-                        onPermissionStateUpdated = { setupViewModel.checkPermissions(context) }
+                        onPermissionStateUpdated = { setupViewModel.checkPermissions(context) },
+                        onSkip = { navigateToPage(pagerState.currentPage + 1) }
                     )
                     SetupPage.AlarmsPermission -> AlarmsPermissionPage(
                         uiState = uiState,
@@ -405,101 +340,10 @@ fun SetupScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DirectorySelectionPage(
-    uiState: SetupUiState,
-    currentPath: File,
-    directoryChildren: ImmutableList<DirectoryEntry>,
-    availableStorages: ImmutableList<StorageInfo>,
-    selectedStorageIndex: Int,
-    isExplorerPriming: Boolean,
-    isExplorerReady: Boolean,
-    isCurrentDirectoryResolved: Boolean,
-    isAtRoot: Boolean,
-    explorerRoot: File,
-    onOpenExplorer: () -> Unit,
-    onNavigateTo: (File) -> Unit,
-    onNavigateUp: () -> Unit,
-    onRefresh: () -> Unit,
-    onPrimeExplorer: () -> Unit,
-    onSkip: () -> Unit,
-    onToggleAllowed: (File) -> Unit,
-    onSelectionFinished: () -> Unit,
-    onStorageSelected: (Int) -> Unit
-) {
-    var showDirectoryPicker by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-
-    val hasMediaPermission = uiState.mediaPermissionGranted
-    val canOpenDirectoryPicker = hasMediaPermission
-
-    LaunchedEffect(canOpenDirectoryPicker) {
-        if (canOpenDirectoryPicker) {
-            onPrimeExplorer()
-        }
-    }
-
-    PermissionPageLayout(
-        title = stringResource(R.string.setup_excluded_folders_title),
-        description = stringResource(R.string.setup_excluded_folders_description),
-        buttonText = stringResource(R.string.setup_choose_folders_ignore),
-        buttonEnabled = canOpenDirectoryPicker,
-        onGrantClicked = {
-            if (canOpenDirectoryPicker) {
-                showDirectoryPicker = true
-                onOpenExplorer()
-            } else {
-                Toast.makeText(context, context.getString(R.string.toast_grant_storage_first), Toast.LENGTH_SHORT).show()
-            }
-        },
-        icons = persistentListOf(
-            R.drawable.rounded_folder_24,
-            R.drawable.rounded_music_note_24,
-            R.drawable.rounded_create_new_folder_24,
-            R.drawable.rounded_folder_open_24,
-            R.drawable.rounded_audio_file_24
-        )
-    ) {
-        TextButton(onClick = onSkip) {
-            Text(stringResource(R.string.skip_for_now), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-    }
-
-    FileExplorerDialog(
-        visible = showDirectoryPicker,
-        currentPath = currentPath,
-        directoryChildren = directoryChildren,
-        availableStorages = availableStorages,
-        selectedStorageIndex = selectedStorageIndex,
-        isLoading = uiState.isLoadingDirectories,
-        isPriming = isExplorerPriming,
-        isReady = isExplorerReady,
-        isCurrentDirectoryResolved = isCurrentDirectoryResolved,
-        isAtRoot = isAtRoot,
-        rootDirectory = explorerRoot,
-        onNavigateTo = onNavigateTo,
-        onNavigateUp = onNavigateUp,
-        onNavigateHome = { onNavigateTo(explorerRoot) },
-        onToggleAllowed = onToggleAllowed,
-        onRefresh = onRefresh,
-        onStorageSelected = onStorageSelected,
-        onDone = {
-            onSelectionFinished()
-            showDirectoryPicker = false
-        },
-        onDismiss = {
-            onSelectionFinished()
-            showDirectoryPicker = false
-        }
-    )
-}
 
 sealed class SetupPage {
     object Welcome : SetupPage()
-    object MediaPermission : SetupPage()
     object BackupRestore : SetupPage()
-    object DirectorySelection : SetupPage()
     object ThemeSelection : SetupPage()
     object NotificationsPermission : SetupPage()
     object AlarmsPermission : SetupPage()
@@ -508,17 +352,13 @@ sealed class SetupPage {
 }
 
 private fun buildSetupPages(sdkInt: Int): List<SetupPage> {
-    val pages = mutableListOf<SetupPage>(
-        SetupPage.Welcome,
-        SetupPage.MediaPermission
-    )
+    val pages = mutableListOf<SetupPage>(SetupPage.Welcome)
 
     if (sdkInt >= Build.VERSION_CODES.TIRAMISU) {
         pages += SetupPage.NotificationsPermission
     }
 
     pages += SetupPage.BackupRestore
-    pages += SetupPage.DirectorySelection
     pages += SetupPage.ThemeSelection
     pages += SetupPage.NavBarLayout
 
@@ -528,60 +368,6 @@ private fun buildSetupPages(sdkInt: Int): List<SetupPage> {
 
     pages += SetupPage.Finish
     return pages
-}
-
-private fun firstBlockedForwardPageIndex(
-    pages: List<SetupPage>,
-    fromPageIndex: Int,
-    toPageIndex: Int,
-    context: Context,
-    uiState: SetupUiState
-): Int? {
-    if (toPageIndex <= fromPageIndex) return null
-    return (fromPageIndex until toPageIndex).firstOrNull { pageIndex ->
-        !isPermissionGateSatisfied(context, pages[pageIndex], uiState)
-    }
-}
-
-private fun isPermissionGateSatisfied(
-    context: Context,
-    page: SetupPage,
-    uiState: SetupUiState
-): Boolean {
-    return when (page) {
-        SetupPage.MediaPermission -> {
-            uiState.mediaPermissionGranted || hasMediaPermissionNow(context)
-        }
-        SetupPage.NotificationsPermission -> {
-            uiState.notificationsPermissionGranted ||
-                Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-        }
-        else -> true
-    }
-}
-
-private fun allRequiredPermissionsGrantedNow(context: Context): Boolean {
-    val mediaGranted = hasMediaPermissionNow(context)
-    val notificationsGranted =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-    return mediaGranted && notificationsGranted
-}
-
-private fun hasMediaPermissionNow(context: Context): Boolean {
-    val mediaPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        Manifest.permission.READ_MEDIA_AUDIO
-    } else {
-        Manifest.permission.READ_EXTERNAL_STORAGE
-    }
-    return ContextCompat.checkSelfPermission(context, mediaPermission) == PackageManager.PERMISSION_GRANTED
 }
 
 private fun hasExactAlarmPermissionNow(context: Context): Boolean {
@@ -682,50 +468,10 @@ fun WelcomePage() {
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MediaPermissionPage(
-    uiState: SetupUiState,
-    onPermissionStateUpdated: () -> Unit
-) {
-    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        listOf(Manifest.permission.READ_MEDIA_AUDIO)
-    } else {
-        listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-    }
-    val permissionState = rememberMultiplePermissionsState(permissions = permissions)
-    val mediaIcons = persistentListOf(
-        R.drawable.rounded_music_note_24,
-        R.drawable.rounded_album_24,
-        R.drawable.rounded_library_music_24,
-        R.drawable.rounded_artist_24,
-        R.drawable.rounded_playlist_play_24
-    )
-
-    val isGranted = uiState.mediaPermissionGranted || permissionState.allPermissionsGranted
-
-    LaunchedEffect(permissionState.allPermissionsGranted) {
-        onPermissionStateUpdated()
-    }
-
-    PermissionPageLayout(
-        title = stringResource(R.string.setup_permission_media_title),
-        granted = isGranted,
-        description = stringResource(R.string.setup_permission_media_description),
-        buttonText = if (isGranted) stringResource(R.string.setup_permission_granted) else stringResource(R.string.setup_grant_media_permission),
-        buttonEnabled = !isGranted,
-        icons = mediaIcons,
-        onGrantClicked = {
-            if (!isGranted) {
-                permissionState.launchMultiplePermissionRequest()
-            }
-        }
-    )
-}
-
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
 fun NotificationsPermissionPage(
     uiState: SetupUiState,
-    onPermissionStateUpdated: () -> Unit
+    onPermissionStateUpdated: () -> Unit,
+    onSkip: () -> Unit
 ) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
@@ -756,7 +502,13 @@ fun NotificationsPermissionPage(
                 permissionState.launchMultiplePermissionRequest()
             }
         }
-    )
+    ) {
+        if (!isGranted) {
+            TextButton(onClick = onSkip) {
+                Text(stringResource(R.string.skip_for_now), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
 }
 
 @Composable

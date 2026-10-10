@@ -219,14 +219,6 @@ interface MusicRepository {
      */
     suspend fun getSongByPath(path: String): Song?
 
-    /**
-     * Returns all unique directories that contain audio files.
-     * This is mainly used for the initial directory setup.
-     * It also handles the initial save of allowed directories on first run.
-     * @return Set of unique directory paths.
-     */
-    suspend fun getAllUniqueAudioDirectories(): Set<String>
-
     fun getAllUniqueAlbumArtUris(): Flow<List<Uri>>
 
     suspend fun invalidateCachesDependentOnAllowedDirectories()

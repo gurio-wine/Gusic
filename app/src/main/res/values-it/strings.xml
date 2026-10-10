@@ -170,7 +170,7 @@
     <string name="searched_for_x_format">Ricerca di \"%s\"</string>
     <string name="searching_lyrics">Ricerca testi…</string>
     <string name="service_processing_action">Elaborazione azione di riproduzione…</string>
-    <string name="setcat_find_duplicates_subtitle">Cerca nella tua libreria le tracce che compaiono più di una volta.</string>
+    <string name="setcat_find_duplicates_subtitle">Trova corrispondenze di titolo e artista tra i brani salvati localmente nella raccolta.</string>
     <string name="setcat_find_duplicates_title">Trova tracce duplicate</string>
     <string name="setcat_playback_speed">Velocità di riproduzione</string>
     <string name="shortcut_playlist_short">Playlist</string>

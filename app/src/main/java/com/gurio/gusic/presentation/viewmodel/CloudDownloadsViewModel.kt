@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -142,7 +143,9 @@ class CloudDownloadsViewModel @Inject constructor(
                 if (activeScriptPath == null) {
                     _downloadEvents.tryEmit(appContext.getString(R.string.lx_msg_download_needs_script))
                 } else {
-                    val effectiveQuality = quality ?: LxQualities.Q320
+                    val effectiveQuality = quality ?: runCatching {
+                        userPreferencesRepository.lxMusicPreferredQualityFlow.first()
+                    }.getOrDefault(LxQualities.DEFAULT_PREFERRED)
                     lxUiSongs.forEach { uiSong ->
                         val lxSong = LxSongMapper.toLxSong(uiSong)
                         if (lxSong == null) {

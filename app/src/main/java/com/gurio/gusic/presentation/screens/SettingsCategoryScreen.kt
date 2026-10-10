@@ -56,7 +56,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ClearAll
-import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LightMode
@@ -66,8 +65,12 @@ import androidx.compose.material.icons.outlined.Style
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.AudioFile
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Science
@@ -161,12 +164,11 @@ import com.gurio.gusic.data.preferences.ThemePreference
 import com.gurio.gusic.data.model.Song
 import com.gurio.gusic.data.model.LyricsSourcePreference
 import com.gurio.gusic.presentation.components.CollapsibleCommonTopBar
-import com.gurio.gusic.presentation.components.FileExplorerDialog
 import com.gurio.gusic.presentation.components.MiniPlayerHeight
 import com.gurio.gusic.presentation.model.SettingsCategory
 import com.gurio.gusic.presentation.navigation.Screen
 import com.gurio.gusic.presentation.settings.search.settingHighlight
-import com.gurio.gusic.presentation.viewmodel.M3uSyncViewModel
+import com.gurio.gusic.presentation.viewmodel.LibraryViewModel
 import com.gurio.gusic.presentation.viewmodel.PlayerViewModel
 import com.gurio.gusic.presentation.viewmodel.SettingsViewModel
 import com.gurio.gusic.ui.theme.RoundedSans
@@ -183,7 +185,7 @@ fun SettingsCategoryScreen(
     navController: NavController,
     playerViewModel: PlayerViewModel,
     settingsViewModel: SettingsViewModel = hiltViewModel(),
-    m3uSyncViewModel: M3uSyncViewModel = hiltViewModel(),
+    libraryViewModel: LibraryViewModel = hiltViewModel(),
     statsViewModel: com.gurio.gusic.presentation.viewmodel.StatsViewModel = hiltViewModel(),
     onBackClick: () -> Unit
 ) {
@@ -192,27 +194,11 @@ fun SettingsCategoryScreen(
     
     val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val playbackSpeed by settingsViewModel.playbackSpeed.collectAsStateWithLifecycle()
-    val currentPath by settingsViewModel.currentPath.collectAsStateWithLifecycle()
-    val directoryChildren by settingsViewModel.currentDirectoryChildren.collectAsStateWithLifecycle()
-    val availableStorages by settingsViewModel.availableStorages.collectAsStateWithLifecycle()
-    val selectedStorageIndex by settingsViewModel.selectedStorageIndex.collectAsStateWithLifecycle()
-    val isLoadingDirectories by settingsViewModel.isLoadingDirectories.collectAsStateWithLifecycle()
-    val isExplorerPriming by settingsViewModel.isExplorerPriming.collectAsStateWithLifecycle()
-    val isExplorerReady by settingsViewModel.isExplorerReady.collectAsStateWithLifecycle()
-    val isCurrentDirectoryResolved by settingsViewModel.isCurrentDirectoryResolved.collectAsStateWithLifecycle()
-    val isSyncing by settingsViewModel.isSyncing.collectAsStateWithLifecycle()
-    val syncProgress by settingsViewModel.syncProgress.collectAsStateWithLifecycle()
     val dataTransferProgress by settingsViewModel.dataTransferProgress.collectAsStateWithLifecycle()
-    val m3uSyncState by m3uSyncViewModel.state.collectAsStateWithLifecycle()
+    val safImportUiState by libraryViewModel.safImportUiState.collectAsStateWithLifecycle()
     val paletteRegenerateTargets by playerViewModel.paletteRegenerationTargets.collectAsStateWithLifecycle()
-    val explorerRoot = settingsViewModel.explorerRoot()
 
-    var showExplorerSheet by remember { mutableStateOf(false) }
-    var refreshRequested by remember { mutableStateOf(false) }
-    var syncRequestObservedRunning by remember { mutableStateOf(false) }
-    var syncIndicatorLabel by remember { mutableStateOf<String?>(null) }
     var showClearLyricsDialog by remember { mutableStateOf(false) }
-    var showRebuildDatabaseWarning by remember { mutableStateOf(false) }
     var showRegenerateDailyMixDialog by remember { mutableStateOf(false) }
     var showRegenerateStatsDialog by remember { mutableStateOf(false) }
     var showRegenerateAllPalettesDialog by remember { mutableStateOf(false) }
@@ -222,12 +208,6 @@ fun SettingsCategoryScreen(
     var importFileUri by remember { mutableStateOf<Uri?>(null) }
     var showExportEncryptionDialog by remember { mutableStateOf(false) }
     var exportPassphrase by remember { mutableStateOf<String?>(null) }
-    var minSongDurationDraft by remember(uiState.minSongDuration) {
-        mutableStateOf(uiState.minSongDuration.toFloat())
-    }
-    var minTracksPerAlbumDraft by remember(uiState.minTracksPerAlbum) {
-        mutableStateOf(uiState.minTracksPerAlbum.toFloat())
-    }
     var albumArtCacheLimitDraft by remember(uiState.albumArtCacheLimitMb) {
         mutableStateOf(uiState.albumArtCacheLimitMb.toFloat())
     }
@@ -250,10 +230,10 @@ fun SettingsCategoryScreen(
         }
     }
 
-    val m3uFolderPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri != null) m3uSyncViewModel.selectFolder(uri)
+    val safImportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        libraryViewModel.importSafDocuments(uris)
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -262,27 +242,6 @@ fun SettingsCategoryScreen(
             settingsViewModel.dataTransferEvents.collectLatest { message ->
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
-        }
-    }
-
-    LaunchedEffect(m3uSyncViewModel, lifecycleOwner) {
-        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            m3uSyncViewModel.messages.collectLatest { message ->
-                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    LaunchedEffect(isSyncing, refreshRequested) {
-        if (!refreshRequested) return@LaunchedEffect
-
-        if (isSyncing) {
-            syncRequestObservedRunning = true
-        } else if (syncRequestObservedRunning) {
-            Toast.makeText(context, context.getString(R.string.toast_library_sync_finished), Toast.LENGTH_SHORT).show()
-            refreshRequested = false
-            syncRequestObservedRunning = false
-            syncIndicatorLabel = null
         }
     }
 
@@ -402,185 +361,69 @@ fun SettingsCategoryScreen(
                ) {
                     when (category) {
                         SettingsCategory.LIBRARY -> {
-                            SettingsSubsection(title = stringResource(R.string.setcat_library_structure)) {
-                                SettingsItem(
-                                    title = stringResource(R.string.setcat_excluded_directories_title),
-                                    subtitle = stringResource(R.string.setcat_excluded_directories_subtitle),
-                                    leadingIcon = { Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    modifier = Modifier.settingHighlight("item_library_excluded_directories", highlightKey),
-                                    onClick = {
-                                        showExplorerSheet = true
-                                        settingsViewModel.openExplorer()
-                                    }
-                                )
-                                SettingsItem(
-                                    title = stringResource(R.string.setcat_artists_title),
-                                    subtitle = stringResource(R.string.setcat_artists_subtitle),
-                                    leadingIcon = { Icon(Icons.Outlined.Person, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    modifier = Modifier.settingHighlight("item_library_artists", highlightKey),
-                                    onClick = { navController.navigateSafely(Screen.ArtistSettings.createRoute()) }
-                                )
-                            }
+                             SettingsSubsection(title = stringResource(R.string.setcat_library_structure)) {
+                                 FilledTonalButton(
+                                     enabled = !safImportUiState.isImporting,
+                                     onClick = { safImportLauncher.launch(arrayOf("audio/*")) },
+                                     modifier = Modifier
+                                         .fillMaxWidth()
+                                         .padding(horizontal = 12.dp, vertical = 8.dp)
+                                         .settingHighlight("item_library_import_local_songs", highlightKey),
+                                 ) {
+                                     if (safImportUiState.isImporting) {
+                                         CircularProgressIndicator(
+                                             modifier = Modifier.size(18.dp),
+                                             strokeWidth = 2.dp,
+                                         )
+                                         Spacer(modifier = Modifier.width(8.dp))
+                                         Text(stringResource(R.string.library_saf_import_progress))
+                                     } else {
+                                         Icon(
+                                             imageVector = Icons.Rounded.AudioFile,
+                                             contentDescription = null,
+                                             modifier = Modifier.size(18.dp),
+                                         )
+                                         Spacer(modifier = Modifier.width(8.dp))
+                                         Text(stringResource(R.string.library_saf_import_action))
+                                     }
+                                 }
+                                 SettingsItem(
+                                     title = stringResource(R.string.setcat_artists_title),
+                                     subtitle = stringResource(R.string.setcat_artists_subtitle),
+                                     leadingIcon = { Icon(Icons.Outlined.Person, null, tint = MaterialTheme.colorScheme.secondary) },
+                                     trailingIcon = { Icon(Icons.Rounded.ChevronRight, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                     modifier = Modifier.settingHighlight("item_library_artists", highlightKey),
+                                     onClick = { navController.navigateSafely(Screen.ArtistSettings.createRoute()) }
+                                 )
+                                 SettingsItem(
+                                     title = stringResource(R.string.setcat_find_duplicates_title),
+                                     subtitle = stringResource(R.string.setcat_find_duplicates_subtitle),
+                                     leadingIcon = { Icon(Icons.Rounded.Search, null, tint = MaterialTheme.colorScheme.secondary) },
+                                     trailingIcon = { Icon(Icons.Rounded.ChevronRight, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                     modifier = Modifier.settingHighlight("item_library_find_duplicates", highlightKey),
+                                     onClick = { navController.navigateSafely(Screen.Duplicates.createRoute()) }
+                                 )
+                             }
 
-                            SettingsSubsection(title = stringResource(R.string.setcat_filtering)) {
-                                SliderSettingsItem(
-                                    label = stringResource(R.string.setcat_min_song_duration),
-                                    value = minSongDurationDraft,
-                                    valueRange = 0f..120000f,
-                                    steps = 23,
-                                    onValueChange = { minSongDurationDraft = it },
-                                    onValueChangeFinished = {
-                                        val selectedDuration = minSongDurationDraft.toInt()
-                                        if (selectedDuration != uiState.minSongDuration) {
-                                            settingsViewModel.setMinSongDuration(selectedDuration)
-                                        }
-                                    },
-                                    valueText = { value -> "${(value / 1000).toInt()}s" },
-                                    modifier = Modifier.settingHighlight("item_library_min_duration", highlightKey)
-                                )
-                                SliderSettingsItem(
-                                    label = stringResource(R.string.setcat_min_tracks_per_album),
-                                    value = minTracksPerAlbumDraft,
-                                    valueRange = 1f..5f,
-                                    steps = 3,
-                                    onValueChange = { minTracksPerAlbumDraft = it },
-                                    onValueChangeFinished = {
-                                        val selectedTracks = minTracksPerAlbumDraft.toInt()
-                                        if (selectedTracks != uiState.minTracksPerAlbum) {
-                                            settingsViewModel.setMinTracksPerAlbum(selectedTracks)
-                                        }
-                                    },
-                                    valueText = { value -> "${value.toInt()}" },
-                                    modifier = Modifier.settingHighlight("item_library_min_tracks", highlightKey)
-                                )
-                                SliderSettingsItem(
-                                    label = stringResource(R.string.setcat_album_art_cache_limit),
-                                    value = albumArtCacheLimitDraft,
-                                    valueRange = 50f..1500f,
-                                    steps = 28,
-                                    onValueChange = { albumArtCacheLimitDraft = it },
-                                    onValueChangeFinished = {
-                                        val selectedLimit = albumArtCacheLimitDraft.toInt()
-                                        if (selectedLimit != uiState.albumArtCacheLimitMb) {
-                                            settingsViewModel.setAlbumArtCacheLimitMb(selectedLimit)
-                                        }
-                                    },
-                                    valueText = { value -> "${value.toInt()} MB" },
-                                    modifier = Modifier.settingHighlight("item_library_album_art_cache", highlightKey)
-                                )
-                            }
+                              SettingsSubsection(title = stringResource(R.string.setcat_library_cache_section)) {
+                                  SliderSettingsItem(
+                                      label = stringResource(R.string.setcat_album_art_cache_limit),
+                                      value = albumArtCacheLimitDraft,
+                                      valueRange = 50f..1500f,
+                                      steps = 28,
+                                      onValueChange = { albumArtCacheLimitDraft = it },
+                                      onValueChangeFinished = {
+                                          val selectedLimit = albumArtCacheLimitDraft.toInt()
+                                          if (selectedLimit != uiState.albumArtCacheLimitMb) {
+                                              settingsViewModel.setAlbumArtCacheLimitMb(selectedLimit)
+                                          }
+                                      },
+                                      valueText = { value -> "${value.toInt()} MB" },
+                                      modifier = Modifier.settingHighlight("item_library_album_art_cache", highlightKey)
+                                  )
+                              }
 
-                            SettingsSubsection(title = stringResource(R.string.setcat_sync_scanning)) {
-                                Box(modifier = Modifier.settingHighlight("item_library_refresh", highlightKey)) {
-                                RefreshLibraryItem(
-                                    isSyncing = isSyncing,
-                                    syncProgress = syncProgress,
-                                    activeOperationLabel = if (isSyncing) syncIndicatorLabel else null,
-                                    onFullSync = {
-                                        if (isSyncing) return@RefreshLibraryItem
-                                        refreshRequested = true
-                                        syncRequestObservedRunning = false
-                                        syncIndicatorLabel = context.getString(R.string.setcat_sync_full_rescan_label)
-                                        Toast.makeText(context, context.getString(R.string.toast_full_rescan_started), Toast.LENGTH_SHORT).show()
-                                        settingsViewModel.fullSyncLibrary()
-                                    },
-                                    onRebuild = {
-                                        if (isSyncing) return@RefreshLibraryItem
-                                        showRebuildDatabaseWarning = true
-                                    }
-                                )
-                                }
-                                SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_auto_scan_lrc_title),
-                                    subtitle = stringResource(R.string.setcat_auto_scan_lrc_subtitle),
-                                    checked = uiState.autoScanLrcFiles,
-                                    onCheckedChange = { settingsViewModel.setAutoScanLrcFiles(it) },
-                                    leadingIcon = { Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_library_auto_scan_lrc", highlightKey)
-                                )
-                                SettingsItem(
-                                    title = stringResource(R.string.setcat_find_duplicates_title),
-                                    subtitle = stringResource(R.string.setcat_find_duplicates_subtitle),
-                                    leadingIcon = { Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    modifier = Modifier.settingHighlight("item_library_find_duplicates", highlightKey),
-                                    onClick = { navController.navigateSafely(Screen.Duplicates.createRoute()) }
-                                )
-                            }
-
-                            SettingsSubsection(title = stringResource(R.string.setcat_m3u_sync_section)) {
-                                SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_m3u_sync_title),
-                                    subtitle = if (m3uSyncState.enabled) {
-                                        val folder = remember(m3uSyncState.treeUri) {
-                                            m3uSyncState.treeUri
-                                                ?.let(Uri::parse)
-                                                ?.lastPathSegment
-                                                ?.substringAfterLast(':')
-                                                .orEmpty()
-                                        }
-                                        stringResource(
-                                            R.string.setcat_m3u_sync_enabled_subtitle,
-                                            folder.ifBlank { stringResource(R.string.setcat_m3u_sync_selected_folder) },
-                                        )
-                                    } else {
-                                        stringResource(R.string.setcat_m3u_sync_disabled_subtitle)
-                                    },
-                                    checked = m3uSyncState.enabled,
-                                    onCheckedChange = { enabled ->
-                                        if (enabled) m3uFolderPicker.launch(null) else m3uSyncViewModel.disable()
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Outlined.Folder,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.secondary,
-                                        )
-                                    },
-                                    modifier = Modifier.settingHighlight("item_library_m3u_sync", highlightKey),
-                                )
-                                if (m3uSyncState.enabled) {
-                                    SettingsItem(
-                                        title = stringResource(R.string.setcat_m3u_sync_now_title),
-                                        subtitle = when {
-                                            m3uSyncState.error != null -> m3uSyncState.error.orEmpty()
-                                            m3uSyncState.lastReport != null -> {
-                                                val report = m3uSyncState.lastReport!!
-                                                stringResource(
-                                                    R.string.setcat_m3u_sync_result,
-                                                    report.changed,
-                                                    report.conflicts.size,
-                                                    report.unresolvedEntries,
-                                                )
-                                            }
-                                            else -> stringResource(R.string.setcat_m3u_sync_now_subtitle)
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                Icons.Rounded.Restore,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.secondary,
-                                            )
-                                        },
-                                        trailingIcon = {
-                                            if (m3uSyncState.isSyncing) {
-                                                CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                                            }
-                                        },
-                                        modifier = Modifier.settingHighlight(
-                                            "item_library_m3u_sync_now",
-                                            highlightKey,
-                                        ),
-                                        onClick = {
-                                            if (!m3uSyncState.isSyncing) m3uSyncViewModel.syncNow()
-                                        },
-                                    )
-                                }
-                            }
-
-                            SettingsSubsection(title = stringResource(R.string.setcat_online_services)) {
+                             SettingsSubsection(title = stringResource(R.string.setcat_online_services)) {
                                 SwitchSettingItem(
                                     title = stringResource(R.string.setcat_external_lyrics_title),
                                     subtitle = stringResource(R.string.setcat_external_lyrics_subtitle),
@@ -611,6 +454,14 @@ fun SettingsCategoryScreen(
                                 title = stringResource(R.string.setcat_lyrics_management),
                                 addBottomSpace = false
                             ) {
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_auto_scan_lrc_title),
+                                    subtitle = stringResource(R.string.setcat_auto_scan_lrc_subtitle),
+                                    checked = uiState.autoScanLrcFiles,
+                                    onCheckedChange = { settingsViewModel.setAutoScanLrcFiles(it) },
+                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_lyrics_24), null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_library_auto_scan_lrc", highlightKey)
+                                )
                                 ThemeSelectorItem(
                                     label = stringResource(R.string.setcat_lyrics_source_priority_label),
                                     description = stringResource(R.string.setcat_lyrics_source_priority_desc),
@@ -1276,34 +1127,59 @@ fun SettingsCategoryScreen(
 
     BackupTransferProgressDialogHost(progress = dataTransferProgress)
 
-    FileExplorerDialog(
-        visible = showExplorerSheet,
-        currentPath = currentPath,
-        directoryChildren = directoryChildren,
-        availableStorages = availableStorages,
-        selectedStorageIndex = selectedStorageIndex,
-        isLoading = isLoadingDirectories,
-        isPriming = isExplorerPriming,
-        isReady = isExplorerReady,
-        isCurrentDirectoryResolved = isCurrentDirectoryResolved,
-        isAtRoot = settingsViewModel.isAtRoot(),
-        rootDirectory = explorerRoot,
-        onNavigateTo = settingsViewModel::loadDirectory,
-        onNavigateUp = settingsViewModel::navigateUp,
-        onNavigateHome = { settingsViewModel.loadDirectory(explorerRoot) },
-        onToggleAllowed = settingsViewModel::toggleDirectoryAllowed,
-        onRefresh = settingsViewModel::refreshExplorer,
-        onStorageSelected = settingsViewModel::selectStorage,
-        onDone = {
-            settingsViewModel.applyPendingDirectoryRuleChanges()
-            showExplorerSheet = false
-        },
-        onDismiss = {
-            settingsViewModel.applyPendingDirectoryRuleChanges()
-            showExplorerSheet = false
-        }
-    )
-
+    if (safImportUiState.summary != null || safImportUiState.unexpectedError != null) {
+        val summary = safImportUiState.summary
+        AlertDialog(
+            onDismissRequest = libraryViewModel::dismissSafImportFeedback,
+            title = { Text(stringResource(R.string.library_saf_import_result_title)) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    if (summary != null) {
+                        Text(
+                            stringResource(
+                                R.string.library_saf_import_summary_format,
+                                summary.importedCount,
+                                summary.alreadyPresentCount,
+                                summary.failedResults.size,
+                            ),
+                        )
+                        if (summary.failedResults.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = stringResource(R.string.library_saf_import_failures_title),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            summary.failedResults.forEach { result ->
+                                Text(
+                                    text = "${result.uri}\n${result.error.orEmpty()}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(top = 6.dp),
+                                )
+                            }
+                        }
+                    } else {
+                        Text(
+                            stringResource(
+                                R.string.library_saf_import_error_format,
+                                safImportUiState.unexpectedError.orEmpty(),
+                            ),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = libraryViewModel::dismissSafImportFeedback) {
+                    Text(stringResource(R.string.library_saf_import_dismiss))
+                }
+            },
+        )
+    }
     if (showPaletteRegenerateSheet) {
         ModalBottomSheet(
             onDismissRequest = {
@@ -1479,31 +1355,6 @@ fun SettingsCategoryScreen(
     }
 
     
-    if (showRebuildDatabaseWarning) {
-        AlertDialog(
-            icon = { Icon(Icons.Outlined.Warning, null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text(stringResource(R.string.dialog_rebuild_database_title)) },
-            text = { Text(stringResource(R.string.dialog_rebuild_database_message)) },
-            onDismissRequest = { showRebuildDatabaseWarning = false },
-            confirmButton = { 
-                TextButton(
-                    onClick = { 
-                        showRebuildDatabaseWarning = false
-                        refreshRequested = true
-                        syncRequestObservedRunning = false
-                        syncIndicatorLabel = context.getString(R.string.sync_indicator_rebuilding)
-                        Toast.makeText(context, context.getString(R.string.toast_rebuilding_database), Toast.LENGTH_SHORT).show()
-                        settingsViewModel.rebuildDatabase() 
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { 
-                    Text(stringResource(R.string.rebuild)) 
-                } 
-            },
-            dismissButton = { TextButton(onClick = { showRebuildDatabaseWarning = false }) { Text(stringResource(R.string.cancel), maxLines = 1, overflow = TextOverflow.Ellipsis) } }
-        )
-    }
-
     if (showRegenerateDailyMixDialog) {
         AlertDialog(
             icon = { Icon(painterResource(R.drawable.rounded_instant_mix_24), null, tint = MaterialTheme.colorScheme.primary) },

@@ -10,14 +10,13 @@ object SettingsRegistry {
         listOf(
             // --- LIBRARY CATEGORY ---
             SettingSpec(
-                id = "library_excluded_directories",
-                itemKey = "item_library_excluded_directories",
-                titleRes = R.string.setcat_excluded_directories_title,
-                subtitleRes = R.string.setcat_excluded_directories_subtitle,
+                id = "library_import_local_songs",
+                itemKey = "item_library_import_local_songs",
+                titleRes = R.string.library_saf_import_action,
                 category = SettingsCategory.LIBRARY,
                 subscreenRoute = Screen.SettingsCategory.createRoute("library"),
                 type = SettingType.NAVIGABLE_CARD,
-                keywordsStatic = listOf("folder", "ignore", "exclude", "blacklist", "directories", "hidden")
+                keywordsStatic = listOf("import", "local", "songs", "audio", "导入", "本地", "歌曲")
             ),
             SettingSpec(
                 id = "library_artists",
@@ -30,24 +29,6 @@ object SettingsRegistry {
                 keywordsStatic = listOf("artist", "delimiters", "split", "multi artist", "parsing", "separator")
             ),
             SettingSpec(
-                id = "library_min_duration",
-                itemKey = "item_library_min_duration",
-                titleRes = R.string.setcat_min_song_duration,
-                category = SettingsCategory.LIBRARY,
-                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
-                type = SettingType.NAVIGABLE_CARD,
-                keywordsStatic = listOf("duration", "short songs", "filter", "seconds", "length")
-            ),
-            SettingSpec(
-                id = "library_min_tracks",
-                itemKey = "item_library_min_tracks",
-                titleRes = R.string.setcat_min_tracks_per_album,
-                category = SettingsCategory.LIBRARY,
-                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
-                type = SettingType.NAVIGABLE_CARD,
-                keywordsStatic = listOf("tracks", "album", "filter", "singles")
-            ),
-            SettingSpec(
                 id = "library_album_art_cache",
                 itemKey = "item_library_album_art_cache",
                 titleRes = R.string.setcat_album_art_cache_limit,
@@ -55,36 +36,6 @@ object SettingsRegistry {
                 subscreenRoute = Screen.SettingsCategory.createRoute("library"),
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("cache", "storage", "album art", "artwork", "size", "space")
-            ),
-            SettingSpec(
-                id = "library_refresh",
-                itemKey = "item_library_refresh",
-                titleRes = R.string.presentation_batch_f_refresh_library_title,
-                subtitleRes = R.string.presentation_batch_f_refresh_library_subtitle,
-                category = SettingsCategory.LIBRARY,
-                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
-                type = SettingType.ACTION,
-                keywordsStatic = listOf("scan", "rescan", "sync", "refresh", "rebuild", "database")
-            ),
-            SettingSpec(
-                id = "library_m3u_sync",
-                itemKey = "item_library_m3u_sync",
-                titleRes = R.string.setcat_m3u_sync_title,
-                subtitleRes = R.string.setcat_m3u_sync_disabled_subtitle,
-                category = SettingsCategory.LIBRARY,
-                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
-                type = SettingType.NAVIGABLE_CARD,
-                keywordsStatic = listOf("m3u", "m3u8", "playlist", "sync", "folder", "import", "export")
-            ),
-            SettingSpec(
-                id = "library_m3u_sync_now",
-                itemKey = "item_library_m3u_sync_now",
-                titleRes = R.string.setcat_m3u_sync_now_title,
-                subtitleRes = R.string.setcat_m3u_sync_now_subtitle,
-                category = SettingsCategory.LIBRARY,
-                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
-                type = SettingType.ACTION,
-                keywordsStatic = listOf("m3u", "playlist", "sync now", "reconcile")
             ),
             SettingSpec(
                 id = "library_auto_scan_lrc",

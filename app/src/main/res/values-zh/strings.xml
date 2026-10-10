@@ -239,7 +239,7 @@
 <string name="duplicates_group_count">共%1$d份副本</string>
 <string name="duplicates_group_title_format">%1$s — %2$s</string>
 <string name="setcat_find_duplicates_title">查找重複曲目</string>
-<string name="setcat_find_duplicates_subtitle">掃描曲庫中多次出現的歌曲</string>
+<string name="setcat_find_duplicates_subtitle">在本機曲庫記錄中查找標題和歌手匹配的重複曲目</string>
 
 <string name="cloud_download_action">下載</string>
 <string name="cloud_download_queued">已排隊</string>

@@ -47,7 +47,6 @@ data class PlayerUiState(
     val currentSongSortOption: SortOption = SortOption.SongTitleAZ,
     val searchHistory: ImmutableList<SearchHistoryItem> = persistentListOf(),
     val searchQuery: String = "",
-    val isSyncingLibrary: Boolean = false,
     val selectedSearchFilter: SearchFilterType = SearchFilterType.ALL,
     val currentStorageFilter: com.gurio.gusic.data.model.StorageFilter = com.gurio.gusic.data.model.StorageFilter.ALL,
     val hideLocalMedia: Boolean = false,

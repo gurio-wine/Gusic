@@ -2,6 +2,15 @@
 
 All notable changes to Gusic will be documented in this file.
 
+## [26.10.08] - 2026-10-08
+
+### Changed
+- Retired unattended device-wide MediaStore catalog synchronization and broad observer registration.
+- Added explicit SAF library import with persisted identity/read-grant validation and database-backed maintenance while preserving URI-based playback.
+- Updated the stable release baseline to `26.10.08` / `522016000`; alpha CI continues to validate the baseline and derive reserved alpha versions through the shared helper.
+
+---
+
 ## [26.10.06] - 2026-10-06
 
 ### Changed

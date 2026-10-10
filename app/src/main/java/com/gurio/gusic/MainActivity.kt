@@ -3,7 +3,6 @@ package com.gurio.gusic
 import com.gurio.gusic.presentation.navigation.navigateSafely
 import com.gurio.gusic.presentation.navigation.navigateToTopLevelSafely
 
-import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -11,9 +10,8 @@ import android.os.Build
 import android.content.res.Configuration
 import android.os.LocaleList
 import android.os.Bundle
-import com.gurio.gusic.utils.traceSection
 import android.view.WindowManager
-import android.widget.Toast
+import com.gurio.gusic.utils.traceSection
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -102,8 +100,6 @@ import androidx.media3.session.SessionToken
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.gurio.gusic.data.preferences.AppThemeMode
@@ -112,8 +108,6 @@ import com.gurio.gusic.data.preferences.sanitizeNavBarCornerRadius
 import com.gurio.gusic.data.preferences.ThemePreferencesRepository
 import com.gurio.gusic.data.preferences.UserPreferencesRepository
 import com.gurio.gusic.data.service.MusicService
-import com.gurio.gusic.data.worker.SyncManager
-import com.gurio.gusic.data.worker.SyncProgress
 import com.gurio.gusic.presentation.components.AppSidebarDrawer
 import com.gurio.gusic.presentation.components.CrashReportDialog
 import com.gurio.gusic.presentation.components.DismissUndoBar
@@ -128,6 +122,7 @@ import com.gurio.gusic.presentation.components.resolveNavBarOccupiedHeight
 import com.gurio.gusic.presentation.components.resolveNavBarSurfaceHeight
 import com.gurio.gusic.presentation.components.sanitizeNavigationBarBottomInset
 import com.gurio.gusic.presentation.navigation.AppNavigation
+import com.gurio.gusic.presentation.navigation.mainRootTabSpecs
 import com.gurio.gusic.presentation.navigation.Screen
 import com.gurio.gusic.presentation.screens.SetupScreen
 import com.gurio.gusic.presentation.viewmodel.MainViewModel
@@ -139,8 +134,8 @@ import com.gurio.gusic.utils.CrashHandler
 import com.gurio.gusic.utils.LogUtils
 import com.gurio.gusic.utils.shouldKeepScreenAwake
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.delay
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -155,6 +150,15 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
+
+internal fun shouldShowStartupSetup(
+    isSetupComplete: Boolean?,
+    isBenchmarkMode: Boolean,
+): Boolean? = when {
+    isBenchmarkMode -> false
+    isSetupComplete == null -> null
+    else -> !isSetupComplete
+}
 
 @Immutable
 data class BottomNavItem(
@@ -181,8 +185,6 @@ class MainActivity : ComponentActivity() {
     lateinit var userPreferencesRepository: UserPreferencesRepository
     @Inject
     lateinit var themePreferencesRepository: ThemePreferencesRepository
-    @Inject
-    lateinit var syncManager: SyncManager
     private val _pendingPlaylistNavigation = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     private val _pendingShuffleAll = kotlinx.coroutines.flow.MutableStateFlow(false)
 
@@ -207,7 +209,6 @@ class MainActivity : ComponentActivity() {
         super.applyOverrideConfiguration(overrideConfiguration)
     }
 
-    @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         LogUtils.d(this, "onCreate")
         val splashScreen = installSplashScreen()
@@ -259,9 +260,7 @@ class MainActivity : ComponentActivity() {
         if (shouldBenchmarkRebuildDatabase) {
             lifecycleScope.launch {
                 userPreferencesRepository.setInitialSetupDone(true)
-                Timber.tag("PixelPlayerBenchmark").i("Enqueueing benchmark database rebuild")
-                syncManager.rebuildDatabase()
-                delay(1_500L)
+                Timber.tag("PixelPlayerBenchmark").i("Preparing benchmark player from the existing Room library")
                 playerViewModel.prepareBenchmarkPlayerFromLibrary()
             }
         }
@@ -322,27 +321,11 @@ class MainActivity : ComponentActivity() {
             var showCrashReportDialog by remember { mutableStateOf(false) }
             var crashLogData by remember { mutableStateOf<CrashLogData?>(null) }
             
-            val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                listOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
-            } else {
-                listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-            }
-            @OptIn(ExperimentalPermissionsApi::class)
-            val permissionState = rememberMultiplePermissionsState(permissions = permissions)
-            val permissionsValid = permissionState.allPermissionsGranted
-            val showSetupScreen = remember(isSetupComplete, permissionsValid, isBenchmarkMode) {
-                when {
-                    isBenchmarkMode -> false
-                    isSetupComplete == null -> null
-                    else -> !isSetupComplete!! || !permissionsValid
-                }
-            }
-
-            LaunchedEffect(showSetupScreen) {
-                if (showSetupScreen == false) {
-                     LogUtils.i(this, "Setup complete/skipped and permissions valid. Starting sync.")
-                     mainViewModel.startSync()
-                }
+            val showSetupScreen = remember(isSetupComplete, isBenchmarkMode) {
+                shouldShowStartupSetup(
+                    isSetupComplete = isSetupComplete,
+                    isBenchmarkMode = isBenchmarkMode
+                )
             }
 
             LaunchedEffect(Unit) {
@@ -542,21 +525,6 @@ class MainActivity : ComponentActivity() {
         mainViewModel: MainViewModel
     ) = traceSection("MainActivity.MainAppContent") {
         val navController = rememberNavController()
-        val isSyncing by mainViewModel.isSyncing.collectAsStateWithLifecycle()
-        val hasCompletedInitialSync by mainViewModel.hasCompletedInitialSync.collectAsStateWithLifecycle()
-        val syncProgress by mainViewModel.syncProgress.collectAsStateWithLifecycle()
-
-        val context = LocalContext.current
-        LaunchedEffect(Unit) {
-            mainViewModel.syncFailed.collect {
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.sync_failed_toast),
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-
         val isMediaControllerReady by playerViewModel.isMediaControllerReady.collectAsStateWithLifecycle()
         
         val pendingPlaylistNav by _pendingPlaylistNavigation.collectAsStateWithLifecycle()
@@ -587,38 +555,8 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        var canShowLoadingIndicator by remember { mutableStateOf(false) }
-        var loadingShownTimestamp by remember { mutableStateOf(0L) }
-        val minimumDisplayDuration = 1500L
-
-        val shouldPotentiallyShowLoading = isSyncing && !hasCompletedInitialSync
-
-        LaunchedEffect(shouldPotentiallyShowLoading) {
-            if (shouldPotentiallyShowLoading) {
-                delay(300L)
-                if (mainViewModel.isSyncing.value && !mainViewModel.hasCompletedInitialSync.value) {
-                    canShowLoadingIndicator = true
-                    loadingShownTimestamp = System.currentTimeMillis()
-                }
-            } else {
-                if (canShowLoadingIndicator && loadingShownTimestamp > 0) {
-                    val elapsed = System.currentTimeMillis() - loadingShownTimestamp
-                    val remaining = minimumDisplayDuration - elapsed
-                    if (remaining > 0) {
-                        delay(remaining)
-                    }
-                }
-                canShowLoadingIndicator = false
-                loadingShownTimestamp = 0L
-            }
-        }
-
         Box(modifier = Modifier.fillMaxSize()) {
             MainUI(playerViewModel, navController)
-
-            if (canShowLoadingIndicator) {
-                LoadingOverlay(syncProgress)
-            }
         }
     }
 
@@ -630,11 +568,9 @@ class MainActivity : ComponentActivity() {
     ) = traceSection("MainActivity.MainUI") {
         val showSearchTab by playerViewModel.showSearchTab.collectAsStateWithLifecycle()
         val commonNavItems = remember(showSearchTab) {
-            val base = persistentListOf(
-                BottomNavItem(R.string.tab_home, R.drawable.rounded_home_24, R.drawable.home_24_rounded_filled, Screen.Home),
-                BottomNavItem(R.string.tab_online, R.drawable.rounded_headphones_24, R.drawable.rounded_headphones_24, Screen.LxMusic),
-                BottomNavItem(R.string.tab_library, R.drawable.rounded_library_music_24, R.drawable.rounded_library_music_24, Screen.Library),
-            )
+            val base = mainRootTabSpecs.fold(persistentListOf<BottomNavItem>()) { items, spec ->
+                items.adding(BottomNavItem(spec.labelResId, spec.iconResId, spec.selectedIconResId, spec.screen))
+            }
             if (showSearchTab) {
                 base.adding(BottomNavItem(R.string.tab_search, R.drawable.rounded_search_24, R.drawable.rounded_search_24, Screen.Search))
             } else {
@@ -1051,59 +987,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-    @Composable
-    private fun LoadingOverlay(syncProgress: SyncProgress) {
-        val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
-            targetValue = syncProgress.progress,
-            animationSpec = androidx.compose.animation.core.spring(
-                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
-                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
-            ),
-            label = "SyncProgressAnimation"
-        )
-        
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.9f))
-                .clickable(enabled = false, onClick = {}),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(horizontal = 32.dp)
-            ) {
-                CircularWavyProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.sync_preparing_library),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                
-                if (syncProgress.hasProgress) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    androidx.compose.material3.LinearWavyProgressIndicator(
-                        progress = { animatedProgress },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(
-                            R.string.sync_scanned_count,
-                            syncProgress.currentCount,
-                            syncProgress.totalCount
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-
 
     @androidx.annotation.OptIn(UnstableApi::class)
     override fun onStart() {

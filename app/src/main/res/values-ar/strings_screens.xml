@@ -200,7 +200,7 @@
     <string name="skip_not_now">تخطي / ليس الآن</string>
     <string name="tab_albums">الألبومات</string>
     <string name="tab_artists">الفنانون</string>
-    <string name="tab_library">المكتبة</string>
+    <string name="tab_library">مكتبتي</string>
     <string name="tab_songs">الأغاني</string>
     <string name="toast_added_to_queue">تمت الإضافة إلى قائمة الانتظار</string>
     <string name="toast_crash_log_copied">تم نسخ سجل التعطل إلى الحافظة</string>

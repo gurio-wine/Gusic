@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="presentation_batch_d_library_title">音乐库</string>
+    <string name="presentation_batch_d_library_title">我的</string>
     <string name="presentation_batch_d_open_settings_cd">设置</string>
     <string name="presentation_batch_d_edit_library_tabs_cd">编辑</string>
     <string name="presentation_batch_d_reorder_tabs_cd">调整标签顺序</string>

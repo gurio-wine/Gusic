@@ -82,7 +82,7 @@
     <string name="setcat_auto_hide_delay_label">Penundaan Sembunyi Otomatis</string>
     <string name="setcat_auto_rotate_patterns_subtitle">Berganti-ganti pola kolase setiap kali Anda mengunjungi Beranda.</string>
     <string name="setcat_auto_rotate_patterns_title">Putar Pola Otomatis</string>
-    <string name="setcat_auto_scan_lrc_subtitle">Secara otomatis memindai dan menetapkan file .lrc di folder yang sama selama sinkronisasi pustaka.</string>
+    <string name="setcat_auto_scan_lrc_subtitle">Saat pemeliharaan, cari dan tautkan file .lrc di sebelah lagu yang sudah ada di pustaka. Ini tidak menemukan atau mengimpor musik baru.</string>
     <string name="setcat_auto_scan_lrc_title">Pindai otomatis file .lrc</string>
     <string name="setcat_background_playback">Pemutaran Latar Belakang</string>
     <string name="setcat_carousel_no_peek">Tanpa Intip</string>
@@ -244,7 +244,8 @@
     <string name="settings_search_section_top_matches">Hasil teratas</string>
     <string name="settings_top_bar_title">Pengaturan</string>
     <string name="sync_indicator_rebuilding">Membangun kembali database</string>
-    <string name="tab_home">Beranda</string>
+    <string name="tab_home">Rekomendasi</string>
+    <string name="tab_online">Temukan</string>
     <string name="toast_daily_mix_regeneration_started">Regenerasi Daily Mix dimulai</string>
     <string name="toast_full_rescan_started">Pemindaian ulang penuh dimulai…</string>
     <string name="toast_library_sync_finished">Sinkronisasi pustaka selesai</string>

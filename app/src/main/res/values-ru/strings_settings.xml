@@ -82,7 +82,7 @@
     <string name="setcat_auto_hide_delay_label">Задержка скрытия</string>
     <string name="setcat_auto_rotate_patterns_subtitle">Менять шаблон коллажа при каждом открытии главной страницы.</string>
     <string name="setcat_auto_rotate_patterns_title">Автосмена шаблонов</string>
-    <string name="setcat_auto_scan_lrc_subtitle">Автоматически искать и привязывать .lrc-файлы из той же папки во время синхронизации.</string>
+    <string name="setcat_auto_scan_lrc_subtitle">Во время обслуживания ищет и привязывает .lrc-файлы рядом с композициями, уже сохранёнными в медиатеке. Новую музыку эта функция не обнаруживает и не импортирует.</string>
     <string name="setcat_auto_scan_lrc_title">Автосканирование .lrc-файлов</string>
     <string name="setcat_background_playback">Фоновое воспроизведение</string>
     <string name="setcat_carousel_no_peek">Без предпросмотра</string>
@@ -244,7 +244,8 @@
     <string name="settings_search_section_top_matches">Лучшие совпадения</string>
     <string name="settings_top_bar_title">Настройки</string>
     <string name="sync_indicator_rebuilding">Пересоздание базы данных</string>
-    <string name="tab_home">Главная</string>
+    <string name="tab_home">Рекомендации</string>
+    <string name="tab_online">Обзор</string>
     <string name="toast_daily_mix_regeneration_started">Пересоздание Daily Mix начато</string>
     <string name="toast_full_rescan_started">Полное сканирование начато…</string>
     <string name="toast_library_sync_finished">Синхронизация медиатеки завершена</string>

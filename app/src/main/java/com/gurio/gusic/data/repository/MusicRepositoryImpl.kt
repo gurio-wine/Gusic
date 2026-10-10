@@ -4,8 +4,6 @@ package com.gurio.gusic.data.repository
 
 import android.content.Context
 import android.net.Uri
-import android.provider.MediaStore
-
 import com.gurio.gusic.data.model.Song
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +39,6 @@ import com.gurio.gusic.data.preferences.PlaylistPreferencesRepository
 import com.gurio.gusic.data.preferences.UserPreferencesRepository
 import com.gurio.gusic.ui.theme.GenreThemeUtils
 import com.gurio.gusic.utils.DirectoryFilterUtils
-import com.gurio.gusic.utils.LogUtils
 import com.gurio.gusic.utils.toHexString
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
@@ -53,8 +50,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import androidx.paging.Pager
@@ -90,7 +85,6 @@ class MusicRepositoryImpl @Inject constructor(
         private const val UNKNOWN_GENRE_ID = "unknown"
     }
 
-    private val directoryScanMutex = Mutex()
     private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val defaultLibraryPagingConfig = PagingConfig(
         pageSize = 50,
@@ -485,26 +479,6 @@ class MusicRepositoryImpl @Inject constructor(
         }.map { entities ->
             entities.map { it.toSong() }
         }.flowOn(Dispatchers.IO)
-    }
-
-    override suspend fun getAllUniqueAudioDirectories(): Set<String> = withContext(Dispatchers.IO) {
-        LogUtils.d(this, "getAllUniqueAudioDirectories")
-        directoryScanMutex.withLock {
-            val directories = mutableSetOf<String>()
-            val projection = arrayOf(MediaStore.Audio.Media.DATA)
-            val selection = "(${MediaStore.Audio.Media.IS_MUSIC} != 0 OR ${MediaStore.Audio.Media.DATA} LIKE '%.m4a' OR ${MediaStore.Audio.Media.DATA} LIKE '%.flac')"
-            context.contentResolver.query(
-                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                projection, selection, null, null
-            )?.use { c ->
-                val dataColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
-                while (c.moveToNext()) {
-                    File(c.getString(dataColumn)).parent?.let { directories.add(it) }
-                }
-            }
-            LogUtils.i(this, "Found ${directories.size} unique audio directories")
-            return@withLock directories
-        }
     }
 
     override fun getAllUniqueAlbumArtUris(): Flow<List<Uri>> {

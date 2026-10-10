@@ -170,7 +170,7 @@
     <string name="searched_for_x_format">Искали \"%s\"</string>
     <string name="searching_lyrics">Поиск текста песни…</string>
     <string name="service_processing_action">Обработка действия воспроизведения…</string>
-    <string name="setcat_find_duplicates_subtitle">Найдите в медиатеке треки, которые встречаются более одного раза.</string>
+    <string name="setcat_find_duplicates_subtitle">Найти совпадения названия и исполнителя среди композиций, сохранённых в локальной медиатеке.</string>
     <string name="setcat_find_duplicates_title">Поиск дубликатов треков</string>
     <string name="setcat_playback_speed">Скорость воспроизведения</string>
     <string name="shortcut_playlist_short">Плейлист</string>

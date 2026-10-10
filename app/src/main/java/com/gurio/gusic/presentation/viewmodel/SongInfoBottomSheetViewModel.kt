@@ -218,7 +218,7 @@ class SongInfoBottomSheetViewModel @Inject constructor(
         probeJob = viewModelScope.launch {
             val preferred = runCatching {
                 userPreferencesRepository.lxMusicPreferredQualityFlow.first()
-            }.getOrDefault(LxQualities.Q320)
+            }.getOrDefault(LxQualities.DEFAULT_PREFERRED)
             val ordered = (listOf(preferred) + LxQualities.ALL).distinct()
             lxDownloadQualityProber.probe(lxSong, ordered, scripts) { probe ->
                 val current = _downloadQualityDialog.value ?: return@probe

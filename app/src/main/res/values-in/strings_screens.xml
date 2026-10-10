@@ -200,7 +200,7 @@
     <string name="skip_not_now">Lewati / Tidak sekarang</string>
     <string name="tab_albums">ALBUM</string>
     <string name="tab_artists">ARTIS</string>
-    <string name="tab_library">Pustaka</string>
+    <string name="tab_library">Milik Saya</string>
     <string name="tab_songs">LAGU</string>
     <string name="toast_added_to_queue">Ditambahkan ke antrean</string>
     <string name="toast_crash_log_copied">Log crash disalin ke papan klip</string>

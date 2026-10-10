@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/icon.png" alt="Gusic 图标" width="160"/>
+  <img src="fastlane/metadata/android/en-US/images/icon.png" alt="Gusic 图标" width="160"/>
 </p>
 
 <h1 align="center">Gusic</h1>

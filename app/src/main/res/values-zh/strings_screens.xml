@@ -61,7 +61,7 @@
     <string name="setup_library_layout_subtitle">選擇你偏好的庫瀏覽方式。</string>
     <string name="setup_compact_mode">緊湊模式</string>
     <string name="setup_library_layout_footer">後續可在 設置＞外觀＞庫導航 中修改。</string>
-    <string name="tab_library">曲庫</string>
+    <string name="tab_library">我的</string>
     <string name="tab_search">搜索</string>
     <string name="tab_songs">歌曲</string>
     <string name="tab_albums">專輯</string>

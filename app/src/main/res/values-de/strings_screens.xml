@@ -200,7 +200,7 @@
     <string name="skip_not_now">Vorerst überspringen</string>
     <string name="tab_albums">ALBEN</string>
     <string name="tab_artists">KÜNSTLER</string>
-    <string name="tab_library">Bibliothek</string>
+    <string name="tab_library">Meine</string>
     <string name="tab_songs">SONGS</string>
     <string name="toast_added_to_queue">Zur Queue hinzugefügt</string>
     <string name="toast_crash_log_copied">Absturzprotokoll in die Zwischenablage kopiert</string>

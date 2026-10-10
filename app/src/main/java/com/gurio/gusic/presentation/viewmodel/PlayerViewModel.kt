@@ -63,7 +63,6 @@ import com.gurio.gusic.data.repository.LyricsSearchResult
 import com.gurio.gusic.data.repository.MusicRepository
 import com.gurio.gusic.data.service.MusicNotificationProvider
 import com.gurio.gusic.data.service.player.DualPlayerEngine
-import com.gurio.gusic.data.worker.SyncManager
 import com.gurio.gusic.utils.AppShortcutManager
 import com.gurio.gusic.utils.ValidatedLyricsImport
 import com.gurio.gusic.utils.QueueUtils
@@ -290,7 +289,6 @@ class PlayerViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val themePreferencesRepository: ThemePreferencesRepository,
     private val albumArtThemeDao: AlbumArtThemeDao,
-    val syncManager: SyncManager,
 
     private val dualPlayerEngine: DualPlayerEngine,
     private val appShortcutManager: AppShortcutManager,
@@ -1133,15 +1131,6 @@ class PlayerViewModel @Inject constructor(
             initialValue = SortOption.SONGS
         )
 
-    val isSyncingStateFlow: StateFlow<Boolean> = syncManager.isSyncing
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = true
-        )
-
-    private val _isInitialDataLoaded = MutableStateFlow(false)
-
     val allSongsFlow: StateFlow<ImmutableList<Song>> = libraryStateHolder.allSongs
 
     val genres: StateFlow<ImmutableList<Genre>> = libraryStateHolder.genres
@@ -1621,31 +1610,14 @@ class PlayerViewModel @Inject constructor(
         val action: () -> Unit = {
             Timber.d("[TileDebug] action() invoked")
             viewModelScope.launch {
-                var songs = musicRepository.getRandomSongs(limit = 500)
-                Timber.d("[TileDebug] Repository returned ${songs.size} random songs immediately")
-
-                if (songs.isEmpty()) {
-                    Timber.d("[TileDebug] No songs available yet, triggering sync and retrying repository sample")
-                    syncManager.sync()
-                    songs = withTimeoutOrNull(30_000L) {
-                        var refreshedSongs = emptyList<Song>()
-                        while (refreshedSongs.isEmpty()) {
-                            refreshedSongs = musicRepository.getRandomSongs(limit = 500)
-                            if (refreshedSongs.isEmpty()) {
-                                delay(500L)
-                            }
-                        }
-                        refreshedSongs
-                    }
-                        ?: emptyList()
-                    Timber.d("[TileDebug] After retry, repository returned ${songs.size} songs")
-                }
+                val songs = musicRepository.getRandomSongs(limit = 500)
+                Timber.d("[TileDebug] Repository returned ${songs.size} random songs")
 
                 if (songs.isNotEmpty()) {
                     Timber.d("[TileDebug] Calling playSongsShuffled with ${songs.size} songs")
                     playSongsShuffled(songs, "All Songs (Shuffled)", startAtZero = true)
                 } else {
-                    Timber.w("[TileDebug] No songs found even after sync - library may be empty")
+                    Timber.w("[TileDebug] No songs found in the local library")
                     sendToast(context.getString(R.string.player_no_songs_in_library_toast))
                 }
             }
@@ -1933,20 +1905,7 @@ class PlayerViewModel @Inject constructor(
             loadSearchHistory()
 
             viewModelScope.launch {
-                isSyncingStateFlow.collect { isSyncing ->
-                    val oldSyncingLibraryState = _playerUiState.value.isSyncingLibrary
-                    _playerUiState.update { it.copy(isSyncingLibrary = isSyncing) }
-
-                    if (oldSyncingLibraryState && !isSyncing) {
-                        Timber.tag("PlayerViewModel").i("Sync completed. Calling resetAndLoadInitialData from isSyncingStateFlow observer.")
-                        resetAndLoadInitialData("isSyncingStateFlow observer")
-                    }
-                }
-            }
-
-            viewModelScope.launch {
-                if (!isSyncingStateFlow.value && !_isInitialDataLoaded.value && libraryStateHolder.allSongs.value.isEmpty()) {
-                    Timber.tag("PlayerViewModel").i("Initial check: Sync not active and initial data not loaded. Calling resetAndLoadInitialData.")
+                if (libraryStateHolder.allSongs.value.isEmpty()) {
                     resetAndLoadInitialData("Initial Check")
                 }
             }
@@ -2100,8 +2059,7 @@ class PlayerViewModel @Inject constructor(
         try {
             viewModelScope.launch {
                 _isInitialThemePreloadComplete.value = false
-                if (isSyncingStateFlow.value && !_isInitialDataLoaded.value) {
-                } else if (!_isInitialDataLoaded.value && libraryStateHolder.allSongs.value.isEmpty()) {
+                if (libraryStateHolder.allSongs.value.isEmpty()) {
                     resetAndLoadInitialData("preloadThemesAndInitialData")
                 }
                 _isInitialThemePreloadComplete.value = true

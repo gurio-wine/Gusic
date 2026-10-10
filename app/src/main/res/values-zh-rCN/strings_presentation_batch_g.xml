@@ -185,7 +185,9 @@
 
 “从歌曲标题提取艺术家”可以识别歌名内类似 (feat. 艺人) 的格式。
 
-反斜杠(\)可用来转义字符分隔符。</string>
+反斜杠(\)可用来转义字符分隔符。
+
+这些设置仅在 Gusic 编辑歌曲艺术家元数据时生效；不会重新扫描或处理现有歌曲，SAF 导入会保留所选文件中的艺术家元数据。</string>
     <string name="presentation_batch_g_artist_example_arrow"> → </string>
     <string name="presentation_batch_g_artist_examples_title">示例</string>
     <string name="presentation_batch_g_artist_ex_1_in">"Artist1/Artist2"</string>

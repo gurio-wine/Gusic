@@ -59,6 +59,9 @@ class LxMusicRepository @Inject constructor(
     internal val kuwoCookieStore: com.gurio.gusic.data.lxmusic.kuwo.KuwoCookieStore,
 ) {
     internal val accountExtension: LxAccountExtension = LxAccountExtensionLoader.load(this)
+    private val tencentQrLoginClient by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        TencentQrLoginClient(okHttpClient)
+    }
 
     val accountWritesEnabled: Boolean get() = accountExtension.isAvailable
 
@@ -208,8 +211,9 @@ class LxMusicRepository @Inject constructor(
     }
 
     fun setDisabledPaths(paths: Set<String>) {
-        val newlyDisabled = paths - disabledPaths
-        disabledPaths = paths
+        val normalizedPaths = LxScriptPolicy.normalizeDisabledPaths(paths)
+        val newlyDisabled = normalizedPaths - disabledPaths
+        disabledPaths = normalizedPaths
         newlyDisabled.forEach { path ->
             engine.unloadScript(path)
             _loaded.value = _loaded.value - path
@@ -330,6 +334,7 @@ class LxMusicRepository @Inject constructor(
             author = fields["author"] ?: "",
             description = fields["description"] ?: "",
             isImported = isImported,
+            isDefault = LxScriptPolicy.isDefaultSource(path, isImported),
         )
     }
 
@@ -2049,10 +2054,10 @@ class LxMusicRepository @Inject constructor(
         accountExtension.txFetchPlaylistSongs(disstid) ?: emptyList()
 
     suspend fun txQrCreate(type: LxTxQrType): Pair<ByteArray, String>? =
-        accountExtension.txQrCreate(type)
+        tencentQrLoginClient.create(type)
 
     suspend fun txQrPoll(type: LxTxQrType, session: String): LxTxQrPoll =
-        accountExtension.txQrPoll(type, session)
+        tencentQrLoginClient.poll(type, session)
 
 
     fun invalidateKgCloudListsCache() {
@@ -3817,7 +3822,7 @@ class LxMusicRepository @Inject constructor(
     fun hasActiveScript(): Boolean = allScriptPaths().any { it !in disabledPaths }
 
     suspend fun ensureDefaultScriptLoaded() {
-        val defaultScript = _scripts.value.firstOrNull { !it.isImported && it.assetPath.contains("wy.js", ignoreCase = true) && it.assetPath !in disabledPaths }
+        val defaultScript = _scripts.value.firstOrNull { it.isDefault && it.assetPath !in disabledPaths }
             ?: _scripts.value.firstOrNull { !it.isImported && it.assetPath !in disabledPaths }
             ?: run {
                 Timber.w("no bundled scripts available to auto-load (imported scripts stay off)")
@@ -3902,7 +3907,7 @@ class LxMusicRepository @Inject constructor(
             assetPath = assetPath,
             source = song.source,
             songmid = song.songmid,
-            quality = resolvedQuality ?: "320k",
+            quality = resolvedQuality ?: LxQualities.DEFAULT_PREFERRED,
             extraInfo = extraInfo,
             timeoutMs = musicUrlEventTimeoutMs,
         )
@@ -3972,7 +3977,7 @@ class LxMusicRepository @Inject constructor(
         val cacheKey = "${song.source}/${song.songmid}"
         val effectiveQuality = quality ?: runCatching {
             userPreferencesRepository.lxMusicPreferredQualityFlow.first()
-        }.getOrNull()
+        }.getOrNull() ?: LxQualities.DEFAULT_PREFERRED
 
         val route = decidePlaybackRoute(song, effectiveQuality)
 
@@ -4102,10 +4107,10 @@ class LxMusicRepository @Inject constructor(
 
     suspend fun currentPreferredQuality(): String =
         runCatching { userPreferencesRepository.lxMusicPreferredQualityFlow.first() }
-            .getOrNull() ?: LxQualities.Q320
+            .getOrNull() ?: LxQualities.DEFAULT_PREFERRED
 
     @Volatile
-    var preferredQualitySync: String = LxQualities.Q320
+    var preferredQualitySync: String = LxQualities.DEFAULT_PREFERRED
         private set
 
     init {
@@ -4236,7 +4241,7 @@ class LxMusicRepository @Inject constructor(
             officialUnavailableAt.remove(cacheKey)
         }
         val requestedRank = qualityRank(quality)
-        return when (val r = neteaseOfficialApi.resolveUrl(song.songmid, quality ?: LxQualities.Q320)) {
+        return when (val r = neteaseOfficialApi.resolveUrl(song.songmid, quality ?: LxQualities.DEFAULT_PREFERRED)) {
             is NeteaseOfficialApi.Result.Success -> {
                 val actualRank = officialLevelRank(r.level)
                 if (actualRank >= requestedRank) {
@@ -4787,6 +4792,13 @@ class LxMusicRepository @Inject constructor(
         return candidates.distinct()
     }
 
+    private suspend fun enableImportedScript(meta: LxScriptMeta): LxScriptMeta {
+        val enabledPaths = enableImportedLxScript(userPreferencesRepository, meta.assetPath)
+        setDisabledPaths(enabledPaths)
+        runCatching { load(meta.assetPath) }
+        return meta
+    }
+
     suspend fun importFromUrl(url: String): Result<LxScriptMeta> = withContext(Dispatchers.IO) {
         runCatching {
             var lastErr: Exception? = null
@@ -4806,7 +4818,8 @@ class LxMusicRepository @Inject constructor(
                         val file = File(importedDir, fileName)
                         file.writeText(body)
                         refreshScripts()
-                        return@runCatching parseScriptMeta(fileName, file.absolutePath, body, isImported = true)
+                        val meta = parseScriptMeta(fileName, file.absolutePath, body, isImported = true)
+                        return@runCatching enableImportedScript(meta)
                     }
                 } catch (e: Exception) {
                     lastErr = e
@@ -4825,7 +4838,8 @@ class LxMusicRepository @Inject constructor(
             val file = File(importedDir, fileName)
             file.writeText(raw)
             refreshScripts()
-            parseScriptMeta(fileName, file.absolutePath, raw, isImported = true)
+            val meta = parseScriptMeta(fileName, file.absolutePath, raw, isImported = true)
+            enableImportedScript(meta)
         }
     }
 
@@ -4843,6 +4857,7 @@ class LxMusicRepository @Inject constructor(
     }
 
     suspend fun deleteScript(assetPath: String): Boolean = withContext(Dispatchers.IO) {
+        if (_scripts.value.any { it.assetPath == assetPath && it.isDefault }) return@withContext false
         runCatching {
             unload(assetPath)
             if (assetPath in disabledPaths) {

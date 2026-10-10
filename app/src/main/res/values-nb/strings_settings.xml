@@ -82,7 +82,7 @@
     <string name="setcat_auto_hide_delay_label">Forsinkelse for autoskjuling</string>
     <string name="setcat_auto_rotate_patterns_subtitle">Bytt mønster hver gang du besøker Hjem-skjermen.</string>
     <string name="setcat_auto_rotate_patterns_title">Roter mønstre automatisk</string>
-    <string name="setcat_auto_scan_lrc_subtitle">Skann og tildel .lrc-filer i samme mappe automatisk under synkronisering.</string>
+    <string name="setcat_auto_scan_lrc_subtitle">Under vedlikehold søkes det etter .lrc-filer ved spor som allerede finnes i biblioteket, og tekstene tilordnes. Dette oppdager eller importerer ikke ny musikk.</string>
     <string name="setcat_auto_scan_lrc_title">Skann .lrc-filer automatisk</string>
     <string name="setcat_background_playback">Bakgrunnsavspilling</string>
     <string name="setcat_carousel_no_peek">Ingen kikk</string>
@@ -244,7 +244,8 @@
     <string name="settings_search_section_top_matches">Beste treff</string>
     <string name="settings_top_bar_title">Innstillinger</string>
     <string name="sync_indicator_rebuilding">Gjenoppbygger database</string>
-    <string name="tab_home">Hjem</string>
+    <string name="tab_home">Anbefalt</string>
+    <string name="tab_online">Oppdag</string>
     <string name="toast_daily_mix_regeneration_started">Regenerering av Daily Mix startet</string>
     <string name="toast_full_rescan_started">Fullstendig reskanning startet…</string>
     <string name="toast_library_sync_finished">Biblioteksynkronisering fullført</string>

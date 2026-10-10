@@ -155,12 +155,11 @@ fun HomeScreen(
             else -> homeMixPreviewSongs
         }
     }
-    var homePlaceholderRefreshGeneration by rememberSaveable { mutableIntStateOf(0) }
-    var hasHomeLoadingMinimumElapsed by rememberSaveable(homePlaceholderRefreshGeneration) {
+    var hasHomeLoadingMinimumElapsed by rememberSaveable(yourMixSongs.isEmpty()) {
         mutableStateOf(false)
     }
 
-    LaunchedEffect(homePlaceholderRefreshGeneration, yourMixSongs.isEmpty()) {
+    LaunchedEffect(yourMixSongs.isEmpty()) {
         if (yourMixSongs.isEmpty()) {
             hasHomeLoadingMinimumElapsed = false
             delay(HomeLoadingPlaceholderMinDurationMillis)
@@ -348,11 +347,7 @@ fun HomeScreen(
                             YourMixLoadingPlaceholder()
                         } else {
                             YourMixEmptyPlaceholder(
-                                onRefresh = {
-                                    homePlaceholderRefreshGeneration++
-                                    settingsViewModel.refreshLibrary()
-                                    playerViewModel.forceUpdateDailyMix()
-                                }
+                                onOpenLibrary = { navController.navigateSafely(Screen.Library.route) }
                             )
                         }
                     }
@@ -627,7 +622,7 @@ private fun YourMixLoadingPlaceholder() {
 
 @Composable
 private fun YourMixEmptyPlaceholder(
-    onRefresh: () -> Unit
+    onOpenLibrary: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
 
@@ -678,7 +673,7 @@ private fun YourMixEmptyPlaceholder(
             }
 
             FilledTonalButton(
-                onClick = onRefresh,
+                onClick = onOpenLibrary,
                 shape = AbsoluteSmoothCornerShape(
                     cornerRadiusTL = 22.dp,
                     smoothnessAsPercentTR = 60,

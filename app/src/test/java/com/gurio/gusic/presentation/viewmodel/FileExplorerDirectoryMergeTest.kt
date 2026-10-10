@@ -7,37 +7,33 @@ import java.io.File
 class FileExplorerDirectoryMergeTest {
 
     @Test
-    fun `merge preserves filesystem directories missing from MediaStore index`() {
-        val unindexedAlbum = RawDirectoryEntry(
-            file = File("/storage/emulated/0/Music/New Album"),
+    fun `merge preserves filesystem directories and unknown counts`() {
+        val firstAlbum = RawDirectoryEntry(
+            file = File("/storage/emulated/0/Music/First Album"),
             directAudioCount = -1,
             totalAudioCount = -1,
-            canonicalPath = "/storage/emulated/0/Music/New Album"
+            canonicalPath = "/storage/emulated/0/Music/First Album"
         )
-        val indexedAlbum = RawDirectoryEntry(
-            file = File("/storage/emulated/0/Music/Indexed Album"),
+        val secondAlbum = RawDirectoryEntry(
+            file = File("/storage/emulated/0/Music/Second Album"),
             directAudioCount = -1,
             totalAudioCount = -1,
-            canonicalPath = "/storage/emulated/0/Music/Indexed Album"
-        )
-        val indexedAlbumCounts = indexedAlbum.copy(
-            directAudioCount = 3,
-            totalAudioCount = 3
+            canonicalPath = "/storage/emulated/0/Music/Second Album"
         )
 
         val merged = mergeDirectoryEntryLists(
-            filesystemEntries = listOf(unindexedAlbum, indexedAlbum),
-            mediaStoreEntries = listOf(indexedAlbumCounts)
+            filesystemEntries = listOf(firstAlbum, secondAlbum),
+            additionalFilesystemEntries = emptyList()
         )
 
         assertEquals(
             listOf(
-                "/storage/emulated/0/Music/Indexed Album",
-                "/storage/emulated/0/Music/New Album"
+                "/storage/emulated/0/Music/First Album",
+                "/storage/emulated/0/Music/Second Album"
             ),
             merged.map { it.canonicalPath }
         )
-        assertEquals(3, merged.first { it.canonicalPath.endsWith("Indexed Album") }.totalAudioCount)
-        assertEquals(-1, merged.first { it.canonicalPath.endsWith("New Album") }.totalAudioCount)
+        assertEquals(listOf(-1, -1), merged.map { it.directAudioCount })
+        assertEquals(listOf(-1, -1), merged.map { it.totalAudioCount })
     }
 }

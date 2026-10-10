@@ -1,5 +1,22 @@
 package com.gurio.gusic.presentation.navigation
 
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import com.gurio.gusic.R
+
+internal data class MainRootTabSpec(
+    @StringRes val labelResId: Int,
+    @DrawableRes val iconResId: Int,
+    @DrawableRes val selectedIconResId: Int,
+    val screen: Screen,
+)
+
+internal val mainRootTabSpecs = listOf(
+    MainRootTabSpec(R.string.tab_home, R.drawable.rounded_home_24, R.drawable.home_24_rounded_filled, Screen.Home),
+    MainRootTabSpec(R.string.tab_online, R.drawable.rounded_headphones_24, R.drawable.rounded_headphones_24, Screen.LxMusic),
+    MainRootTabSpec(R.string.tab_library, R.drawable.rounded_library_music_24, R.drawable.rounded_library_music_24, Screen.Library),
+)
+
 internal fun isMainRootRoute(route: String?): Boolean = when (route) {
     Screen.Home.route,
     Screen.Search.route,

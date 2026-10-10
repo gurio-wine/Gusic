@@ -48,7 +48,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import com.gurio.gusic.MainCoroutineExtension
 import com.gurio.gusic.data.service.player.DualPlayerEngine
-import com.gurio.gusic.data.worker.SyncManager
 import com.gurio.gusic.utils.AppShortcutManager
 import com.gurio.gusic.utils.MediaItemBuilder
 
@@ -66,7 +65,6 @@ class PlayerViewModelTest {
     private val mockContext: Context = mockk(relaxed = true)
     private val mockLxMusicRepository: LxMusicRepository = mockk(relaxed = true)
 
-    private val mockSyncManager: SyncManager = mockk(relaxed = true)
     private val mockDualPlayerEngine: DualPlayerEngine = mockk(relaxed = true)
     private val mockAppShortcutManager: AppShortcutManager = mockk(relaxed = true)
     private val mockListeningStatsTracker: ListeningStatsTracker = mockk(relaxed = true)
@@ -211,7 +209,6 @@ class PlayerViewModelTest {
             mockUserPreferencesRepository,
             mockThemePreferencesRepository,
             mockAlbumArtThemeDao,
-            mockSyncManager,
             mockDualPlayerEngine,
             mockAppShortcutManager,
             mockListeningStatsTracker,

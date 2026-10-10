@@ -46,6 +46,7 @@
     <string name="cd_close_notice">关闭提示</string>
 
     <string name="setcat_library_structure">曲库结构</string>
+    <string name="setcat_library_cache_section">封面缓存</string>
     <string name="setcat_excluded_directories_title">排除目录</string>
     <string name="setcat_excluded_directories_subtitle">扫描曲库时将跳过此处的文件夹</string>
     <string name="setcat_artists_title">歌手</string>
@@ -59,7 +60,7 @@
     <string name="toast_library_sync_finished">曲库同步完成</string>
     <string name="toast_full_rescan_started">开始完整重新扫描…</string>
     <string name="setcat_auto_scan_lrc_title">自动扫描.lrc歌词文件</string>
-    <string name="setcat_auto_scan_lrc_subtitle">曲库同步时自动扫描同目录下的lrc歌词并绑定歌曲</string>
+    <string name="setcat_auto_scan_lrc_subtitle">定期维护时，检查已在曲库中的歌曲旁是否有 .lrc 文件并关联歌词；此操作不会发现或导入音乐。</string>
     <string name="setcat_online_services">可选在线服务</string>
     <string name="setcat_external_lyrics_title">来自 LRCLIB 的在线歌词</string>
     <string name="setcat_external_lyrics_subtitle">本地无歌词时允许从 lrclib.net 搜索、手动获取歌词</string>
@@ -136,7 +137,7 @@
     <string name="setcat_app_navigation_section">应用导航</string>
     <string name="setcat_default_tab_label">默认启动页面</string>
     <string name="setcat_default_tab_desc">设置打开应用默认显示的标签页</string>
-    <string name="tab_home">主页</string>
+    <string name="tab_home">推荐</string>
     <string name="tab_online">发现</string>
     <string name="setcat_library_navigation_label">曲库导航方式</string>
     <string name="setcat_library_navigation_desc">切换曲库标签页的交互形式</string>

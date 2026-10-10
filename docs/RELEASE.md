@@ -11,20 +11,20 @@ Gurio Wine maintains Gusic’s current code, features, and releases in the Gusic
 Version values live in `gradle.properties`:
 
 ```properties
-APP_VERSION_NAME=26.10.06
-APP_VERSION_CODE=522012000
+APP_VERSION_NAME=26.10.08
+APP_VERSION_CODE=522016000
 ```
 
-The stable version name is `YY.MM.DD`; its three segments identify the formal release date, and the omitted modification number is treated as `000`. Thus the formal date `26.10.06` has code `261006 * 2000 + 000 = 522012000`. For a same-date follow-up build, an optional fourth, zero-padded segment is supported (`26.10.06.001`, `.002`, and so on); its code is `YYMMDD * 2000 + MOD`. When the formal date changes, advance the date segments and normally omit the modification segment for the initial stable build.
+The stable version name is `YY.MM.DD`; its three segments identify the formal release date, and the omitted modification number is treated as `000`. Thus the formal date `26.10.08` has code `261008 * 2000 + 000 = 522016000`. Optional fourth, zero-padded segments support same-date follow-up builds (`26.10.08.001`, `.002`, and so on); their code is `YYMMDD * 2000 + MOD`. When the formal date changes, advance the date segments and normally omit the modification segment for the initial stable build.
 
-Alpha CI builds reserve slots `1001` through `1999`: the workflow calls `scripts/alpha_version.py`, which validates the stable name/code pair (including a real calendar date), validates a run number from `1` through `999`, and computes `YYMMDD * 2000 + 1000 + run number`. For example, alpha run 1 for `26.10.06` is `26.10.06-alpha.1` with code `522013001`. This keeps alpha artifacts separate from stable modifications and below Android's signed 32-bit version-code limit. Every published or CI code must be strictly greater than the last code distributed through the same release channel, must never be reused, and must be checked before publishing.
+Alpha CI builds reserve slots `1001` through `1999`: the workflow calls `scripts/alpha_version.py`, which validates the stable name/code pair (including a real calendar date), validates a run number from `1` through `999`, and computes `YYMMDD * 2000 + 1000 + run number`. For example, alpha run 1 for `26.10.08` is `26.10.08-alpha.1` with code `522017001`. This keeps alpha artifacts separate from stable modifications and below Android's signed 32-bit version-code limit. Every published or CI code must be strictly greater than the last code distributed through the same release channel, must never be reused, and must be checked before publishing.
 
 For every public release:
 
 1. Set `APP_VERSION_NAME` to the release date (`YY.MM.DD`); use the optional `.MOD` suffix only for same-date follow-ups.
 2. Set `APP_VERSION_CODE` to `YYMMDD * 2000 + MOD` (`MOD=000` when omitted) and verify it is greater than the last published code.
 3. Move the relevant `CHANGELOG.md` entries from `Unreleased` to the release version.
-4. Tag the release as `v<APP_VERSION_NAME>`, for example `v26.10.06`.
+4. Tag the release as `v<APP_VERSION_NAME>`, for example `v26.10.08`.
 
 ## Required Local Checks
 
@@ -79,7 +79,7 @@ The property `-Ppixelplayer.disableReleaseSigning=true` is intentionally not a R
 Install the release candidate and verify:
 
 1. First launch and setup complete.
-2. Local library scan finds music.
+2. Explicit SAF library import adds selected music files and they persist across restart.
 3. Playback starts, pauses, resumes, skips, and survives backgrounding.
 4. Full player opens and closes smoothly.
 5. Widget controls still reach the playback service.

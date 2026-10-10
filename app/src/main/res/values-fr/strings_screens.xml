@@ -200,7 +200,7 @@
     <string name="skip_not_now">Passer / Pas maintenant</string>
     <string name="tab_albums">ALBUMS</string>
     <string name="tab_artists">ARTISTES</string>
-    <string name="tab_library">Bibliothèque</string>
+    <string name="tab_library">Ma musique</string>
     <string name="tab_songs">CHANSONS</string>
     <string name="toast_added_to_queue">Ajouté à la file d\'attente</string>
     <string name="toast_crash_log_copied">Journal d\'erreur copié dans le presse-papiers</string>

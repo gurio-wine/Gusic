@@ -82,7 +82,7 @@
     <string name="setcat_auto_hide_delay_label">자동 숨김 지연 시간</string>
     <string name="setcat_auto_rotate_patterns_subtitle">홈을 방문할 때마다 콜라주 패턴을 순환합니다.</string>
     <string name="setcat_auto_rotate_patterns_title">패턴 자동 회전</string>
-    <string name="setcat_auto_scan_lrc_subtitle">라이브러리 동기화 중 같은 폴더에 있는 .lrc 파일을 자동으로 스캔하여 할당합니다.</string>
+    <string name="setcat_auto_scan_lrc_subtitle">정기 유지관리 중 라이브러리에 이미 저장된 곡과 같은 폴더의 .lrc 파일을 찾아 연결합니다. 새 음악을 검색하거나 가져오지는 않습니다.</string>
     <string name="setcat_auto_scan_lrc_title">.lrc 파일 자동 스캔</string>
     <string name="setcat_background_playback">백그라운드 재생</string>
     <string name="setcat_carousel_no_peek">미리보기 없음</string>
@@ -244,7 +244,8 @@
     <string name="settings_search_section_top_matches">주요 결과</string>
     <string name="settings_top_bar_title">설정</string>
     <string name="sync_indicator_rebuilding">데이터베이스 다시 구축 중</string>
-    <string name="tab_home">홈</string>
+    <string name="tab_home">추천</string>
+    <string name="tab_online">탐색</string>
     <string name="toast_daily_mix_regeneration_started">데일리 믹스 재생성 시작됨</string>
     <string name="toast_full_rescan_started">전체 재스캔 시작됨…</string>
     <string name="toast_library_sync_finished">라이브러리 동기화 완료</string>

@@ -13,6 +13,8 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.media3.common.Player
 import com.gurio.gusic.data.diagnostics.AdvancedPerformanceDiagnostics
+import com.gurio.gusic.data.lxmusic.LxQualities
+import com.gurio.gusic.data.lxmusic.LxScriptPolicy
 import com.gurio.gusic.data.model.PlaybackQueueSnapshot
 import com.gurio.gusic.data.model.Playlist
 import com.gurio.gusic.data.model.SortOption
@@ -489,22 +491,25 @@ constructor(
 
     val lxMusicDisabledScriptsFlow: Flow<Set<String>> =
         dataStore.data.map { preferences ->
-            preferences[PreferencesKeys.LX_MUSIC_DISABLED_SCRIPTS] ?: emptySet()
+            LxScriptPolicy.normalizeDisabledPaths(
+                preferences[PreferencesKeys.LX_MUSIC_DISABLED_SCRIPTS] ?: emptySet(),
+            )
         }
 
     suspend fun setLxMusicDisabledScripts(scripts: Set<String>) {
+        val normalized = LxScriptPolicy.normalizeDisabledPaths(scripts)
         dataStore.edit { preferences ->
-            if (scripts.isEmpty()) {
+            if (normalized.isEmpty()) {
                 preferences.remove(PreferencesKeys.LX_MUSIC_DISABLED_SCRIPTS)
             } else {
-                preferences[PreferencesKeys.LX_MUSIC_DISABLED_SCRIPTS] = scripts
+                preferences[PreferencesKeys.LX_MUSIC_DISABLED_SCRIPTS] = normalized
             }
         }
     }
 
     val lxMusicPreferredQualityFlow: Flow<String> =
         dataStore.data.map { preferences ->
-            preferences[PreferencesKeys.LX_MUSIC_PREFERRED_QUALITY] ?: "320k"
+            preferences[PreferencesKeys.LX_MUSIC_PREFERRED_QUALITY] ?: LxQualities.DEFAULT_PREFERRED
         }
 
     suspend fun setLxMusicPreferredQuality(quality: String) {

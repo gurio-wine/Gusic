@@ -61,7 +61,7 @@
     <string name="setup_library_layout_subtitle">选择你偏好的库浏览方式。</string>
     <string name="setup_compact_mode">紧凑模式</string>
     <string name="setup_library_layout_footer">后续可在 设置＞外观＞库导航 中修改。</string>
-    <string name="tab_library">曲库</string>
+    <string name="tab_library">我的</string>
     <string name="tab_search">搜索</string>
     <string name="tab_songs">歌曲</string>
     <string name="tab_albums">专辑</string>
@@ -249,6 +249,13 @@
     <string name="cd_toggle_grid_list">切换网格/列表视图</string>
     <string name="cd_genre_illustration">流派配图</string>
     <string name="dash_last_synced_format">上次同步：%1$s</string>
+    <string name="library_saf_import_action">导入本地歌曲</string>
+    <string name="library_saf_import_progress">正在导入…</string>
+    <string name="library_saf_import_result_title">音频导入完成</string>
+    <string name="library_saf_import_summary_format">已导入：%1$d · 已在音乐库中：%2$d · 失败：%3$d</string>
+    <string name="library_saf_import_failures_title">无法导入的项目</string>
+    <string name="library_saf_import_error_format">无法导入所选音频：%1$s</string>
+    <string name="library_saf_import_dismiss">完成</string>
     <!-- LX Music / Netease Cookie -->
     <string name="lxmusic_netease_cookie_title">网易云 Cookie</string>
     <string name="lxmusic_netease_cookie_hint">粘贴 music.163.com 的 Cookie（需含 MUSIC_U）</string>

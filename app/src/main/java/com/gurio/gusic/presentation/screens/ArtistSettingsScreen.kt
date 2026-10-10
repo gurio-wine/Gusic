@@ -2,14 +2,9 @@ package com.gurio.gusic.presentation.screens
 
 import com.gurio.gusic.presentation.navigation.navigateSafely
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,17 +28,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.LibraryMusic
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -156,16 +146,10 @@ fun ArtistSettingsScreen(
             contentPadding = PaddingValues(top = currentTopBarHeightDp + 8.dp, bottom = 100.dp)
         ) {
             item {
-                AnimatedVisibility(
-                    visible = uiState.rescanRequired,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    RescanRequiredBanner(
-                        isResyncing = uiState.isResyncing,
-                        onRescanClick = { viewModel.rescanLibrary() }
-                    )
-                }
+                InfoCard(
+                    title = stringResource(R.string.presentation_batch_g_artist_info_title),
+                    content = stringResource(R.string.presentation_batch_g_artist_info_body)
+                )
             }
 
             item {
@@ -286,13 +270,6 @@ fun ArtistSettingsScreen(
             }
 
             item {
-                InfoCard(
-                    title = stringResource(R.string.presentation_batch_g_artist_info_title),
-                    content = stringResource(R.string.presentation_batch_g_artist_info_body)
-                )
-            }
-
-            item {
                 ExamplesCard(
                     examples = persistentListOf(
                         stringResource(R.string.presentation_batch_g_artist_ex_1_in) to stringResource(R.string.presentation_batch_g_artist_ex_1_out),
@@ -315,83 +292,6 @@ fun ArtistSettingsScreen(
 }
 
 
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun RescanRequiredBanner(
-    isResyncing: Boolean,
-    onRescanClick: () -> Unit
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                modifier = Modifier.size(24.dp)
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.presentation_batch_g_artist_rescan_banner_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                )
-                Text(
-                    text = stringResource(R.string.presentation_batch_g_artist_rescan_banner_body),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Button(
-                onClick = onRescanClick,
-                enabled = !isResyncing,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.tertiary,
-                    contentColor = MaterialTheme.colorScheme.onTertiary
-                ),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                if (isResyncing) {
-                    LoadingIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = MaterialTheme.colorScheme.onTertiary
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Outlined.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = if (isResyncing) {
-                        stringResource(R.string.presentation_batch_g_artist_rescan_scanning)
-                    } else {
-                        stringResource(R.string.presentation_batch_g_artist_rescan)
-                    },
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
-        }
-    }
-}
 
 @Composable
 private fun InfoCard(

@@ -8,7 +8,6 @@ import com.gurio.gusic.presentation.navigation.navigateSafelyReplacing
 import com.gurio.gusic.utils.traceSection
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
@@ -17,6 +16,8 @@ import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -49,10 +51,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ViewList
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material.icons.rounded.ViewModule
 import com.gurio.gusic.presentation.components.ToggleSegmentButton
 import androidx.compose.material3.LoadingIndicator
@@ -165,9 +167,7 @@ import com.gurio.gusic.presentation.viewmodel.SongInfoBottomSheetViewModel
 import com.gurio.gusic.data.model.LibraryTabId
 import com.gurio.gusic.data.model.toLibraryTabIdOrNull
 import com.gurio.gusic.data.preferences.LibraryNavigationMode
-import com.gurio.gusic.data.worker.SyncProgress
 import com.gurio.gusic.presentation.screens.search.components.GenreTypography
-import com.gurio.gusic.presentation.components.SyncProgressBar
 import com.gurio.gusic.presentation.viewmodel.LibraryViewModel
 import com.gurio.gusic.presentation.selection.appendDistinctSelection
 import com.gurio.gusic.presentation.selection.selectionIndex
@@ -235,10 +235,6 @@ private const val ENABLE_FOLDERS_STORAGE_FILTER = false
 private const val FOLDER_NAVIGATION_ROOT_KEY = "__folder_root__"
 private const val FOLDER_NAVIGATION_FORWARD = 1
 private const val FOLDER_NAVIGATION_BACKWARD = -1
-private const val PULL_REFRESH_MIN_VISIBLE_MS = 900L
-private const val PULL_REFRESH_MAX_VISIBLE_MS = 1_500L
-private const val INLINE_SYNC_MIN_VISIBLE_MS = 600L
-
 private data class LibraryScreenPlayerProjection(
     val currentFolder: MusicFolder? = null,
     val folderSourceRootPath: String = "",
@@ -254,7 +250,6 @@ private data class LibraryScreenPlayerProjection(
     val isSdCardAvailable: Boolean = false,
     val musicFolders: ImmutableList<MusicFolder> = persistentListOf(),
     val isLoadingLibraryCategories: Boolean = true,
-    val isSyncingLibrary: Boolean = false,
     val isLoadingInitialSongs: Boolean = true,
     val hideLocalMedia: Boolean = false
 )
@@ -275,7 +270,6 @@ private fun PlayerUiState.toLibraryScreenProjection(): LibraryScreenPlayerProjec
         isSdCardAvailable = isSdCardAvailable,
         musicFolders = musicFolders,
         isLoadingLibraryCategories = isLoadingLibraryCategories,
-        isSyncingLibrary = isSyncingLibrary,
         isLoadingInitialSongs = isLoadingInitialSongs,
         hideLocalMedia = hideLocalMedia
     )
@@ -297,12 +291,7 @@ fun LibraryScreen(
     val lastTabIndex by playerViewModel.lastLibraryTabIndexFlow.collectAsStateWithLifecycle()
     val favoriteIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
-    val syncManager = playerViewModel.syncManager
     var isRefreshing by remember { mutableStateOf(false) }
-    val isFetchingChanges by syncManager.isFetchingChanges
-        .collectAsStateWithLifecycle(initialValue = false)
-    val isSyncing by syncManager.isSyncing
-        .collectAsStateWithLifecycle(initialValue = false)
 
     var showSongInfoBottomSheet by remember { mutableStateOf(false) }
     var showPlaylistBottomSheet by remember { mutableStateOf(false) }
@@ -310,6 +299,25 @@ fun LibraryScreen(
     val selectedSongForInfo by playerViewModel.selectedSongForInfo.collectAsStateWithLifecycle()
     val tabTitles by playerViewModel.libraryTabsFlow.collectAsStateWithLifecycle()
     val currentTabId by playerViewModel.currentLibraryTabId.collectAsStateWithLifecycle()
+    val allSongsLazyPagingItems = libraryViewModel.songsPagingFlow.collectAsLazyPagingItems()
+    val albumsLazyPagingItems = libraryViewModel.albumsPagingFlow.collectAsLazyPagingItems()
+    val artistsLazyPagingItems = libraryViewModel.artistsPagingFlow.collectAsLazyPagingItems()
+    val favoritePagingItems = libraryViewModel.favoritesPagingFlow.collectAsLazyPagingItems()
+    val onRefresh: () -> Unit = {
+        isRefreshing = true
+        when (currentTabId) {
+            LibraryTabId.SONGS,
+            LibraryTabId.LIKED,
+            LibraryTabId.PLAYLISTS -> Unit
+            LibraryTabId.ALBUMS -> albumsLazyPagingItems.refresh()
+            LibraryTabId.ARTISTS -> artistsLazyPagingItems.refresh()
+            LibraryTabId.FOLDERS -> playerViewModel.loadFoldersFromRepository()
+        }
+        scope.launch {
+            kotlinx.coroutines.delay(600L)
+            isRefreshing = false
+        }
+    }
     val libraryNavigationMode by playerViewModel.libraryNavigationMode.collectAsStateWithLifecycle()
     val isCompactNavigation = libraryNavigationMode == LibraryNavigationMode.COMPACT_PILL
     val tabCount = tabTitles.size.coerceAtLeast(1)
@@ -346,7 +354,6 @@ fun LibraryScreen(
     ) { uri ->
         uri?.let { playlistViewModel.importM3u(it) }
     }
-
     var showReorderTabsSheet by remember { mutableStateOf(false) }
     var showTabSwitcherSheet by remember { mutableStateOf(false) }
 
@@ -356,7 +363,7 @@ fun LibraryScreen(
     val selectedSongIds by multiSelectionState.selectedSongIds.collectAsStateWithLifecycle()
     var showMultiSelectionSheet by remember { mutableStateOf(false) }
     var showBatchDownloadQualityDialog by remember { mutableStateOf(false) }
-    var batchDownloadQuality by remember { mutableStateOf(LxQualities.Q320) }
+    var batchDownloadQuality by remember { mutableStateOf(LxQualities.MASTER) }
     var selectedAlbums by remember { mutableStateOf<ImmutableList<Album>>(persistentListOf()) }
     val selectedAlbumIds = remember(selectedAlbums) { selectedAlbums.map { it.id }.toSet() }
     val isAlbumSelectionMode = selectedAlbums.isNotEmpty()
@@ -527,71 +534,6 @@ fun LibraryScreen(
             showSongInfoBottomSheet = true
         }
     }
-    var isMinDelayActive by remember { mutableStateOf(false) }
-    var refreshGeneration by remember { mutableStateOf(0) }
-
-    val onRefresh: () -> Unit = remember(scope, syncManager) {
-        {
-            val currentRefreshGeneration = refreshGeneration + 1
-            refreshGeneration = currentRefreshGeneration
-            isMinDelayActive = true
-            isRefreshing = true
-            syncManager.incrementalSync()
-            scope.launch {
-                kotlinx.coroutines.delay(PULL_REFRESH_MIN_VISIBLE_MS)
-                if (currentRefreshGeneration != refreshGeneration) return@launch
-                isMinDelayActive = false
-                val stillFetching = syncManager.isFetchingChanges.first()
-                if (!stillFetching) {
-                    isRefreshing = false
-                    return@launch
-                }
-
-                val remainingVisibleMs =
-                    (PULL_REFRESH_MAX_VISIBLE_MS - PULL_REFRESH_MIN_VISIBLE_MS)
-                        .coerceAtLeast(0L)
-                if (remainingVisibleMs > 0L) {
-                    kotlinx.coroutines.delay(remainingVisibleMs)
-                }
-                if (currentRefreshGeneration != refreshGeneration) return@launch
-                isRefreshing = false
-            }
-        }
-    }
-
-    LaunchedEffect(isFetchingChanges) {
-        if (!isFetchingChanges && !isMinDelayActive) {
-            isRefreshing = false
-        }
-    }
-
-    var inlineSyncVisible by remember { mutableStateOf(false) }
-    var inlineSyncShownAt by remember { mutableStateOf<Long?>(null) }
-    LaunchedEffect(isSyncing, isRefreshing) {
-        if (isSyncing && !isRefreshing) {
-            if (!inlineSyncVisible) {
-                inlineSyncShownAt = System.currentTimeMillis()
-                inlineSyncVisible = true
-            }
-        } else if (isRefreshing) {
-            inlineSyncVisible = false
-            inlineSyncShownAt = null
-        } else if (inlineSyncVisible) {
-            val shownAt = inlineSyncShownAt
-            val elapsed = if (shownAt != null) {
-                System.currentTimeMillis() - shownAt
-            } else {
-                INLINE_SYNC_MIN_VISIBLE_MS
-            }
-            val remaining = INLINE_SYNC_MIN_VISIBLE_MS - elapsed
-            if (remaining > 0) {
-                kotlinx.coroutines.delay(remaining)
-            }
-            inlineSyncVisible = false
-            inlineSyncShownAt = null
-        }
-    }
-
     val hasSelectionInCurrentTab = when (currentTabId) {
         LibraryTabId.PLAYLISTS -> isPlaylistSelectionMode
         LibraryTabId.ALBUMS -> isAlbumSelectionMode
@@ -929,10 +871,6 @@ fun LibraryScreen(
 
                         val playlistUiState by playlistViewModel.uiState.collectAsStateWithLifecycle()
                         val visiblePlaylists = playlistUiState.playlists
-                        val allSongsLazyPagingItems = libraryViewModel.songsPagingFlow.collectAsLazyPagingItems()
-                        val albumsLazyPagingItems = libraryViewModel.albumsPagingFlow.collectAsLazyPagingItems()
-                        val artistsLazyPagingItems = libraryViewModel.artistsPagingFlow.collectAsLazyPagingItems()
-                        val favoritePagingItems = libraryViewModel.favoritesPagingFlow.collectAsLazyPagingItems()
                         val isLibraryLoading by libraryViewModel.isLoadingLibrary.collectAsStateWithLifecycle()
                         val hasCurrentSong by remember(playerViewModel) {
                             playerViewModel.stablePlayerState
@@ -1120,11 +1058,6 @@ fun LibraryScreen(
                                 )
                             }
                         }
-
-                        LibraryInlineSyncIndicator(
-                            visible = inlineSyncVisible && !isLibraryContentEmpty,
-                            syncManager = syncManager
-                        )
 
                         if (isSortSheetVisible && sanitizedSortOptions.isNotEmpty()) {
                             val currentSelectionKey = currentSelectedSortOption?.storageKey
@@ -1492,15 +1425,15 @@ fun LibraryScreen(
                         }
                     }
                 }
-                if (
-                    isLibraryContentEmpty &&
-                    (
-                            playerUiState.isSyncingLibrary ||
-                                    playerUiState.isLoadingInitialSongs ||
-                                    playerUiState.isLoadingLibraryCategories
-                            )
+                if (isLibraryContentEmpty &&
+                    (playerUiState.isLoadingInitialSongs || playerUiState.isLoadingLibraryCategories)
                 ) {
-                    LibrarySyncOverlay(syncManager = syncManager)
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LoadingIndicator(modifier = Modifier.size(64.dp))
+                    }
                 }
             }
             Box(
@@ -1967,116 +1900,6 @@ private fun CompactLibraryPagerIndicator(
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha))
             )
-        }
-    }
-}
-
-/**
- * Slim, non-intrusive indicator for sync work that should not keep the list pulled
- * down: automatic startup syncs, background maintenance, and manual refreshes after
- * the short pull-to-refresh confirmation window. It sits just below
- * [LibraryActionRow] and collapses to zero height when not active.
- *
- * Distinct from [LibrarySyncOverlay], which is reserved for initial empty-library
- * loads. The parent screen also gates this indicator off while the pull spinner is
- * visible, so the two feedback channels do not compete.
- */
-@Composable
-private fun LibraryInlineSyncIndicator(
-    visible: Boolean,
-    syncManager: com.gurio.gusic.data.worker.SyncManager
-) {
-    AnimatedVisibility(
-        visible = visible,
-        enter = androidx.compose.animation.expandVertically(
-            expandFrom = Alignment.Top,
-            animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing)
-        ) + androidx.compose.animation.fadeIn(animationSpec = tween(180)),
-        exit = androidx.compose.animation.shrinkVertically(
-            shrinkTowards = Alignment.Top,
-            animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
-        ) + androidx.compose.animation.fadeOut(animationSpec = tween(160))
-    ) {
-        val syncProgress by syncManager.syncProgress
-            .collectAsStateWithLifecycle(initialValue = SyncProgress())
-
-        val phaseLabel = when (syncProgress.phase) {
-            SyncProgress.SyncPhase.FETCHING_MEDIASTORE ->
-                stringResource(R.string.sync_scanning)
-            SyncProgress.SyncPhase.PROCESSING_FILES,
-            SyncProgress.SyncPhase.SAVING_TO_DATABASE ->
-                stringResource(R.string.sync_processing)
-            SyncProgress.SyncPhase.SCANNING_LRC ->
-                stringResource(R.string.library_background_sync_lyrics)
-            SyncProgress.SyncPhase.CLEANING_CACHE ->
-                stringResource(R.string.library_background_sync_cache)
-            SyncProgress.SyncPhase.SYNCING_CLOUD ->
-                stringResource(R.string.library_background_sync_cloud)
-            else ->
-                stringResource(R.string.sync_in_progress)
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp)
-        ) {
-            Text(
-                text = phaseLabel,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            LinearWavyProgressIndicator(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-            )
-        }
-    }
-}
-
-/**
- * P1-1: Isolated sync/loading overlay composable.
- *
- * By collecting [SyncManager.syncProgress] HERE instead of in the parent [LibraryScreen],
- * only this small subtree recomposes on every progress tick (e.g., file count updates
- * during a library scan). The rest of [LibraryScreen] — including the Scaffold, pager,
- * and all tab content — remains unaffected during sync.
- */
-@Composable
-private fun LibrarySyncOverlay(syncManager: com.gurio.gusic.data.worker.SyncManager) {
-    val syncProgress by syncManager.syncProgress
-        .collectAsStateWithLifecycle(initialValue = SyncProgress())
-
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(32.dp)
-            ) {
-                if (syncProgress.hasProgress && syncProgress.isRunning) {
-                    SyncProgressBar(
-                        syncProgress = syncProgress,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
-                    LoadingIndicator(modifier = Modifier.size(64.dp))
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(R.string.syncing_library),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
         }
     }
 }

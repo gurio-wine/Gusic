@@ -20,13 +20,30 @@ object SourceType {
     const val NAVIDROME = 5
     const val JELLYFIN = 6
     const val LX_MUSIC = 7
+    const val SAF = 8
 
-    /** Derive source type from a content URI string (fallback for migration / conversion). */
-    fun fromContentUri(uri: String): Int = when {
-        uri.startsWith("navidrome://") -> NAVIDROME
-        uri.startsWith("jellyfin://") -> JELLYFIN
-        uri.startsWith("lxmusic://") -> LX_MUSIC
-        else -> LOCAL
+    fun isCloud(sourceType: Int): Boolean = sourceType == NAVIDROME ||
+        sourceType == JELLYFIN || sourceType == LX_MUSIC
+
+    fun isMediaStoreOwned(sourceType: Int): Boolean = sourceType == LOCAL
+
+    /** Derive source type from a URI string without treating every content URI as SAF. */
+    fun fromContentUri(uri: String): Int {
+        val parsed = runCatching { java.net.URI(uri) }.getOrNull()
+        val segments = parsed?.rawPath.orEmpty().split('/').drop(1)
+        val isDocumentUri = when {
+            segments.size == 2 -> segments[0] == "document" && segments[1].isNotEmpty()
+            segments.size == 4 -> segments[0] == "tree" && segments[1].isNotEmpty() &&
+                segments[2] == "document" && segments[3].isNotEmpty()
+            else -> false
+        }
+        return when {
+            uri.startsWith("navidrome://") -> NAVIDROME
+            uri.startsWith("jellyfin://") -> JELLYFIN
+            uri.startsWith("lxmusic://") -> LX_MUSIC
+            parsed?.scheme == "content" && !parsed.rawAuthority.isNullOrBlank() && isDocumentUri -> SAF
+            else -> LOCAL
+        }
     }
 }
 

@@ -2,12 +2,10 @@ package com.gurio.gusic.presentation.viewmodel
 
 import android.content.Context
 import android.os.Environment
-import android.provider.MediaStore
 import com.gurio.gusic.data.preferences.UserPreferencesRepository
 import com.gurio.gusic.utils.DirectoryRuleResolver
 import com.gurio.gusic.utils.StorageInfo
 import com.gurio.gusic.utils.StorageUtils
-import com.gurio.gusic.utils.buildLocalAudioSelection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,7 +15,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.mapLatest
@@ -51,7 +48,7 @@ internal data class RawDirectoryEntry(
 
 internal fun mergeDirectoryEntryLists(
     filesystemEntries: List<RawDirectoryEntry>,
-    mediaStoreEntries: List<RawDirectoryEntry>
+    additionalFilesystemEntries: List<RawDirectoryEntry>
 ): List<RawDirectoryEntry> {
     val merged = linkedMapOf<String, RawDirectoryEntry>()
 
@@ -59,24 +56,18 @@ internal fun mergeDirectoryEntryLists(
         merged[entry.canonicalPath] = entry
     }
 
-    mediaStoreEntries.forEach { mediaEntry ->
-        val existing = merged[mediaEntry.canonicalPath]
-        merged[mediaEntry.canonicalPath] =
+    additionalFilesystemEntries.forEach { additionalEntry ->
+        val existing = merged[additionalEntry.canonicalPath]
+        merged[additionalEntry.canonicalPath] =
             if (existing == null) {
-                mediaEntry
+                additionalEntry
             } else {
-                mediaEntry.copy(displayName = mediaEntry.displayName ?: existing.displayName)
+                additionalEntry.copy(displayName = additionalEntry.displayName ?: existing.displayName)
             }
     }
 
     return merged.values.sortedWith(compareBy({ it.file.name.lowercase() }))
 }
-
-private data class MediaStoreDirectoryIndex(
-    val childrenByParent: Map<String, Set<String>>,
-    val directAudioCountByPath: Map<String, Int>,
-    val totalAudioCountByPath: Map<String, Int>
-)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FileExplorerStateHolder(
@@ -128,11 +119,7 @@ class FileExplorerStateHolder(
     private val mapperDispatcher = Dispatchers.Default
     private val prefetchDispatcher = Dispatchers.IO.limitedParallelism(2)
     private val loadMutex = Mutex()
-    private val mediaStoreIndexMutex = Mutex()
     private var loadJob: Job? = null
-    private val countEnrichmentJobs = ConcurrentHashMap<String, Job>()
-    @Volatile
-    private var mediaStoreDirectoryIndex: MediaStoreDirectoryIndex? = null
 
     companion object {
         private const val PREFETCH_CHILDREN_LIMIT = 8
@@ -315,7 +302,6 @@ class FileExplorerStateHolder(
             directoryChildrenCache.clear()
             prefetchedDirectoryKeys.clear()
             resolvedDirectoryKeys.clear()
-            mediaStoreDirectoryIndex = null
         }
 
         if (updatePath) {
@@ -331,7 +317,6 @@ class FileExplorerStateHolder(
             _isLoading.value = false
             _isExplorerReady.value = true
             _isCurrentDirectoryResolved.value = resolvedDirectoryKeys.contains(targetKey)
-            enrichDirectoryEntries(target, cachedEntries, forceRefresh)
             prefetchChildDirectories(cachedEntries)
             return
         }
@@ -340,40 +325,29 @@ class FileExplorerStateHolder(
         _isCurrentDirectoryResolved.value = false
         _rawCurrentDirectoryChildren.value = emptyList()
 
-        val immediateEntries = listImmediateDirectoryEntries(target)
-        val resultEntries = if (immediateEntries.isNotEmpty()) {
-            immediateEntries
-        } else {
-            computeDirectoryEntriesFromMediaStore(target, forceRefresh).also {
-                resolvedDirectoryKeys.add(targetKey)
-            }
-        }
+        val resultEntries = listImmediateDirectoryEntries(target)
+        resolvedDirectoryKeys.add(targetKey)
         directoryChildrenCache[targetKey] = resultEntries
 
         _rawCurrentDirectoryChildren.value = resultEntries
         _isLoading.value = false
         _isExplorerReady.value = true
-        _isCurrentDirectoryResolved.value = resolvedDirectoryKeys.contains(targetKey)
-        enrichDirectoryEntries(target, resultEntries, forceRefresh)
+        _isCurrentDirectoryResolved.value = true
         prefetchChildDirectories(resultEntries)
     }
 
     private suspend fun listImmediateDirectoryEntries(target: File): List<RawDirectoryEntry> =
         withContext(Dispatchers.IO) {
-            val cachedIndex = mediaStoreDirectoryIndex
             runCatching {
                 target.listFiles()
                     ?.asSequence()
                     ?.filter { it.isDirectory && !it.isHidden }
                     ?.map { child ->
-                        val childKey = normalizePath(child)
                         RawDirectoryEntry(
                             file = child,
-                            directAudioCount = cachedIndex?.directAudioCountByPath?.get(childKey)
-                                ?: UNKNOWN_AUDIO_COUNT,
-                            totalAudioCount = cachedIndex?.totalAudioCountByPath?.get(childKey)
-                                ?: UNKNOWN_AUDIO_COUNT,
-                            canonicalPath = childKey
+                            directAudioCount = UNKNOWN_AUDIO_COUNT,
+                            totalAudioCount = UNKNOWN_AUDIO_COUNT,
+                            canonicalPath = normalizePath(child)
                         )
                     }
                     ?.sortedBy { it.file.name.lowercase() }
@@ -381,148 +355,6 @@ class FileExplorerStateHolder(
                     ?: emptyList()
             }.getOrElse { emptyList() }
         }
-
-    private suspend fun computeDirectoryEntriesFromMediaStore(
-        target: File,
-        forceRefresh: Boolean
-    ): List<RawDirectoryEntry> {
-        val index = getOrBuildMediaStoreDirectoryIndex(forceRefresh)
-        val targetKey = normalizePath(target)
-        val childPaths = index.childrenByParent[targetKey].orEmpty()
-
-        return childPaths
-            .map { childPath ->
-                RawDirectoryEntry(
-                    file = File(childPath),
-                    directAudioCount = index.directAudioCountByPath[childPath] ?: 0,
-                    totalAudioCount = index.totalAudioCountByPath[childPath] ?: 0,
-                    canonicalPath = childPath
-                )
-            }
-            .sortedWith(compareBy({ it.file.name.lowercase() }))
-    }
-
-    private fun enrichDirectoryEntries(
-        target: File,
-        currentEntries: List<RawDirectoryEntry>,
-        forceRefresh: Boolean
-    ) {
-        if (currentEntries.isEmpty() && mediaStoreDirectoryIndex == null) return
-
-        val targetKey = normalizePath(target)
-
-        countEnrichmentJobs[targetKey]?.cancel()
-        countEnrichmentJobs[targetKey] = scope.launch(prefetchDispatcher) {
-            try {
-                val index = getOrBuildMediaStoreDirectoryIndex(forceRefresh)
-                val mediaStoreEntries = index.childrenByParent[targetKey].orEmpty()
-                    .map { childPath ->
-                        RawDirectoryEntry(
-                            file = File(childPath),
-                            directAudioCount = index.directAudioCountByPath[childPath] ?: 0,
-                            totalAudioCount = index.totalAudioCountByPath[childPath] ?: 0,
-                            canonicalPath = childPath
-                        )
-                    }
-                    .sortedWith(compareBy({ it.file.name.lowercase() }))
-                val enrichedEntries = mergeDirectoryEntryLists(
-                    filesystemEntries = currentEntries,
-                    mediaStoreEntries = mediaStoreEntries
-                )
-
-                directoryChildrenCache[targetKey] = enrichedEntries
-                resolvedDirectoryKeys.add(targetKey)
-
-                if (normalizePath(_currentPath.value) == targetKey) {
-                    _rawCurrentDirectoryChildren.value = enrichedEntries
-                    _isCurrentDirectoryResolved.value = true
-                }
-            } catch (error: CancellationException) {
-                throw error
-            } finally {
-                countEnrichmentJobs.remove(targetKey)
-            }
-        }
-    }
-
-    private fun hasUnknownCounts(entry: RawDirectoryEntry): Boolean {
-        return entry.directAudioCount == UNKNOWN_AUDIO_COUNT || entry.totalAudioCount == UNKNOWN_AUDIO_COUNT
-    }
-
-    private suspend fun getOrBuildMediaStoreDirectoryIndex(forceRefresh: Boolean): MediaStoreDirectoryIndex {
-        if (!forceRefresh) {
-            mediaStoreDirectoryIndex?.let { return it }
-        }
-
-        return mediaStoreIndexMutex.withLock {
-            if (!forceRefresh) {
-                mediaStoreDirectoryIndex?.let { return@withLock it }
-            }
-
-            val index = buildMediaStoreDirectoryIndex()
-            mediaStoreDirectoryIndex = index
-            index
-        }
-    }
-
-    private suspend fun buildMediaStoreDirectoryIndex(): MediaStoreDirectoryIndex = withContext(Dispatchers.IO) {
-        val childrenByParent = mutableMapOf<String, MutableSet<String>>()
-        val directAudioCountByPath = mutableMapOf<String, Int>()
-        val totalAudioCountByPath = mutableMapOf<String, Int>()
-        val storageRoots = (_availableStorages.value.ifEmpty { StorageUtils.getAvailableStorages(context) })
-            .map { normalizePath(it.path) }
-            .sortedByDescending { it.length }
-
-        if (storageRoots.isEmpty()) {
-            return@withContext MediaStoreDirectoryIndex(
-                childrenByParent = emptyMap(),
-                directAudioCountByPath = emptyMap(),
-                totalAudioCountByPath = emptyMap()
-            )
-        }
-
-        val minDurationMs = userPreferencesRepository.minSongDurationFlow.first()
-        val (selection, selectionArgs) = buildLocalAudioSelection(minDurationMs)
-        val projection = arrayOf(MediaStore.Audio.Media.DATA)
-
-        context.contentResolver.query(
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-            projection,
-            selection,
-            selectionArgs,
-            null
-        )?.use { cursor ->
-            val dataIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
-            while (cursor.moveToNext()) {
-                val songPath = cursor.getString(dataIndex) ?: continue
-                val parentFile = File(songPath).parentFile ?: continue
-                val parentPath = normalizePath(parentFile)
-                val storageRoot = storageRoots.firstOrNull { parentPath == it || parentPath.startsWith("$it/") } ?: continue
-
-                if (parentPath.contains("/.")) continue
-
-                directAudioCountByPath[parentPath] = (directAudioCountByPath[parentPath] ?: 0) + 1
-
-                var currentPath = parentPath
-                while (true) {
-                    totalAudioCountByPath[currentPath] = (totalAudioCountByPath[currentPath] ?: 0) + 1
-                    if (currentPath == storageRoot) break
-
-                    val parentOfCurrent = File(currentPath).parentFile?.let(::normalizePath) ?: break
-                    if (parentOfCurrent != storageRoot && !currentPath.startsWith("$storageRoot/")) break
-
-                    childrenByParent.getOrPut(parentOfCurrent) { linkedSetOf() }.add(currentPath)
-                    currentPath = parentOfCurrent
-                }
-            }
-        }
-
-        MediaStoreDirectoryIndex(
-            childrenByParent = childrenByParent.mapValues { it.value.toSet() },
-            directAudioCountByPath = directAudioCountByPath.toMap(),
-            totalAudioCountByPath = totalAudioCountByPath.toMap()
-        )
-    }
 
     private fun prefetchChildDirectories(entries: List<RawDirectoryEntry>) {
         entries.asSequence()
@@ -536,11 +368,7 @@ class FileExplorerStateHolder(
                     try {
                         val prefetchedEntries = listImmediateDirectoryEntries(entry.file)
                         directoryChildrenCache[targetKey] = prefetchedEntries
-                        enrichDirectoryEntries(
-                            target = entry.file,
-                            currentEntries = prefetchedEntries,
-                            forceRefresh = false
-                        )
+                        resolvedDirectoryKeys.add(targetKey)
                     } catch (error: CancellationException) {
                         prefetchedDirectoryKeys.remove(targetKey)
                         throw error

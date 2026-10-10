@@ -59,7 +59,7 @@
     <string name="toast_library_sync_finished">曲庫同步完成</string>
     <string name="toast_full_rescan_started">開始完整重新掃描…</string>
     <string name="setcat_auto_scan_lrc_title">自動掃描.lrc歌詞文件</string>
-    <string name="setcat_auto_scan_lrc_subtitle">曲庫同步時自動掃描同目錄下的lrc歌詞並綁定歌曲</string>
+    <string name="setcat_auto_scan_lrc_subtitle">定期維護時，檢查曲庫中已有歌曲旁是否有 .lrc 檔案並關聯歌詞；此操作不會發現或匯入音樂。</string>
     <string name="setcat_online_services">可選在線服務</string>
     <string name="setcat_external_lyrics_title">來自 LRCLIB 的在線歌詞</string>
     <string name="setcat_external_lyrics_subtitle">本地無歌詞時允許從 lrclib.net 搜索、手動獲取歌詞</string>
@@ -128,7 +128,7 @@
     <string name="setcat_app_navigation_section">應用導航</string>
     <string name="setcat_default_tab_label">默認啟動頁面</string>
     <string name="setcat_default_tab_desc">設置打開應用默認顯示的標籤頁</string>
-    <string name="tab_home">主頁</string>
+    <string name="tab_home">推薦</string>
     <string name="tab_online">發現</string>
     <string name="setcat_library_navigation_label">曲庫導航方式</string>
     <string name="setcat_library_navigation_desc">切換曲庫標籤頁的交互形式</string>

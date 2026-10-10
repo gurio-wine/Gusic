@@ -3,13 +3,10 @@ package com.gurio.gusic.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gurio.gusic.data.preferences.UserPreferencesRepository
-import com.gurio.gusic.data.worker.SyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -18,26 +15,16 @@ data class ArtistSettingsUiState(
     val artistDelimiters: List<String> = UserPreferencesRepository.DEFAULT_ARTIST_DELIMITERS,
     val wordDelimiters: List<String> = UserPreferencesRepository.DEFAULT_ARTIST_WORD_DELIMITERS,
     val extractArtistsFromTitle: Boolean = true,
-    val groupByAlbumArtist: Boolean = false,
-    val rescanRequired: Boolean = false,
-    val isResyncing: Boolean = false
+    val groupByAlbumArtist: Boolean = false
 )
 
 @HiltViewModel
 class ArtistSettingsViewModel @Inject constructor(
-    private val userPreferencesRepository: UserPreferencesRepository,
-    private val syncManager: SyncManager
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ArtistSettingsUiState())
     val uiState: StateFlow<ArtistSettingsUiState> = _uiState.asStateFlow()
-
-    val isSyncing: StateFlow<Boolean> = syncManager.isSyncing
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false
-        )
 
     init {
         viewModelScope.launch {
@@ -61,18 +48,6 @@ class ArtistSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.groupByAlbumArtistFlow.collect { enabled ->
                 _uiState.update { it.copy(groupByAlbumArtist = enabled) }
-            }
-        }
-
-        viewModelScope.launch {
-            userPreferencesRepository.artistSettingsRescanRequiredFlow.collect { required ->
-                _uiState.update { it.copy(rescanRequired = required) }
-            }
-        }
-
-        viewModelScope.launch {
-            syncManager.isSyncing.collect { syncing ->
-                _uiState.update { it.copy(isResyncing = syncing) }
             }
         }
     }
@@ -146,12 +121,6 @@ class ArtistSettingsViewModel @Inject constructor(
     fun setExtractArtistsFromTitle(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setExtractArtistsFromTitle(enabled)
-        }
-    }
-
-    fun rescanLibrary() {
-        viewModelScope.launch {
-            syncManager.fullSync(deepScan = false)
         }
     }
 }

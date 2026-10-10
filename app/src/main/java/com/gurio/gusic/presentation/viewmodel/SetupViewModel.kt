@@ -18,8 +18,6 @@ import com.gurio.gusic.data.backup.model.RestoreResult
 import com.gurio.gusic.data.preferences.AppThemeMode
 import com.gurio.gusic.data.preferences.ThemePreferencesRepository
 import com.gurio.gusic.data.preferences.UserPreferencesRepository
-import com.gurio.gusic.data.repository.MusicRepository
-import com.gurio.gusic.data.worker.SyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.Channel
@@ -29,16 +27,11 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import java.io.File
 
 data class SetupUiState(
-    val mediaPermissionGranted: Boolean = false,
     val notificationsPermissionGranted: Boolean = false,
-    val isLoadingDirectories: Boolean = false,
-    val blockedDirectories: Set<String> = emptySet(),
     val navBarStyle: String = "default",
     val navBarCornerRadius: Int = 28,
     val alarmsPermissionGranted: Boolean = false,
@@ -49,11 +42,7 @@ data class SetupUiState(
     val backupTransferProgress: BackupTransferProgressUpdate? = null
 ) {
     val allPermissionsGranted: Boolean
-        get() {
-            val mediaOk = mediaPermissionGranted
-            val notificationsOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) notificationsPermissionGranted else true
-            return mediaOk && notificationsOk
-        }
+        get() = true
 }
 
 sealed interface SetupEvent {
@@ -65,9 +54,7 @@ sealed interface SetupEvent {
 class SetupViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val themePreferencesRepository: ThemePreferencesRepository,
-    private val syncManager: SyncManager,
     private val backupManager: BackupManager,
-    private val musicRepository: MusicRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -75,25 +62,6 @@ class SetupViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
     private val _events = Channel<SetupEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
-    
-    /**
-     * Expose sync progress for UI to show during initial setup
-     */
-    val isSyncing = syncManager.isSyncing
-
-    private val fileExplorerStateHolder = FileExplorerStateHolder(userPreferencesRepository, viewModelScope, context)
-
-    val currentPath = fileExplorerStateHolder.currentPath
-    val currentDirectoryChildren = fileExplorerStateHolder.currentDirectoryChildren
-    val blockedDirectories = fileExplorerStateHolder.blockedDirectories
-    val availableStorages = fileExplorerStateHolder.availableStorages
-    val selectedStorageIndex = fileExplorerStateHolder.selectedStorageIndex
-    val isLoadingDirectories = fileExplorerStateHolder.isLoading
-    val isExplorerPriming = fileExplorerStateHolder.isPrimingExplorer
-    val isExplorerReady = fileExplorerStateHolder.isExplorerReady
-    val isCurrentDirectoryResolved = fileExplorerStateHolder.isCurrentDirectoryResolved
-    private var hasPendingDirectoryRuleChanges = false
-    private var latestDirectoryRuleUpdateJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -104,23 +72,18 @@ class SetupViewModel @Inject constructor(
 
         viewModelScope.launch {
             combine<Any?, SetupPrefsUpdate>(
-                userPreferencesRepository.blockedDirectoriesFlow,
                 userPreferencesRepository.navBarStyleFlow,
                 userPreferencesRepository.navBarCornerRadiusFlow,
                 themePreferencesRepository.appThemeModeFlow
             ) { values ->
-                @Suppress("UNCHECKED_CAST")
-                val blockedDirectories = values[0] as Set<String>
                 SetupPrefsUpdate(
-                    blocked = blockedDirectories,
-                    style = values[1] as String,
-                    radius = values[2] as Int,
-                    appThemeMode = values[3] as String
+                    style = values[0] as String,
+                    radius = values[1] as Int,
+                    appThemeMode = values[2] as String
                 )
             }.collect { update ->
                 _uiState.update { state ->
                     state.copy(
-                        blockedDirectories = update.blocked,
                         navBarStyle = update.style,
                         navBarCornerRadius = update.radius,
                         appThemeMode = update.appThemeMode
@@ -128,28 +91,15 @@ class SetupViewModel @Inject constructor(
                 }
             }
         }
-
-        viewModelScope.launch {
-            fileExplorerStateHolder.isLoading.collect { loading ->
-                _uiState.update { it.copy(isLoadingDirectories = loading) }
-            }
-        }
     }
-    
+
     private data class SetupPrefsUpdate(
-        val blocked: Set<String>,
         val style: String,
         val radius: Int,
         val appThemeMode: String
     )
 
     fun checkPermissions(context: Context) {
-        val mediaPermissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
-        } else {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-        }
-
         val notificationsPermissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         } else {
@@ -165,72 +115,11 @@ class SetupViewModel @Inject constructor(
 
         _uiState.update {
             it.copy(
-                mediaPermissionGranted = mediaPermissionGranted,
                 notificationsPermissionGranted = notificationsPermissionGranted,
                 alarmsPermissionGranted = alarmsPermissionGranted
             )
         }
     }
-
-    fun loadMusicDirectories() {
-        viewModelScope.launch {
-            if (!userPreferencesRepository.initialSetupDoneFlow.first()) {
-            }
-
-            userPreferencesRepository.blockedDirectoriesFlow.first().let { blocked ->
-                _uiState.update { it.copy(blockedDirectories = blocked) }
-            }
-            fileExplorerStateHolder.primeExplorerRoot()?.join()
-        }
-    }
-
-    fun toggleDirectoryAllowed(file: File) {
-        hasPendingDirectoryRuleChanges = true
-        latestDirectoryRuleUpdateJob = viewModelScope.launch {
-            fileExplorerStateHolder.toggleDirectoryAllowed(file)
-        }
-    }
-
-    fun applyPendingDirectoryRuleChanges() {
-        if (!hasPendingDirectoryRuleChanges) return
-        hasPendingDirectoryRuleChanges = false
-        viewModelScope.launch {
-            latestDirectoryRuleUpdateJob?.join()
-            syncManager.forceRefresh()
-        }
-    }
-
-    fun loadDirectory(file: File) {
-        fileExplorerStateHolder.loadDirectory(file)
-    }
-
-    fun selectStorage(index: Int) {
-        fileExplorerStateHolder.selectStorage(index)
-    }
-
-    fun refreshAvailableStorages() {
-        fileExplorerStateHolder.refreshAvailableStorages()
-    }
-
-    fun refreshCurrentDirectory() {
-        fileExplorerStateHolder.refreshCurrentDirectory()
-    }
-
-    fun primeExplorer() {
-        fileExplorerStateHolder.primeExplorerRoot()
-    }
-
-    fun openExplorer() {
-        fileExplorerStateHolder.openExplorerRoot()
-    }
-
-    fun navigateUp() {
-        fileExplorerStateHolder.navigateUp()
-    }
-
-    fun isAtRoot(): Boolean = fileExplorerStateHolder.isAtRoot()
-
-    fun explorerRoot(): File = fileExplorerStateHolder.rootDirectory()
 
     fun setNavBarStyle(style: String) {
         viewModelScope.launch {
@@ -252,17 +141,7 @@ class SetupViewModel @Inject constructor(
 
     fun setSetupComplete() {
         viewModelScope.launch {
-            completeSetup(syncAfter = true)
-        }
-    }
-    
-    /**
-     * Retry the initial sync if it failed.
-     * Can be called from UI when user wants to retry after a failure.
-     */
-    fun retrySync() {
-        viewModelScope.launch {
-            syncManager.fullSync(deepScan = false)
+            completeSetup()
         }
     }
 
@@ -380,10 +259,7 @@ class SetupViewModel @Inject constructor(
         }
     }
 
-    private suspend fun completeSetup(syncAfter: Boolean) {
+    private suspend fun completeSetup() {
         userPreferencesRepository.setInitialSetupDone(true)
-        if (syncAfter) {
-            syncManager.fullSync(deepScan = false)
-        }
     }
 }
