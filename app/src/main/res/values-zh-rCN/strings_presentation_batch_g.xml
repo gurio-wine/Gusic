@@ -408,4 +408,35 @@
         <item>主题样式默认跟随系统</item>
         <item>曲库导航方式样式选择功能已从首次启动选择中删除</item>
     </string-array>
+    <!-- Gusic 0.1.1：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v011_whats_new">
+        <item>调整了播放页布局</item>
+        <item>关于页新增应用内更新检查</item>
+    </string-array>
+    <!-- Gusic 0.1.1：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v011_changes">
+        <item>修复了多音源切换时的竞态问题</item>
+    </string-array>
+    <!-- Gusic 26.10.08：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v261008_whats_new">
+        <item>本地乐库改为通过系统文件选择器（SAF）导入音乐，不再扫描 MediaStore；导入的音乐重启后保留</item>
+        <item>QQ音乐登录在扫码之外新增网页登录方式</item>
+        <item>应用名称与图标全面更新为 Gusic</item>
+    </string-array>
+    <!-- Gusic 26.10.08：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v261008_changes">
+        <item>歌单导出文件改用 Gusic 标记，旧的 PixelPlayer 导出文件仍可导入</item>
+        <item>开发工具迁移后的内部清理与文档更新</item>
+    </string-array>
+    <!-- Gusic 26.10.10：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v261010_whats_new">
+        <item>QQ音乐登录后可加载资料、喜欢的歌曲和歌单</item>
+        <item>在线平台名称全部显示为全称（QQ音乐、网易云音乐、酷狗音乐、酷我音乐）</item>
+        <item>关于页顶部图标更新为新版 Gusic 图标</item>
+    </string-array>
+    <!-- Gusic 26.10.10：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v261010_changes">
+        <item>发布的 APK 按 gusic-&lt;abi&gt;-[v&lt;版本&gt;].apk 命名</item>
+        <item>平台登录 Cookie 不再随云备份与设备迁移导出</item>
+    </string-array>
 </resources>

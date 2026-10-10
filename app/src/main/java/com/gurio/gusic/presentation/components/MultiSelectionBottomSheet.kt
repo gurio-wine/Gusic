@@ -218,12 +218,16 @@ fun MultiSelectionBottomSheet(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         if (platformSources.isNotEmpty()) {
+                            val sourceLabels = platformSources.map { source ->
+                                LxSources.labelRes(source)?.let { res -> stringResource(res) }
+                                    ?: LxSources.shortLabel(source)
+                            }
                             Text(
                                 text = buildAnnotatedString {
-                                    platformSources.forEachIndexed { index, source ->
+                                    sourceLabels.forEachIndexed { index, label ->
                                         if (index > 0) append(", ")
-                                        withStyle(SpanStyle(color = LxSources.brandColor(source))) {
-                                            append(LxSources.shortLabel(source))
+                                        withStyle(SpanStyle(color = LxSources.brandColor(platformSources[index]))) {
+                                            append(label)
                                         }
                                     }
                                 },

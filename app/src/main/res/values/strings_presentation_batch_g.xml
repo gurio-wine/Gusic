@@ -408,4 +408,35 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>Theme style now follows the system by default.</item>
         <item>Library navigation style selection has been removed from first-launch selection.</item>
     </string-array>
+    <!-- Gusic 0.1.1：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v011_whats_new">
+        <item>Adjusted the player page layout.</item>
+        <item>Added an in-app update checker to the About page.</item>
+    </string-array>
+    <!-- Gusic 0.1.1：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v011_changes">
+        <item>Fixed a race condition when switching between multiple online sources.</item>
+    </string-array>
+    <!-- Gusic 26.10.08：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v261008_whats_new">
+        <item>The local library now imports music through the system file picker (SAF) instead of MediaStore scanning; imported files persist across restarts.</item>
+        <item>QQ Music login now supports web login in addition to QR code login.</item>
+        <item>App identity, name, and icons are now Gusic throughout.</item>
+    </string-array>
+    <!-- Gusic 26.10.08：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v261008_changes">
+        <item>Playlist export files now carry a Gusic playlist marker; old PixelPlayer exports still import.</item>
+        <item>Internal cleanup and documentation updates after the development-tooling migration.</item>
+    </string-array>
+    <!-- Gusic 26.10.10：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v261010_whats_new">
+        <item>QQ Music login now loads your profile, liked songs, and playlists after signing in.</item>
+        <item>Online platform names are now shown in full (QQ Music, NetEase Cloud Music, Kugou Music, Kuwo Music) instead of abbreviations.</item>
+        <item>The About page header icon now matches the new Gusic branding.</item>
+    </string-array>
+    <!-- Gusic 26.10.10：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v261010_changes">
+        <item>Released APKs are named gusic-&lt;abi&gt;-[v&lt;version&gt;].apk.</item>
+        <item>Platform login cookies are excluded from cloud backup and device transfer.</item>
+    </string-array>
 </resources>

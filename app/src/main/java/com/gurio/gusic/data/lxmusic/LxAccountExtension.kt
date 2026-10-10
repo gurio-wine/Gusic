@@ -1,6 +1,7 @@
 package com.gurio.gusic.data.lxmusic
 
 import com.gurio.gusic.data.lxmusic.platform.PlatformResult
+import com.gurio.gusic.data.lxmusic.tencent.TencentAccountApi
 import timber.log.Timber
 
 internal interface LxAccountExtension {
@@ -162,11 +163,100 @@ data class LxTxQrPoll(
     enum class Status { PENDING, SCANNED, EXPIRED, SUCCESS, ERROR }
 }
 
+/**
+ * 内置账号扩展：QQ音乐（tx）的账号读取走 [TencentAccountApi]，其余平台沿用不可用实现。
+ * isAvailable 保持 false（账号写操作仍不可用），读取类功能照常工作。
+ */
+internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExtension {
+    private val unavailable = LxUnavailableAccountExtension
+    private val tencentApi = TencentAccountApi(host.okHttpClient, host.tencentCookieStore)
+
+    override val isAvailable: Boolean = false
+
+    override suspend fun kgSendSmsCode(mobile: String): Boolean = unavailable.kgSendSmsCode(mobile)
+    override suspend fun kgLoginBySmsCode(mobile: String, code: String): Boolean =
+        unavailable.kgLoginBySmsCode(mobile, code)
+    override suspend fun kgApplySongLike(
+        songmid: String,
+        hash: String?,
+        name: String,
+        singer: String,
+        albumId: String?,
+        mixSongId: String?,
+        like: Boolean,
+    ): Boolean = unavailable.kgApplySongLike(songmid, hash, name, singer, albumId, mixSongId, like)
+    override suspend fun kgQueryFollowInfo(singerId: String): Boolean? =
+        unavailable.kgQueryFollowInfo(singerId)
+    override suspend fun kgApplyFollowSinger(singerId: String, follow: Boolean, source: Int): Boolean =
+        unavailable.kgApplyFollowSinger(singerId, follow, source)
+    override suspend fun kgSubscribePlaylist(name: String, gid: String): Boolean =
+        unavailable.kgSubscribePlaylist(name, gid)
+    override suspend fun kgUnsubscribe(gid: String?, name: String?): Boolean =
+        unavailable.kgUnsubscribe(gid, name)
+    override suspend fun kgDeleteCloudList(listid: String): Boolean =
+        unavailable.kgDeleteCloudList(listid)
+    override suspend fun kgCollectByCopy(name: String, songs: List<LxSong>): Boolean =
+        unavailable.kgCollectByCopy(name, songs)
+    override suspend fun kgAddSongsToPlaylist(listid: String, songs: List<LxSong>): LxAddToPlaylistResult =
+        unavailable.kgAddSongsToPlaylist(listid, songs)
+    override suspend fun kgRemoveSongsFromPlaylist(listid: String, songs: List<LxSong>): Boolean =
+        unavailable.kgRemoveSongsFromPlaylist(listid, songs)
+    override suspend fun kwApplySongLike(songId: String, like: Boolean): Boolean =
+        unavailable.kwApplySongLike(songId, like)
+    override suspend fun kwAddSongsToPlaylist(playlistId: String, songIds: List<String>): LxAddToPlaylistResult =
+        unavailable.kwAddSongsToPlaylist(playlistId, songIds)
+    override suspend fun kwRemoveSongsFromPlaylist(playlistId: String, songIds: List<String>): Boolean =
+        unavailable.kwRemoveSongsFromPlaylist(playlistId, songIds)
+    override suspend fun kwSetPlaylistCollect(playlistId: String, collect: Boolean): Boolean =
+        unavailable.kwSetPlaylistCollect(playlistId, collect)
+    override suspend fun kwApplyArtistFollow(artistId: String, follow: Boolean): Boolean =
+        unavailable.kwApplyArtistFollow(artistId, follow)
+    override suspend fun kwApplyAlbumLike(albumId: String, like: Boolean): Boolean =
+        unavailable.kwApplyAlbumLike(albumId, like)
+
+    // 红心写接口经上游实测被业务码 80105 拒绝，保持只读
+    override suspend fun txApplySongLike(songId: String, like: Boolean): Boolean = false
+
+    override suspend fun kwFetchProfile(): Pair<String?, String?>? = unavailable.kwFetchProfile()
+    override suspend fun kwFetchUserPlaylists(): List<LxPlaylist>? = unavailable.kwFetchUserPlaylists()
+    override suspend fun kwFetchFollowedArtists(): List<LxArtist>? = unavailable.kwFetchFollowedArtists()
+    override suspend fun kwFetchLikedAlbums(): List<LxAlbum>? = unavailable.kwFetchLikedAlbums()
+    override suspend fun kwFetchLikedSongIds(): Set<String>? = unavailable.kwFetchLikedSongIds()
+    override suspend fun kwFetchLikedSongs(): List<LxSong>? = unavailable.kwFetchLikedSongs()
+    override suspend fun kwFetchUserPlaylistSongs(playlistId: String): List<LxSong>? =
+        unavailable.kwFetchUserPlaylistSongs(playlistId)
+    override suspend fun kgFetchUserPlaylists(): List<LxPlaylist>? = unavailable.kgFetchUserPlaylists()
+    override suspend fun kgFetchCloudPlaylistSongs(listid: String): List<LxSong>? =
+        unavailable.kgFetchCloudPlaylistSongs(listid)
+    override suspend fun kgFetchLikedSongIds(): Set<String>? = unavailable.kgFetchLikedSongIds()
+    override suspend fun kgFetchLikedSongs(): List<LxSong>? = unavailable.kgFetchLikedSongs()
+    override suspend fun kgFetchProfile(): Pair<String?, String?>? = unavailable.kgFetchProfile()
+
+    override suspend fun txFetchProfile(): Pair<String?, String?>? = tencentApi.fetchProfile()
+    override suspend fun txFetchLikedSongs(): List<LxSong>? = tencentApi.fetchLikedSongs()
+    override suspend fun txFetchLikedAlbums(): List<LxAlbum>? = null
+    override suspend fun txFetchUserPlaylists(): List<LxPlaylist>? = tencentApi.fetchUserPlaylists()
+    override suspend fun txFetchPlaylistSongs(disstid: String): List<LxSong>? =
+        tencentApi.fetchPlaylistSongs(disstid)
+
+    override suspend fun txQrCreate(type: LxTxQrType): Pair<ByteArray, String>? =
+        unavailable.txQrCreate(type)
+    override suspend fun txQrPoll(type: LxTxQrType, session: String): LxTxQrPoll =
+        unavailable.txQrPoll(type, session)
+
+    override suspend fun kwFetchPlaylistSquareSongs(playlistId: String): List<LxSong>? =
+        unavailable.kwFetchPlaylistSquareSongs(playlistId)
+    override suspend fun kwResolvePlayUrl(songmid: String): PlatformResult? =
+        unavailable.kwResolvePlayUrl(songmid)
+
+    override fun clearReadCaches() {}
+}
+
 internal object LxAccountExtensionLoader {
     private const val PRIVATE_CLASS_NAME =
         "com.gurio.gusic.data.lxmusic.LxPrivateAccountExtension"
 
-    // 账号实现类加载失败时退回全失败实现，账号相关功能整体只读
+    // 账号实现类加载失败时退回内置实现：TX 读取可用，其余平台只读
     fun load(host: LxMusicRepository): LxAccountExtension =
         runCatching {
             val clazz = Class.forName(PRIVATE_CLASS_NAME)
@@ -175,7 +265,9 @@ internal object LxAccountExtensionLoader {
             (ctor.newInstance(host) as LxAccountExtension)
                 .also { Timber.i("LxAccountExtension: private implementation loaded") }
         }.getOrElse { e ->
-            Timber.i("LxAccountExtension: private impl unavailable, read-only mode (${e.javaClass.simpleName})")
-            LxUnavailableAccountExtension
+            Timber.i(
+                "LxAccountExtension: private impl unavailable, using built-in TX reads (${e.javaClass.simpleName})",
+            )
+            LxBuiltinAccountExtension(host)
         }
 }

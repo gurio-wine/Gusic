@@ -311,7 +311,9 @@ class SongInfoBottomSheetViewModel @Inject constructor(
                 isCloud = true,
             )
             !song.lxMusicSource.isNullOrBlank() -> SongLocationInfo(
-                label = LxSources.englishName(song.lxMusicSource!!),
+                label = LxSources.labelRes(song.lxMusicSource!!)
+                    ?.let(appContext::getString)
+                    ?: LxSources.englishName(song.lxMusicSource!!),
                 value = LxSongMapper.webSongUrl(song) ?: song.contentUriString.orEmpty(),
                 isCloud = true,
             )

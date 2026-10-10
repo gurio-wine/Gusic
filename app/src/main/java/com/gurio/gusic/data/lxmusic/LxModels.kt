@@ -16,6 +16,17 @@ object LxSources {
 
     fun shortLabel(source: String): String = if (source == TENCENT) "qq" else source
 
+    /** 用户可见的平台全称资源；未覆盖的平台返回 null，调用方回退到 shortLabel。 */
+    @androidx.annotation.StringRes
+    fun labelRes(source: String): Int? = when (source) {
+        NETEASE -> com.gurio.gusic.R.string.lx_source_netease
+        KUWO -> com.gurio.gusic.R.string.lx_source_kuwo
+        TENCENT -> com.gurio.gusic.R.string.lx_source_qq
+        KUGOU -> com.gurio.gusic.R.string.lx_source_kugou
+        MIGU -> com.gurio.gusic.R.string.lx_source_migu
+        else -> null
+    }
+
     fun englishName(source: String): String = when (source) {
         NETEASE -> "NetEase"
         KUWO -> "Kuwo"

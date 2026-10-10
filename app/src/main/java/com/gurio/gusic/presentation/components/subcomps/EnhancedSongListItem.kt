@@ -376,7 +376,8 @@ fun EnhancedSongListItem(
                         if (lxSource != null) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = LxSources.shortLabel(lxSource),
+                                text = LxSources.labelRes(lxSource)?.let { res -> stringResource(res) }
+                                    ?: LxSources.shortLabel(lxSource),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = LxSources.onBrandColor(lxSource),

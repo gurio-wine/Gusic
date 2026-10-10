@@ -173,7 +173,8 @@ private fun LxArtistPickerCard(
                     shape = CircleShape
                 ) {
                     Text(
-                        text = LxSources.shortLabel(source),
+                        text = LxSources.labelRes(source)?.let { res -> stringResource(res) }
+                            ?: LxSources.shortLabel(source),
                         style = MaterialTheme.typography.labelMedium,
                         color = LxSources.onBrandColor(source),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
