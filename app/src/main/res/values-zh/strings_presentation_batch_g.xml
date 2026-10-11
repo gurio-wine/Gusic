@@ -571,4 +571,11 @@
     <string-array name="presentation_batch_g_changelog_v26101201_changes">
         <item>收藏和取消收藏不再彈出成功提示，僅失敗時提示</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101202_whats_new">
+        <item>「我喜歡」入口：每個平台顯示喜歡歌曲數；「本軟體」更名為「我喜歡」；兩級頁面頂部都有返回按鈕</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101202_changes">
+        <item>播放通知不再顯示歌詞：第一行歌名、第二行歌手，通知欄歌詞設定一併移除</item>
+        <item>平台喜歡列表不再顯示平台標籤，本軟體喜歡列表保留</item>
+    </string-array>
 </resources>

@@ -46,7 +46,6 @@ import com.gurio.gusic.data.diagnostics.AdvancedPerformanceDiagnostics
 import com.gurio.gusic.data.model.PlayerInfo
 import com.gurio.gusic.data.model.PlaybackQueueItemSnapshot
 import com.gurio.gusic.data.model.PlaybackQueueSnapshot
-import com.gurio.gusic.data.model.SyncedLine
 import com.gurio.gusic.data.preferences.EqualizerPreferencesRepository
 import com.gurio.gusic.data.preferences.ThemePreferencesRepository
 import com.gurio.gusic.data.preferences.UserPreferencesRepository
@@ -233,17 +232,6 @@ class MusicService : MediaSessionService() {
     private var currentSongForLikeJob: Job? = null
 
     private val notificationLikeBusyIds = mutableSetOf<String>()
-
-    private var notificationLyricsEnabled = false
-    private var notificationLyricsProvider: LocalOnlyMediaNotificationProvider? = null
-    private var notificationLyricsData: NotificationLyricsData? = null
-    private var notificationLyricsLoadJob: Job? = null
-    private var notificationLyricsInFlightId: String? = null
-
-    private data class NotificationLyricsData(
-        val mediaId: String,
-        val lines: List<SyncedLine>,
-    )
 
     private var mediaSession: MediaSession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -803,7 +791,6 @@ class MusicService : MediaSessionService() {
         val localOnlyProvider = LocalOnlyMediaNotificationProvider(this).also {
             it.setSmallIcon(R.drawable.monochrome_player)
         }
-        notificationLyricsProvider = localOnlyProvider
         setMediaNotificationProvider(localOnlyProvider)
         if (temporaryForegroundStartedInOnCreate) {
             serviceScope.launch {
@@ -812,18 +799,6 @@ class MusicService : MediaSessionService() {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     clearTemporaryForegroundNotification()
                 }
-            }
-        }
-        serviceScope.launch {
-            userPreferencesRepository.notificationLyricsEnabledFlow.collect { enabled ->
-                notificationLyricsEnabled = enabled
-                updateNotificationLyrics(force = true)
-            }
-        }
-        serviceScope.launch {
-            while (true) {
-                delay(500L)
-                updateNotificationLyrics()
             }
         }
         serviceScope.launch {
@@ -950,89 +925,6 @@ class MusicService : MediaSessionService() {
         }
     }
 
-
-    private fun updateNotificationLyrics(force: Boolean = false) {
-        val provider = notificationLyricsProvider ?: return
-        val session = mediaSession ?: return
-        val player = session.player
-        val mediaId = player.currentMediaItem?.mediaId
-
-        if (mediaId != null && mediaId != notificationLyricsData?.mediaId && notificationLyricsInFlightId != mediaId) {
-            loadNotificationLyrics(mediaId)
-        }
-
-        val data = notificationLyricsData
-        val lyricsUsable = notificationLyricsEnabled &&
-            mediaId != null &&
-            data != null &&
-            data.mediaId == mediaId &&
-            data.lines.isNotEmpty() &&
-            player.playbackState != Player.STATE_IDLE &&
-            player.playbackState != Player.STATE_ENDED
-
-        val line = if (lyricsUsable) {
-            val lines = data!!.lines
-            val index = findNotificationLyricsLineIndex(lines, player.currentPosition.coerceAtLeast(0L))
-            lines[index].line.takeIf { it.isNotBlank() }
-        } else null
-
-        if (!force && line == provider.currentLyricLine) return
-        provider.currentLyricLine = line
-
-        val mediaNotification = provider.buildNotification(session) ?: return
-        postLyricsNotificationSafely(mediaNotification.notificationId, mediaNotification.notification)
-    }
-
-    private fun loadNotificationLyrics(mediaId: String) {
-        notificationLyricsInFlightId = mediaId
-        notificationLyricsLoadJob?.cancel()
-        notificationLyricsLoadJob = serviceScope.launch {
-            var loaded: NotificationLyricsData? = null
-            runCatching {
-                val song = withContext(Dispatchers.IO) {
-                    musicRepository.getSong(mediaId).firstOrNull()
-                }
-                if (song != null) {
-                    val stored = withContext(Dispatchers.IO) { musicRepository.getStoredLyrics(song) }
-                    loaded = NotificationLyricsData(mediaId, stored?.first?.synced.orEmpty())
-                }
-            }.onFailure {
-                Timber.tag(TAG).d(it, "notification lyrics load failed for %s", mediaId)
-            }
-            if (mediaId == mediaSession?.player?.currentMediaItem?.mediaId) {
-                notificationLyricsData = loaded
-                updateNotificationLyrics(force = true)
-            }
-            if (notificationLyricsInFlightId == mediaId) {
-                notificationLyricsInFlightId = null
-            }
-        }
-    }
-
-    private fun findNotificationLyricsLineIndex(lines: List<SyncedLine>, positionMs: Long): Int {
-        var low = 0
-        var high = lines.lastIndex
-        var result = 0
-        while (low <= high) {
-            val mid = (low + high) / 2
-            if (lines[mid].time <= positionMs) {
-                result = mid
-                low = mid + 1
-            } else {
-                high = mid - 1
-            }
-        }
-        return result
-    }
-
-    @android.annotation.SuppressLint("MissingPermission")
-    private fun postLyricsNotificationSafely(id: Int, notification: Notification) {
-        runCatching {
-            NotificationManagerCompat.from(this).notify(id, notification)
-        }.onFailure {
-            Timber.tag(TAG).d(it, "post lyrics notification failed")
-        }
-    }
 
     private fun startTemporaryForegroundForCommand() {
         val notification = NotificationCompat.Builder(

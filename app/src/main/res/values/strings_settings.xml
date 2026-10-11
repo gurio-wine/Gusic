@@ -66,8 +66,6 @@
     <string name="setcat_external_lyrics_subtitle">Allow searches and manual fetches from lrclib.net when lyrics are missing locally.</string>
     <string name="setcat_external_artist_images_title">Artist artwork from Deezer</string>
     <string name="setcat_external_artist_images_subtitle">Allow missing artist images to be fetched from Deezer and cached locally.</string>
-    <string name="setcat_notification_lyrics_title">Notification lyrics</string>
-    <string name="setcat_notification_lyrics_subtitle">Show the current synced lyric line on the system media notification when synced lyrics are available.</string>
     <string name="setcat_mini_player_lyrics_title">Mini player lyrics</string>
     <string name="setcat_mini_player_lyrics_subtitle">Show the current synced lyric line after the artist name on the mini player.</string>
     <string name="setcat_in_player_lyrics_title">In-player lyrics</string>

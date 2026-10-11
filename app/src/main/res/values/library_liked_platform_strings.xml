@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="library_liked_scope_local">Gusic</string>
+    <string name="library_liked_scope_local">Liked</string>
     <string name="library_liked_platform_load_failed">Failed to load, try again</string>
     <string name="library_liked_platform_empty">No liked songs yet</string>
 </resources>

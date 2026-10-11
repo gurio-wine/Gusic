@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -63,8 +64,15 @@ class LibraryLikedStateHolder @Inject constructor(
     private val _loggedInPlatforms = MutableStateFlow<List<String>>(emptyList())
     val loggedInPlatforms: StateFlow<List<String>> = _loggedInPlatforms.asStateFlow()
 
+    /** 各已登录平台的“我喜欢”歌曲数量：source -> count（拉取失败的平台不出现在 map 中） */
+    private val _platformLikedCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val platformLikedCounts: StateFlow<Map<String, Int>> = _platformLikedCounts.asStateFlow()
+
     /** 会话级内存缓存：source -> 原始 LxSong 列表（有缓存直接用，不做后台刷新） */
     private val platformLikedCache = ConcurrentHashMap<String, List<LxSong>>()
+
+    /** 计数拉取在途任务：source -> Job（防止重复拉取，完成/取消后移除） */
+    private val countFetchJobs = ConcurrentHashMap<String, Job>()
     private var platformLoadJob: Job? = null
 
     init {
@@ -87,15 +95,23 @@ class LibraryLikedStateHolder @Inject constructor(
                 }
             }.collect { logged ->
                 _loggedInPlatforms.value = logged
-                // 登出后清掉该平台缓存，防止换账号后读到前一账号的喜欢列表
+                // 登出后清掉该平台缓存与计数，防止换账号后读到前一账号的数据
                 val loggedOut = previous - logged.toSet()
                 loggedOut.forEach { source ->
                     platformLikedCache.remove(source)
+                    countFetchJobs.remove(source)?.cancel()
+                    _platformLikedCounts.update { it - source }
                     if (_likedScope.value == source) {
                         backToLikedEntries()
                     }
                 }
                 previous = logged.toSet()
+                // 已登录但尚无计数的平台异步拉取一次“我喜欢”数量（失败静默忽略，无计数时不显示数字）
+                logged.forEach { source ->
+                    if (source !in _platformLikedCounts.value && !countFetchJobs.containsKey(source)) {
+                        fetchPlatformLikedCount(source)
+                    }
+                }
             }
         }
     }
@@ -136,6 +152,39 @@ class LibraryLikedStateHolder @Inject constructor(
         if (current == LxSources.LOCAL) return
         platformLikedCache.remove(current)
         loadPlatformSongs(current)
+    }
+
+    /**
+     * 拉取单个平台的“我喜欢”歌曲数量（每个平台一次，失败静默忽略、不重试重放）。
+     * 酷狗返回的 id 集合含杂质（如歌单 id），只统计 32 位十六进制的歌曲 id；
+     * 其余平台直接取集合大小。
+     */
+    private fun fetchPlatformLikedCount(source: String) {
+        val job = holderScope.launch {
+            val count = runCatching {
+                when (source) {
+                    LxSources.NETEASE -> {
+                        // 先确保 uid/登录档案已解析，冷启动时 refresh 才不会静默 no-op
+                        lxMusicRepository.ensureNeteaseLikedListLoaded()
+                        lxMusicRepository.neteaseLikedSongIds.value.size
+                    }
+                    LxSources.TENCENT -> lxMusicRepository.fetchTxLikedSongIds().size
+                    LxSources.KUGOU -> lxMusicRepository.fetchKgLikedSongIds().count { id ->
+                        id.length == 32 && id.all { c -> c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F' }
+                    }
+                    LxSources.KUWO -> lxMusicRepository.fetchKwLikedSongIds().size
+                    else -> null
+                }
+            }.getOrNull()
+            // 底层失败多以空集返回而非异常，0 与失败不可区分：宁缺勿错，0 不写入；
+            // 登出竞态防护：仅当该平台仍处于登录态才允许写入计数
+            if (count != null && count > 0 && source in _loggedInPlatforms.value) {
+                _platformLikedCounts.update { it + (source to count) }
+            }
+        }
+        countFetchJobs[source] = job
+        // 完成后清掉在途记录；失败的平台可在下次登录状态变化时重试
+        job.invokeOnCompletion { countFetchJobs.remove(source, job) }
     }
 
     private fun resetPlatformListState() {

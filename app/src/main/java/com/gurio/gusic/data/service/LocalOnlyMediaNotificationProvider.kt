@@ -59,18 +59,6 @@ class LocalOnlyMediaNotificationProvider(
         CycleFirstNotificationProvider(context),
 ) : MediaNotification.Provider {
 
-    @Volatile
-    var currentLyricLine: String? = null
-
-    @Volatile
-    var cachedActionFactory: MediaNotification.ActionFactory? = null
-
-    @Volatile
-    var cachedCallback: MediaNotification.Provider.Callback? = null
-
-    @Volatile
-    var cachedCustomLayout: ImmutableList<CommandButton> = ImmutableList.of()
-
     fun setSmallIcon(iconResId: Int) {
         delegate.setSmallIcon(iconResId)
     }
@@ -81,9 +69,6 @@ class LocalOnlyMediaNotificationProvider(
         actionFactory: MediaNotification.ActionFactory,
         callback: MediaNotification.Provider.Callback,
     ): MediaNotification {
-        cachedActionFactory = actionFactory
-        cachedCallback = callback
-        cachedCustomLayout = customLayout
         val mediaNotification = delegate.createNotification(
             mediaSession,
             customLayout,
@@ -96,36 +81,10 @@ class LocalOnlyMediaNotificationProvider(
         )
     }
 
-    fun buildNotification(mediaSession: MediaSession): MediaNotification? {
-        val factory = cachedActionFactory ?: return null
-        val callback = cachedCallback ?: return null
-        return runCatching {
-            val mediaNotification = delegate.createNotification(
-                mediaSession,
-                cachedCustomLayout,
-                factory,
-                callback
-            )
-            MediaNotification(mediaNotification.notificationId, decorate(mediaNotification.notification))
-        }.getOrNull()
-    }
-
     private fun decorate(notification: Notification): Notification {
         return runCatching {
             val builder = Notification.Builder.recoverBuilder(context, notification)
                 .setLocalOnly(true)
-            val line = currentLyricLine?.takeIf { it.isNotBlank() }
-            line?.let {
-                val songTitle = notification.extras?.getString(Notification.EXTRA_TITLE)
-                val songArtist = notification.extras?.getString(Notification.EXTRA_TEXT)
-                builder.setContentTitle(it)
-                if (!songTitle.isNullOrBlank()) {
-                    builder.setContentText(songTitle)
-                    if (!songArtist.isNullOrBlank()) {
-                        builder.setSubText(songArtist)
-                    }
-                }
-            }
             builder.build()
         }.getOrElse {
             notification

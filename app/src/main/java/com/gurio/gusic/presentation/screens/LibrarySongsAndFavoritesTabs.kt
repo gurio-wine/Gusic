@@ -34,11 +34,13 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -112,12 +114,14 @@ fun LibraryFavoritesTab(
     likedScope: String? = null,
     favoriteSongCount: Int = 0,
     loggedInPlatforms: List<String> = emptyList(),
+    platformLikedCounts: Map<String, Int> = emptyMap(),
     platformSongs: List<Song> = emptyList(),
     isLoadingPlatformSongs: Boolean = false,
     platformSongsError: String? = null,
     onSelectLikedScope: (String?) -> Unit = {},
     onPlayPlatformSong: (Song) -> Unit = {},
-    onRefreshPlatformSongs: () -> Unit = {}
+    onRefreshPlatformSongs: () -> Unit = {},
+    onBackToLikedEntries: () -> Unit = {}
 ) {
     AnimatedContent(
         targetState = likedScope,
@@ -139,6 +143,7 @@ fun LibraryFavoritesTab(
             null -> LibraryLikedEntriesList(
                 favoriteSongCount = favoriteSongCount,
                 loggedInPlatforms = loggedInPlatforms,
+                platformLikedCounts = platformLikedCounts,
                 onSelect = onSelectLikedScope,
                 bottomBarHeight = bottomBarHeight
             )
@@ -159,16 +164,20 @@ fun LibraryFavoritesTab(
                     onLocateCurrentSongVisibilityChanged = onLocateCurrentSongVisibilityChanged,
                     onRegisterLocateCurrentSongAction = onRegisterLocateCurrentSongAction,
                     storageFilter = storageFilter,
-                    hasCurrentSong = hasCurrentSong
+                    hasCurrentSong = hasCurrentSong,
+                    onBack = onBackToLikedEntries
                 )
             }
             else -> LibraryPlatformLikedSongsContent(
+                title = LxSources.labelRes(scope)?.let { stringResource(it) }
+                    ?: LxSources.shortLabel(scope),
                 songs = platformSongs,
                 isLoading = isLoadingPlatformSongs,
                 error = platformSongsError,
                 onPlaySong = onPlayPlatformSong,
                 onRefresh = onRefreshPlatformSongs,
-                bottomBarHeight = bottomBarHeight
+                bottomBarHeight = bottomBarHeight,
+                onBack = onBackToLikedEntries
             )
         }
     }
@@ -192,7 +201,8 @@ private fun LibraryLocalFavoritesContent(
     onLocateCurrentSongVisibilityChanged: (Boolean) -> Unit,
     onRegisterLocateCurrentSongAction: ((() -> Unit)?) -> Unit,
     storageFilter: StorageFilter,
-    hasCurrentSong: Boolean
+    hasCurrentSong: Boolean,
+    onBack: () -> Unit
 ) {
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -303,96 +313,104 @@ private fun LibraryLocalFavoritesContent(
         }
     }
 
-    if (favoriteSongs.itemCount == 0 && favoriteSongs.loadState.refresh !is LoadState.Loading) {
-        LibraryExpressiveEmptyState(
-            tabId = LibraryTabId.LIKED,
-            storageFilter = storageFilter,
-            bottomBarHeight = bottomBarHeight
+    Column(modifier = Modifier.fillMaxSize()) {
+        LibraryLikedSubScreenHeader(
+            title = stringResource(R.string.library_liked_scope_local),
+            onBack = onBack
         )
-    } else {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            val songsPullToRefreshState = rememberPullToRefreshState()
-            PullToRefreshBox(
-                isRefreshing = isRefreshing,
-                onRefresh = onRefresh,
-                state = songsPullToRefreshState,
-                modifier = Modifier.fillMaxSize(),
-                indicator = {
-                    PullToRefreshDefaults.LoadingIndicator(
-                        state = songsPullToRefreshState,
+        Box(modifier = Modifier.weight(1f)) {
+            if (favoriteSongs.itemCount == 0 && favoriteSongs.loadState.refresh !is LoadState.Loading) {
+                LibraryExpressiveEmptyState(
+                    tabId = LibraryTabId.LIKED,
+                    storageFilter = storageFilter,
+                    bottomBarHeight = bottomBarHeight
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val songsPullToRefreshState = rememberPullToRefreshState()
+                    PullToRefreshBox(
                         isRefreshing = isRefreshing,
-                        modifier = Modifier.align(Alignment.TopCenter)
-                    )
-                }
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(start = 12.dp, end = if (listState.canScrollForward || listState.canScrollBackward) 22.dp else 12.dp, bottom = 6.dp)
-                            .clip(
-                                RoundedCornerShape(
-                                    topStart = 26.dp,
-                                    topEnd = 26.dp,
-                                    bottomStart = PlayerSheetCollapsedCornerRadius,
-                                    bottomEnd = PlayerSheetCollapsedCornerRadius
-                                )
-                            ),
-                        state = listState,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + 30.dp)
+                        onRefresh = onRefresh,
+                        state = songsPullToRefreshState,
+                        modifier = Modifier.fillMaxSize(),
+                        indicator = {
+                            PullToRefreshDefaults.LoadingIndicator(
+                                state = songsPullToRefreshState,
+                                isRefreshing = isRefreshing,
+                                modifier = Modifier.align(Alignment.TopCenter)
+                            )
+                        }
                     ) {
-                        items(
-                            count = favoriteSongs.itemCount,
-                            key = { index -> favoriteSongs.peek(index)?.id ?: index },
-                            contentType = { "song" }
-                        ) { index ->
-                            val song = favoriteSongs[index]
-                            if (song != null) {
-                                LibraryPlaybackAwareSongItem(
-                                    song = song,
-                                    playerViewModel = playerViewModel,
-                                    onMoreOptionsClick = { onMoreOptionsClick(song) },
-                                    isSelected = selectedSongIds.contains(song.id),
-                                    selectionIndex = if (isSelectionMode) getSelectionIndex(song.id) else null,
-                                    isSelectionMode = isSelectionMode,
-                                    onLongPress = { onSongLongPress(song) },
-                                    onClick = {
-                                        if (isSelectionMode) {
-                                            onSongSelectionToggle(song)
-                                        } else {
-                                            playerViewModel.showAndPlaySongFromFavorites(song)
-                                        }
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(start = 12.dp, end = if (listState.canScrollForward || listState.canScrollBackward) 22.dp else 12.dp, bottom = 6.dp)
+                                    .clip(
+                                        RoundedCornerShape(
+                                            topStart = 26.dp,
+                                            topEnd = 26.dp,
+                                            bottomStart = PlayerSheetCollapsedCornerRadius,
+                                            bottomEnd = PlayerSheetCollapsedCornerRadius
+                                        )
+                                    ),
+                                state = listState,
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + 30.dp)
+                            ) {
+                                items(
+                                    count = favoriteSongs.itemCount,
+                                    key = { index -> favoriteSongs.peek(index)?.id ?: index },
+                                    contentType = { "song" }
+                                ) { index ->
+                                    val song = favoriteSongs[index]
+                                    if (song != null) {
+                                        LibraryPlaybackAwareSongItem(
+                                            song = song,
+                                            playerViewModel = playerViewModel,
+                                            onMoreOptionsClick = { onMoreOptionsClick(song) },
+                                            isSelected = selectedSongIds.contains(song.id),
+                                            selectionIndex = if (isSelectionMode) getSelectionIndex(song.id) else null,
+                                            isSelectionMode = isSelectionMode,
+                                            onLongPress = { onSongLongPress(song) },
+                                            onClick = {
+                                                if (isSelectionMode) {
+                                                    onSongSelectionToggle(song)
+                                                } else {
+                                                    playerViewModel.showAndPlaySongFromFavorites(song)
+                                                }
+                                            }
+                                        )
+                                    } else {
+                                        EnhancedSongListItem(
+                                            song = Song.emptySong(),
+                                            isPlaying = false,
+                                            isLoading = true,
+                                            isCurrentSong = false,
+                                            onMoreOptionsClick = {},
+                                            onClick = {}
+                                        )
                                     }
-                                )
-                            } else {
-                                EnhancedSongListItem(
-                                    song = Song.emptySong(),
-                                    isPlaying = false,
-                                    isLoading = true,
-                                    isCurrentSong = false,
-                                    onMoreOptionsClick = {},
-                                    onClick = {}
-                                )
+                                }
                             }
+
+                            val bottomPadding = if (hasCurrentSong)
+                                bottomBarHeight + MiniPlayerHeight + 16.dp
+                            else
+                                bottomBarHeight + 16.dp
+
+                            ExpressiveScrollBar(
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .padding(end = 4.dp, top = 16.dp, bottom = bottomPadding),
+                                listState = listState,
+                                dragLabelProvider = favoriteFastScrollLabelProvider
+                            )
                         }
                     }
-
-                    val bottomPadding = if (hasCurrentSong)
-                        bottomBarHeight + MiniPlayerHeight + 16.dp
-                    else
-                        bottomBarHeight + 16.dp
-
-                    ExpressiveScrollBar(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .padding(end = 4.dp, top = 16.dp, bottom = bottomPadding),
-                        listState = listState,
-                        dragLabelProvider = favoriteFastScrollLabelProvider
-                    )
                 }
             }
         }
@@ -621,6 +639,7 @@ fun LibrarySongsTabPaginated(
 private fun LibraryLikedEntriesList(
     favoriteSongCount: Int,
     loggedInPlatforms: List<String>,
+    platformLikedCounts: Map<String, Int>,
     onSelect: (String?) -> Unit,
     bottomBarHeight: Dp
 ) {
@@ -661,15 +680,24 @@ private fun LibraryLikedEntriesList(
             LibraryLikedEntryRow(
                 title = LxSources.labelRes(source)?.let { stringResource(it) }
                     ?: LxSources.shortLabel(source),
-                subtitle = null,
+                subtitle = platformLikedCounts[source]?.let { likedCount ->
+                    stringResource(R.string.lx_text_track_count_format, likedCount)
+                },
                 onClick = { onSelect(source) },
                 leading = {
+                    // 与本软件行图标槽同尺寸(24dp)并居中放置 10dp 品牌色圆点，
+                    // 保证一级入口各行文字起始边垂直对齐（圆点本身大小不变）
                     Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(LxSources.brandColor(source))
-                    )
+                        modifier = Modifier.size(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(LxSources.brandColor(source))
+                        )
+                    }
                 }
             )
         }
@@ -727,106 +755,149 @@ private fun LibraryLikedEntryRow(
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 private fun LibraryPlatformLikedSongsContent(
+    title: String,
     songs: List<Song>,
     isLoading: Boolean,
     error: String?,
     onPlaySong: (Song) -> Unit,
     onRefresh: () -> Unit,
-    bottomBarHeight: Dp
+    bottomBarHeight: Dp,
+    onBack: () -> Unit
 ) {
     val listState = rememberLazyListState()
-    when {
-        isLoading && songs.isEmpty() -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                LoadingIndicator()
-            }
-        }
-        error != null && songs.isEmpty() -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = stringResource(R.string.library_liked_platform_load_failed),
-                        style = MaterialTheme.typography.titleMedium,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = onRefresh) {
-                        Text(stringResource(R.string.library_retry), maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Column(modifier = Modifier.fillMaxSize()) {
+        LibraryLikedSubScreenHeader(
+            title = title,
+            onBack = onBack
+        )
+        Box(modifier = Modifier.weight(1f)) {
+            when {
+                isLoading && songs.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LoadingIndicator()
                     }
                 }
-            }
-        }
-        else -> {
-            val platformPullToRefreshState = rememberPullToRefreshState()
-            PullToRefreshBox(
-                isRefreshing = isLoading,
-                onRefresh = onRefresh,
-                state = platformPullToRefreshState,
-                modifier = Modifier.fillMaxSize(),
-                indicator = {
-                    PullToRefreshDefaults.LoadingIndicator(
-                        state = platformPullToRefreshState,
-                        isRefreshing = isLoading,
-                        modifier = Modifier.align(Alignment.TopCenter)
-                    )
-                }
-            ) {
-                if (songs.isEmpty()) {
+                error != null && songs.isEmpty() -> {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = stringResource(R.string.library_liked_platform_empty),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .padding(start = 12.dp, end = 12.dp, bottom = 6.dp)
-                            .clip(
-                                RoundedCornerShape(
-                                    topStart = 26.dp,
-                                    topEnd = 26.dp,
-                                    bottomStart = PlayerSheetCollapsedCornerRadius,
-                                    bottomEnd = PlayerSheetCollapsedCornerRadius
-                                )
-                            ),
-                        state = listState,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap)
-                    ) {
-                        itemsIndexed(
-                            items = songs,
-                            key = { index, song -> "${song.id}_$index" },
-                            contentType = { _, _ -> "platform_song" }
-                        ) { _, song ->
-                            EnhancedSongListItem(
-                                song = song,
-                                isPlaying = false,
-                                isCurrentSong = false,
-                                isLoading = false,
-                                showSourceTag = true,
-                                onMoreOptionsClick = {},
-                                onClick = { onPlaySong(song) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = stringResource(R.string.library_liked_platform_load_failed),
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = onRefresh) {
+                                Text(stringResource(R.string.library_retry), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                }
+                else -> {
+                    val platformPullToRefreshState = rememberPullToRefreshState()
+                    PullToRefreshBox(
+                        isRefreshing = isLoading,
+                        onRefresh = onRefresh,
+                        state = platformPullToRefreshState,
+                        modifier = Modifier.fillMaxSize(),
+                        indicator = {
+                            PullToRefreshDefaults.LoadingIndicator(
+                                state = platformPullToRefreshState,
+                                isRefreshing = isLoading,
+                                modifier = Modifier.align(Alignment.TopCenter)
+                            )
+                        }
+                    ) {
+                        if (songs.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.library_liked_platform_empty),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .padding(start = 12.dp, end = 12.dp, bottom = 6.dp)
+                                    .clip(
+                                        RoundedCornerShape(
+                                            topStart = 26.dp,
+                                            topEnd = 26.dp,
+                                            bottomStart = PlayerSheetCollapsedCornerRadius,
+                                            bottomEnd = PlayerSheetCollapsedCornerRadius
+                                        )
+                                    ),
+                                state = listState,
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap)
+                            ) {
+                                itemsIndexed(
+                                    items = songs,
+                                    key = { index, song -> "${song.id}_$index" },
+                                    contentType = { _, _ -> "platform_song" }
+                                ) { _, song ->
+                                    EnhancedSongListItem(
+                                        song = song,
+                                        isPlaying = false,
+                                        isCurrentSong = false,
+                                        isLoading = false,
+                                        // 平台“我喜欢”二级列表内所有歌同源，不再逐行显示平台标签
+                                        showSourceTag = false,
+                                        onMoreOptionsClick = {},
+                                        onClick = { onPlaySong(song) }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * “我喜欢”二级页顶部返回行：返回按钮 + 标题（本软件二级用“我喜欢”，平台二级用平台名）。
+ */
+@Composable
+private fun LibraryLikedSubScreenHeader(
+    title: String,
+    onBack: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .padding(start = 6.dp, end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = stringResource(R.string.auth_cd_back),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }

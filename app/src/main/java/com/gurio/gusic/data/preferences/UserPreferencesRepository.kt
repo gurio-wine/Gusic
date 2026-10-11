@@ -209,7 +209,6 @@ constructor(
         val AUTO_SCAN_LRC_FILES = booleanPreferencesKey("auto_scan_lrc_files")
         val EXTERNAL_LYRICS_ENABLED = booleanPreferencesKey("external_lyrics_enabled")
         val EXTERNAL_ARTIST_IMAGES_ENABLED = booleanPreferencesKey("external_artist_images_enabled")
-        val NOTIFICATION_LYRICS_ENABLED = booleanPreferencesKey("notification_lyrics_enabled")
         val MINI_PLAYER_LYRICS_ENABLED = booleanPreferencesKey("mini_player_lyrics_enabled")
         val IN_PLAYER_LYRICS_ENABLED = booleanPreferencesKey("in_player_lyrics_enabled")
         val IN_PLAYER_LYRICS_FONT_SIZE = intPreferencesKey("in_player_lyrics_font_size")
@@ -725,17 +724,6 @@ constructor(
     suspend fun setExternalArtistImagesEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.EXTERNAL_ARTIST_IMAGES_ENABLED] = enabled
-        }
-    }
-
-    val notificationLyricsEnabledFlow: Flow<Boolean> =
-            dataStore.data.map { preferences ->
-                preferences[PreferencesKeys.NOTIFICATION_LYRICS_ENABLED] ?: true
-            }
-
-    suspend fun setNotificationLyricsEnabled(enabled: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.NOTIFICATION_LYRICS_ENABLED] = enabled
         }
     }
 

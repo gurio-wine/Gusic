@@ -439,14 +439,6 @@ fun SettingsCategoryScreen(
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_artist_24), null, tint = MaterialTheme.colorScheme.secondary) },
                                     modifier = Modifier.settingHighlight("item_library_external_artist_images", highlightKey)
                                 )
-                                SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_notification_lyrics_title),
-                                    subtitle = stringResource(R.string.setcat_notification_lyrics_subtitle),
-                                    checked = uiState.notificationLyricsEnabled,
-                                    onCheckedChange = { settingsViewModel.setNotificationLyricsEnabled(it) },
-                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_music_note_24), null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_library_notification_lyrics", highlightKey)
-                                )
                             }
 
                             SettingsSubsection(

@@ -310,6 +310,7 @@ fun LibraryScreen(
     val platformSongs by likedStateHolder.platformSongs.collectAsStateWithLifecycle()
     val isLoadingPlatformSongs by likedStateHolder.loadingPlatformSongs.collectAsStateWithLifecycle()
     val platformSongsError by likedStateHolder.platformSongsError.collectAsStateWithLifecycle()
+    val platformLikedCounts by likedStateHolder.platformLikedCounts.collectAsStateWithLifecycle()
     val favoriteSongCount by libraryViewModel.favoriteSongCountFlow.collectAsStateWithLifecycle(initialValue = 0)
     // Activity 级共享的 LxMusicViewModel（与 LxMusicScreen 等页面共用同一实例）
     val lxMusicViewModel: LxMusicViewModel = hiltViewModel(
@@ -1332,12 +1333,14 @@ fun LibraryScreen(
                                             likedScope = likedScope,
                                             favoriteSongCount = favoriteSongCount,
                                             loggedInPlatforms = loggedInPlatforms,
+                                            platformLikedCounts = platformLikedCounts,
                                             platformSongs = platformSongs,
                                             isLoadingPlatformSongs = isLoadingPlatformSongs,
                                             platformSongsError = platformSongsError,
                                             onSelectLikedScope = { likedStateHolder.selectLikedScope(it) },
                                             onPlayPlatformSong = onPlayPlatformSong,
-                                            onRefreshPlatformSongs = { likedStateHolder.refreshPlatformSongs() }
+                                            onRefreshPlatformSongs = { likedStateHolder.refreshPlatformSongs() },
+                                            onBackToLikedEntries = { likedStateHolder.backToLikedEntries() }
                                         )
                                     }
 

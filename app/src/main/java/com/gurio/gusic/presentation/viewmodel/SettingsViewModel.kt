@@ -80,7 +80,6 @@ data class SettingsUiState(
     val autoScanLrcFiles: Boolean = false,
     val externalLyricsEnabled: Boolean = false,
     val externalArtistImagesEnabled: Boolean = false,
-    val notificationLyricsEnabled: Boolean = true,
     val miniPlayerLyricsEnabled: Boolean = true,
     val inPlayerLyricsEnabled: Boolean = true,
     val inPlayerLyricsFontSize: Int = 16,
@@ -396,12 +395,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.externalArtistImagesEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(externalArtistImagesEnabled = enabled) }
-            }
-        }
-
-        viewModelScope.launch {
-            userPreferencesRepository.notificationLyricsEnabledFlow.collect { enabled ->
-                _uiState.update { it.copy(notificationLyricsEnabled = enabled) }
             }
         }
 
@@ -734,12 +727,6 @@ class SettingsViewModel @Inject constructor(
     fun setExternalArtistImagesEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setExternalArtistImagesEnabled(enabled)
-        }
-    }
-
-    fun setNotificationLyricsEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            userPreferencesRepository.setNotificationLyricsEnabled(enabled)
         }
     }
 

@@ -72,18 +72,6 @@ object SettingsRegistry {
                 onToggle = { viewModel, checked -> viewModel.setExternalLyricsEnabled(checked) }
             ),
             SettingSpec(
-                id = "library_notification_lyrics",
-                itemKey = "item_library_notification_lyrics",
-                titleRes = R.string.setcat_notification_lyrics_title,
-                subtitleRes = R.string.setcat_notification_lyrics_subtitle,
-                category = SettingsCategory.LIBRARY,
-                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
-                type = SettingType.SWITCH,
-                keywordsStatic = listOf("notification", "status bar", "lyrics", "通知栏", "状态栏", "歌词"),
-                getValue = { it.notificationLyricsEnabled },
-                onToggle = { viewModel, checked -> viewModel.setNotificationLyricsEnabled(checked) }
-            ),
-            SettingSpec(
                 id = "library_mini_player_lyrics",
                 itemKey = "item_library_mini_player_lyrics",
                 titleRes = R.string.setcat_mini_player_lyrics_title,
