@@ -385,6 +385,9 @@
     <string name="presentation_batch_g_changelog_fork_title">全新的分支！Gusic</string>
     <string name="presentation_batch_g_changelog_legacy_header">PixelPlayerOSS</string>
     <string name="presentation_batch_g_changelog_legacy_ellipsis">……</string>
+    <!-- 發現頁「我的」模組未登入佔位 -->
+    <string name="presentation_batch_g_lx_mine_not_logged_in_title">當前平台未登入</string>
+    <string name="presentation_batch_g_lx_mine_login">去登入</string>
     <!-- PixelPlayerOLX 0.1.0：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v010_whats_new">
         <item>新增發現頁以啟用線上功能</item>
@@ -523,5 +526,14 @@
         <item>刪除推薦頁頂部的設定入口</item>
         <item>「我的」頁歌單分類移到第二位</item>
         <item>「排行榜」模組按鈕加寬，文字完整顯示</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101107_whats_new">
+        <item>QQ 收藏：改走客戶端協議端點並更換簽名演算法，修復 80105 被拒</item>
+        <item>QQ 搜尋：請求帶上登入態與簽名並自動重試，空結果大幅減少</item>
+        <item>播放通知按鈕調整為 上一首、播放/暫停、下一首、循環、收藏，單曲循環下上一首不再消失</item>
+        <item>發現頁：各平台「我的」常駐，未登入時顯示提示並提供登入入口</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101107_changes">
+        <item>播放頁：播放/暫停按鈕顏色重新與上一首/下一首區分</item>
     </string-array>
 </resources>

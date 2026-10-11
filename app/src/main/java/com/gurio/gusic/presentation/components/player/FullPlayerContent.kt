@@ -341,8 +341,9 @@ fun FullPlayerContent(
         container = playerAccentColor,
         content = playerOnAccentColor
     )
-    // 播放/暂停大按钮背景与循环、上一首/下一首按钮保持同色
-    val transportPlayPauseColors = transportSkipButtonColors
+    // 上一首/下一首/循环/收藏用主题色；播放/暂停大按钮单独用 tertiary，
+    // 与传输按钮形成主次区分
+    val transportPlayPauseColors = expressivePlayPauseButtonColors(LocalMaterialTheme.current)
     val transportSkipColors = transportSkipButtonColors
     val progressActiveColor = playerOnBaseColor
 
@@ -2823,13 +2824,6 @@ private fun expressivePlayPauseButtonColors(colorScheme: ColorScheme): Transport
     return TransportButtonColors(
         container = colorScheme.tertiaryFixedDim,
         content = colorScheme.onTertiaryFixed
-    )
-}
-
-private fun expressiveSkipButtonColors(colorScheme: ColorScheme): TransportButtonColors {
-    return TransportButtonColors(
-        container = colorScheme.secondaryFixedDim,
-        content = colorScheme.onSecondaryFixed
     )
 }
 

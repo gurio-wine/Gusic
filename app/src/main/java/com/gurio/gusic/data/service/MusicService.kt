@@ -607,6 +607,7 @@ class MusicService : MediaSessionService() {
                         MusicNotificationProvider.CUSTOM_COMMAND_SET_SHUFFLE_STATE,
                         MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_REPEAT_MODE,
                         MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_PLAY_MODE,
+                        MusicNotificationProvider.CUSTOM_COMMAND_SEEK_PREVIOUS,
                         MusicNotificationProvider.CUSTOM_COMMAND_COUNTED_PLAY,
                         MusicNotificationProvider.CUSTOM_COMMAND_CANCEL_COUNTED_PLAY,
                         MusicNotificationProvider.CUSTOM_COMMAND_SET_SLEEP_TIMER_DURATION,
@@ -721,6 +722,11 @@ class MusicService : MediaSessionService() {
                         }
                         refreshMediaSessionUi(session, force = true)
                         requestWidgetFullUpdate(force = true)
+                    }
+                    MusicNotificationProvider.CUSTOM_COMMAND_SEEK_PREVIOUS -> {
+                        // 自定义上一首：sessionCommand 形式不受 ExoPlayer 命令裁剪影响，
+                        // 单曲循环下也不会像 COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM 那样被移除导致按钮消失
+                        session.player.seekToPrevious()
                     }
                     MusicNotificationProvider.CUSTOM_COMMAND_LIKE -> {
                         val songId = session.player.currentMediaItem?.mediaId
@@ -2821,17 +2827,19 @@ class MusicService : MediaSessionService() {
             player.repeatMode == Player.REPEAT_MODE_ONE -> CommandButton.ICON_REPEAT_ONE
             else -> CommandButton.ICON_REPEAT_ALL
         }
+        // 通知布局槽容量有限：BACK/CENTRAL/FORWARD 各一格，其余进 OVERFLOW。
+        // 上一首占 BACK（sessionCommand 不受 player 命令过滤，单曲循环下也不会被 ExoPlayer 撤掉），
+        // 系统自动补 播放/暂停(CENTRAL) 与 下一首(FORWARD)，循环/收藏排进 OVERFLOW：
+        // 最终顺序 上一首、播放/暂停、下一首、循环、收藏
+        val previousButton = CommandButton.Builder(CommandButton.ICON_PREVIOUS)
+            .setDisplayName(getString(R.string.previous_track))
+            .setSessionCommand(SessionCommand(MusicNotificationProvider.CUSTOM_COMMAND_SEEK_PREVIOUS, Bundle.EMPTY))
+            .setSlots(CommandButton.SLOT_BACK)
+            .build()
         val playModeButton = CommandButton.Builder(playModeIcon)
             .setDisplayName(getString(R.string.presentation_batch_e_cd_toggle_repeat))
             .setSessionCommand(SessionCommand(MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_PLAY_MODE, Bundle.EMPTY))
-            // SLOT_BACK：排在通知传输控制（播放/下一首）之前，即最前面；
-            // 它占掉 backward 槽后系统不再自动补“上一首”，改为自带 prev 按钮回退到 OVERFLOW 槽
-            .setSlots(CommandButton.SLOT_BACK)
-            .build()
-        val previousButton = CommandButton.Builder(CommandButton.ICON_PREVIOUS)
-            .setDisplayName("Previous")
-            .setPlayerCommand(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
-            .setSlots(CommandButton.SLOT_BACK, CommandButton.SLOT_OVERFLOW)
+            .setSlots(CommandButton.SLOT_OVERFLOW)
             .build()
 
         val likeButton = CommandButton.Builder(
@@ -2842,7 +2850,7 @@ class MusicService : MediaSessionService() {
             .setSlots(CommandButton.SLOT_OVERFLOW)
             .build()
 
-        return listOf(playModeButton, previousButton, likeButton)
+        return listOf(previousButton, playModeButton, likeButton)
     }
 
     /**

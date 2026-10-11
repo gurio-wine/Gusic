@@ -542,47 +542,72 @@ class LxMusicRepository @Inject constructor(
         }
     }
 
-    // 旧的 client_search_cp 接口已下线，改走 musicu.fcg 的桌面搜索
+    // 旧的 client_search_cp 接口已下线，改走 musicu.fcg 的桌面搜索。
+    // 完全匿名（无 Cookie、无签名）会被软风控概率性返回空列表，这里带上登录态与 zza 签名，
+    // 并在结果为空时延迟静默重试一次
     private suspend fun searchQQ(keyword: String, page: Int): List<LxSong> = withContext(Dispatchers.IO) {
-        val payload = JsonObject().apply {
-            add("comm", JsonObject().apply {
-                addProperty("uin", "0")
-                addProperty("format", "json")
-                // 搜索接口要求 ct=19；ct=24 会被业务层软风控返回空列表
-                addProperty("ct", 19)
-                addProperty("cv", 0)
-            })
-            add("req_1", JsonObject().apply {
-                addProperty("module", "music.search.SearchCgiService")
-                addProperty("method", "DoSearchForQQMusicDesktop")
-                add("param", JsonObject().apply {
-                    addProperty("search_type", 0)
-                    addProperty("query", keyword)
-                    addProperty("page_num", page)
-                    addProperty("num_per_page", 30)
-                })
-            })
+        repeat(2) { attempt ->
+            val songs = searchQQOnce(keyword, page)
+            if (songs.isNotEmpty() || attempt == 1) return@withContext songs
+            delay(400)
         }
-        val req = Request.Builder().url("https://u.y.qq.com/cgi-bin/musicu.fcg")
-            .header("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36")
-            .header("Referer", "https://y.qq.com/")
-            .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
-            .build()
-        runCatching {
-            okHttpClient.newCall(req).execute().use { resp ->
-                val body = resp.body?.string().orEmpty()
-                val root = JsonParser.parseString(body).asJsonObject
-                val songs = root.getAsJsonObject("req_1")
-                    ?.getAsJsonObject("data")?.getAsJsonObject("body")
-                    ?.getAsJsonObject("song")?.getAsJsonArray("list")
-                    ?: return@use emptyList()
-                songs.mapNotNull { el -> TencentAccountApi.mapTrack(el) }
-            }
-        }.getOrElse {
-            Timber.w(it, "searchQQ failed keyword=$keyword page=$page")
-            emptyList()
-        }
+        emptyList()
     }
+
+    private suspend fun searchQQOnce(keyword: String, page: Int): List<LxSong> =
+        withContext(Dispatchers.IO) {
+            val cookie = tencentCookieStore.getCookie().orEmpty()
+            val cookies = TencentAccountApi.parseCookieMap(cookie)
+            val musicKey = TencentAccountApi.musicKey(cookies)
+            val uin = TencentAccountApi.cookieUin(cookies)
+            val payload = JsonObject().apply {
+                add("comm", JsonObject().apply {
+                    addProperty("uin", uin.ifEmpty { "0" })
+                    addProperty("format", "json")
+                    // 搜索接口要求 ct=19；ct=24 会被业务层软风控返回空列表
+                    addProperty("ct", 19)
+                    addProperty("cv", 0)
+                    if (musicKey.isNotEmpty()) addProperty("authst", musicKey)
+                })
+                add("req_1", JsonObject().apply {
+                    addProperty("module", "music.search.SearchCgiService")
+                    addProperty("method", "DoSearchForQQMusicDesktop")
+                    add("param", JsonObject().apply {
+                        addProperty("search_type", 0)
+                        addProperty("query", keyword)
+                        addProperty("page_num", page)
+                        addProperty("num_per_page", 30)
+                    })
+                })
+            }
+            val body = payload.toString()
+            val builder = Request.Builder()
+                .url("https://u.y.qq.com/cgi-bin/musicu.fcg?sign=${TencentAccountApi.getSecuritySign(body)}")
+                .header("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36")
+                .header("Referer", "https://y.qq.com/")
+            if (cookie.isNotBlank()) builder.header("Cookie", cookie)
+            val req = builder.post(body.toRequestBody("application/json; charset=utf-8".toMediaType()))
+                .build()
+            runCatching {
+                okHttpClient.newCall(req).execute().use { resp ->
+                    val bodyText = resp.body?.string().orEmpty()
+                    val root = JsonParser.parseString(bodyText).asJsonObject
+                    val block = root.getAsJsonObject("req_1")
+                    val bizCode = block?.get("code")?.takeIf { it.isJsonPrimitive }
+                        ?.let { runCatching { it.asInt }.getOrNull() }
+                    if (bizCode != null && bizCode != 0) {
+                        Timber.w("searchQQ biz code=$bizCode keyword=$keyword page=$page")
+                    }
+                    val songs = block?.getAsJsonObject("data")?.getAsJsonObject("body")
+                        ?.getAsJsonObject("song")?.getAsJsonArray("list")
+                        ?: return@use emptyList()
+                    songs.mapNotNull { el -> TencentAccountApi.mapTrack(el) }
+                }
+            }.getOrElse {
+                Timber.w(it, "searchQQ failed keyword=$keyword page=$page")
+                emptyList()
+            }
+        }
 
     private suspend fun searchMigu(keyword: String, page: Int): List<LxSong> = withContext(Dispatchers.IO) {
         val encoded = URLEncoder.encode(keyword, "UTF-8")

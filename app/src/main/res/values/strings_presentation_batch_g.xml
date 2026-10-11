@@ -385,6 +385,9 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
     <string name="presentation_batch_g_changelog_fork_title">A brand-new fork: Gusic</string>
     <string name="presentation_batch_g_changelog_legacy_header">PixelPlayerOSS</string>
     <string name="presentation_batch_g_changelog_legacy_ellipsis">…</string>
+    <!-- Discover page: "Mine" module not-logged-in placeholder -->
+    <string name="presentation_batch_g_lx_mine_not_logged_in_title">Not logged in</string>
+    <string name="presentation_batch_g_lx_mine_login">Log in</string>
     <!-- PixelPlayerOLX 0.1.0：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v010_whats_new">
         <item>Added a Discover page to enable online features.</item>
@@ -523,5 +526,14 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>Removed the settings entry from the Home top bar</item>
         <item>Mine page: Playlists category moved to second</item>
         <item>"Charts" module button widened so its label shows in full</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101107_whats_new">
+        <item>QQ favorites: rewritten onto the client protocol endpoint with a new signature, fixing the 80105 rejection</item>
+        <item>QQ search: requests now carry login state and signature with an automatic retry, far fewer empty results</item>
+        <item>Notification buttons reordered to previous, play/pause, next, cycle, favorite; previous no longer vanishes in repeat-one</item>
+        <item>Discover page: "Mine" stays available on every platform, showing a login prompt and entry when signed out</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101107_changes">
+        <item>Player page: play/pause button color distinct from previous/next again</item>
     </string-array>
 </resources>

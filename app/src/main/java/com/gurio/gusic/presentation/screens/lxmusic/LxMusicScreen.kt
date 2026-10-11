@@ -438,7 +438,7 @@ fun LxMusicScreen(
         browseState.module == "playlist" ||
         browseState.selectedPlaylist != null ||
         browseState.isPlaylistSearchMode ||
-        (mineAvailable && (browseState.module == "board" || browseState.module == "search"))
+        browseState.module == "board" || browseState.module == "search"
     val topLayerVisible = playerSheetState == com.gurio.gusic.presentation.viewmodel.PlayerSheetState.EXPANDED ||
         queueSheetVisible || showScriptSheet || showUrlImport || showLoginDialog
     BackHandler(enabled = isSelectionMode && !topLayerVisible) {
@@ -509,21 +509,20 @@ fun LxMusicScreen(
             )
         },
     ) { innerPadding ->
+        // “我的”模块固定保留（未登录时显示登录引导占位），四个模块页序固定
         fun modulePageIndex(module: String): Int = when (module) {
-            "mine" -> if (mineAvailable) 0 else 1
-            "board" -> if (mineAvailable) 1 else 0
-            "playlist" -> if (mineAvailable) 2 else 1
-            else -> if (mineAvailable) 3 else 2
+            "mine" -> 0
+            "board" -> 1
+            "playlist" -> 2
+            else -> 3
         }
-        fun pageIndexToModule(page: Int): String = if (mineAvailable) {
-            when (page) { 0 -> "mine"; 1 -> "board"; 2 -> "playlist"; else -> "search" }
-        } else {
-            when (page) { 0 -> "board"; 1 -> "playlist"; else -> "search" }
+        fun pageIndexToModule(page: Int): String = when (page) {
+            0 -> "mine"; 1 -> "board"; 2 -> "playlist"; else -> "search"
         }
 
         val pagerState = rememberPagerState(
             initialPage = modulePageIndex(browseState.module),
-            pageCount = { if (mineAvailable) 4 else 3 },
+            pageCount = { 4 },
         )
         val isListScrolling = remember { mutableStateOf(false) }
         LaunchedEffect(browseState.module, mineAvailable) {
@@ -599,14 +598,6 @@ fun LxMusicScreen(
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    val mineBubbleProgress by animateFloatAsState(
-                        targetValue = if (mineAvailable) 1f else 0f,
-                        animationSpec = androidx.compose.animation.core.spring(
-                            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
-                        ),
-                        label = "mineBubble",
-                    )
                     val mineLabel = stringResource(R.string.lx_tab_mine)
                     val boardLabel = stringResource(R.string.lx_tab_board)
                     val playlistLabel = stringResource(R.string.lx_tab_playlist)
@@ -621,15 +612,8 @@ fun LxMusicScreen(
                             label = mineLabel,
                             icon = Icons.Rounded.Person,
                             selected = indicatorModule == "mine",
-                            onClick = { if (mineBubbleProgress > 0.5f) viewModel.selectModule("mine") },
-                            modifier = Modifier
-                                .weight(mineBubbleProgress.coerceIn(0.0001f, 1f))
-                                .clip(RoundedCornerShape(16.dp))
-                                .graphicsLayer {
-                                    alpha = mineBubbleProgress
-                                    scaleX = mineBubbleProgress
-                                    transformOrigin = TransformOrigin(0f, 0.5f)
-                                },
+                            onClick = { viewModel.selectModule("mine") },
+                            modifier = Modifier.weight(1f),
                         )
                         // “排行榜”三字更长，多分一点宽度保证完整显示
                         LxModuleButton(boardLabel, Icons.Rounded.Leaderboard,
@@ -651,9 +635,9 @@ fun LxMusicScreen(
                         key = { it },
                         pageSpacing = 0.dp,
                     ) { page ->
-                        if (mineAvailable) {
-                            when (page) {
-                                0 -> {
+                        when (page) {
+                            0 -> {
+                                if (mineAvailable) {
                                     val mineNickname: String?
                                     val mineAvatar: String?
                                     val mineVipType: Int
@@ -710,89 +694,60 @@ fun LxMusicScreen(
                                         multiSelectionState = multiSelectionState,
                                         onSelectionOptionsClick = { showMultiSelectionSheet = true },
                                     )
+                                } else {
+                                    // 未登录：居中占位提示，并提供登录入口（复用各平台现有登录弹窗）
+                                    LxMineNotLoggedInPlaceholder(
+                                        platformLabel = platformName(selectedSource),
+                                        onLogin = {
+                                            when (selectedSource) {
+                                                LxSources.TENCENT -> clearAllWebViewSession { showTxWebLoginDialog = true }
+                                                LxSources.KUGOU -> clearAllWebViewSession { showKgLoginDialog = true }
+                                                LxSources.KUWO -> clearAllWebViewSession { showKwLoginDialog = true }
+                                                else -> clearNeteaseWebViewSession { showLoginDialog = true }
+                                            }
+                                        },
+                                    )
                                 }
-                                1 -> LxBoardPage(browseState, viewModel, playerViewModel, playLxSong,
-                                    playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
-                                    onScrollingChange = { if (pagerState.currentPage == 1) isListScrolling.value = it },
-                                    onSongMoreOptions = { lxInfoSong = it },
-                                    isSelectionMode = isSelectionMode,
-                                    selectedSongIds = selectedSongIds,
-                                    onSongLongPress = toggleLxSongSelection,
-                                    onSongSelectionToggle = toggleLxSongSelection,
-                                    getSelectionIndex = { songId ->
-                                        multiSelectionState.getSelectionIndex(songId)
-                                    },
-                                    multiSelectionState = multiSelectionState,
-                                    onSelectionOptionsClick = { showMultiSelectionSheet = true })
-                                2 -> LxPlaylistPage(browseState, viewModel, playerViewModel, playLxSong,
-                                    playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
-                                    onScrollingChange = { if (pagerState.currentPage == 2) isListScrolling.value = it },
-                                    onSongMoreOptions = { lxInfoSong = it },
-                                    isSelectionMode = isSelectionMode,
-                                    selectedSongIds = selectedSongIds,
-                                    onSongLongPress = toggleLxSongSelection,
-                                    onSongSelectionToggle = toggleLxSongSelection,
-                                    getSelectionIndex = { songId ->
-                                        multiSelectionState.getSelectionIndex(songId)
-                                    },
-                                    multiSelectionState = multiSelectionState,
-                                    onSelectionOptionsClick = { showMultiSelectionSheet = true })
-                                else -> LxSearchPage(browseState, searchState, viewModel, playerViewModel, playSearchSong,
-                                    playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
-                                    onScrollingChange = { if (pagerState.currentPage == 3) isListScrolling.value = it },
-                                    onSongMoreOptions = { lxInfoSong = it },
-                                    isSelectionMode = isSelectionMode,
-                                    selectedSongIds = selectedSongIds,
-                                    onSongLongPress = toggleLxSongSelection,
-                                    onSongSelectionToggle = toggleLxSongSelection,
-                                    getSelectionIndex = { songId ->
-                                        multiSelectionState.getSelectionIndex(songId)
-                                    },
-                                    multiSelectionState = multiSelectionState,
-                                    onSelectionOptionsClick = { showMultiSelectionSheet = true })
                             }
-                        } else {
-                            when (page) {
-                                0 -> LxBoardPage(browseState, viewModel, playerViewModel, playLxSong,
-                                    playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
-                                    onScrollingChange = { if (pagerState.currentPage == 0) isListScrolling.value = it },
-                                    onSongMoreOptions = { lxInfoSong = it },
-                                    isSelectionMode = isSelectionMode,
-                                    selectedSongIds = selectedSongIds,
-                                    onSongLongPress = toggleLxSongSelection,
-                                    onSongSelectionToggle = toggleLxSongSelection,
-                                    getSelectionIndex = { songId ->
-                                        multiSelectionState.getSelectionIndex(songId)
-                                    },
-                                    multiSelectionState = multiSelectionState,
-                                    onSelectionOptionsClick = { showMultiSelectionSheet = true })
-                                1 -> LxPlaylistPage(browseState, viewModel, playerViewModel, playLxSong,
-                                    playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
-                                    onScrollingChange = { if (pagerState.currentPage == 1) isListScrolling.value = it },
-                                    onSongMoreOptions = { lxInfoSong = it },
-                                    isSelectionMode = isSelectionMode,
-                                    selectedSongIds = selectedSongIds,
-                                    onSongLongPress = toggleLxSongSelection,
-                                    onSongSelectionToggle = toggleLxSongSelection,
-                                    getSelectionIndex = { songId ->
-                                        multiSelectionState.getSelectionIndex(songId)
-                                    },
-                                    multiSelectionState = multiSelectionState,
-                                    onSelectionOptionsClick = { showMultiSelectionSheet = true })
-                                else -> LxSearchPage(browseState, searchState, viewModel, playerViewModel, playSearchSong,
-                                    playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
-                                    onScrollingChange = { if (pagerState.currentPage == 2) isListScrolling.value = it },
-                                    onSongMoreOptions = { lxInfoSong = it },
-                                    isSelectionMode = isSelectionMode,
-                                    selectedSongIds = selectedSongIds,
-                                    onSongLongPress = toggleLxSongSelection,
-                                    onSongSelectionToggle = toggleLxSongSelection,
-                                    getSelectionIndex = { songId ->
-                                        multiSelectionState.getSelectionIndex(songId)
-                                    },
-                                    multiSelectionState = multiSelectionState,
-                                    onSelectionOptionsClick = { showMultiSelectionSheet = true })
-                            }
+                            1 -> LxBoardPage(browseState, viewModel, playerViewModel, playLxSong,
+                                playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
+                                onScrollingChange = { if (pagerState.currentPage == 1) isListScrolling.value = it },
+                                onSongMoreOptions = { lxInfoSong = it },
+                                isSelectionMode = isSelectionMode,
+                                selectedSongIds = selectedSongIds,
+                                onSongLongPress = toggleLxSongSelection,
+                                onSongSelectionToggle = toggleLxSongSelection,
+                                getSelectionIndex = { songId ->
+                                    multiSelectionState.getSelectionIndex(songId)
+                                },
+                                multiSelectionState = multiSelectionState,
+                                onSelectionOptionsClick = { showMultiSelectionSheet = true })
+                            2 -> LxPlaylistPage(browseState, viewModel, playerViewModel, playLxSong,
+                                playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
+                                onScrollingChange = { if (pagerState.currentPage == 2) isListScrolling.value = it },
+                                onSongMoreOptions = { lxInfoSong = it },
+                                isSelectionMode = isSelectionMode,
+                                selectedSongIds = selectedSongIds,
+                                onSongLongPress = toggleLxSongSelection,
+                                onSongSelectionToggle = toggleLxSongSelection,
+                                getSelectionIndex = { songId ->
+                                    multiSelectionState.getSelectionIndex(songId)
+                                },
+                                multiSelectionState = multiSelectionState,
+                                onSelectionOptionsClick = { showMultiSelectionSheet = true })
+                            else -> LxSearchPage(browseState, searchState, viewModel, playerViewModel, playSearchSong,
+                                playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
+                                onScrollingChange = { if (pagerState.currentPage == 3) isListScrolling.value = it },
+                                onSongMoreOptions = { lxInfoSong = it },
+                                isSelectionMode = isSelectionMode,
+                                selectedSongIds = selectedSongIds,
+                                onSongLongPress = toggleLxSongSelection,
+                                onSongSelectionToggle = toggleLxSongSelection,
+                                getSelectionIndex = { songId ->
+                                    multiSelectionState.getSelectionIndex(songId)
+                                },
+                                multiSelectionState = multiSelectionState,
+                                onSelectionOptionsClick = { showMultiSelectionSheet = true })
                         }
                     }
                     }
@@ -2025,6 +1980,45 @@ private fun LxModuleButton(
                 softWrap = false,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+    }
+}
+
+// “我的”页未登录占位：提示当前平台未登录，并提供登录入口（复用现有平台登录弹窗）
+@Composable
+private fun LxMineNotLoggedInPlaceholder(
+    platformLabel: String,
+    onLogin: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.Rounded.Person,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.presentation_batch_g_lx_mine_not_logged_in_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = platformLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            )
+            Spacer(Modifier.height(20.dp))
+            FilledTonalButton(
+                onClick = onLogin,
+                shape = RoundedCornerShape(20.dp),
+            ) {
+                Text(text = stringResource(R.string.presentation_batch_g_lx_mine_login))
+            }
         }
     }
 }

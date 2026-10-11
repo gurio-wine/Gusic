@@ -718,7 +718,8 @@ class LxMusicViewModel @Inject constructor(
         resetMineNavigation()
         val restoredModule = when (val remembered = perSourceModule[source]) {
             null -> "board"
-            "mine" -> if (isSourceLoggedIn(source)) "mine" else "board"
+            // “我的”模块固定保留，未登录时由界面显示占位
+            "mine" -> "mine"
             else -> remembered
         }
         _browseState.value = st.copy(
@@ -894,10 +895,10 @@ class LxMusicViewModel @Inject constructor(
         }
 
         if (module == "mine") {
-            if (!isSourceLoggedIn(_selectedSource.value)) return
+            // 未登录也允许进入“我的”模块：界面显示未登录占位与登录入口
             _browseState.value = _browseState.value.copy(module = "mine", error = null)
             perSourceModule[_selectedSource.value] = "mine"
-            ensureMineHome()
+            if (isSourceLoggedIn(_selectedSource.value)) ensureMineHome()
             return
         }
         val source = _selectedSource.value
@@ -1048,8 +1049,8 @@ class LxMusicViewModel @Inject constructor(
 
     fun back(): Boolean {
         val st = _browseState.value
-        val mineHomeAvailable = isSourceLoggedIn(_selectedSource.value)
-        val rootModule = if (mineHomeAvailable) "mine" else "board"
+        // “我的”模块固定保留，返回的根模块始终为 mine（未登录时显示占位）
+        val rootModule = "mine"
         if (st.module == "mine") {
             if (mineBackStack.size > 1) {
                 backMinePage()
@@ -1081,11 +1082,9 @@ class LxMusicViewModel @Inject constructor(
             selectModule(rootModule)
             return true
         }
-        if (mineHomeAvailable) {
-            selectModule("mine")
-            return true
-        }
-        return false
+        // board/search 返回也回到“我的”（未登录时是占位页）
+        selectModule("mine")
+        return true
     }
 
 
@@ -1361,7 +1360,7 @@ class LxMusicViewModel @Inject constructor(
         _mineState.value = MineState()
         _searchState.value = SearchState()
         repository.clearNeteaseUid()
-        if (_browseState.value.module == "mine") selectModule("board")
+        // 登出后停留在“我的”占位页，方便用户直接重新登录
     }
 
 
@@ -1463,9 +1462,7 @@ class LxMusicViewModel @Inject constructor(
         clearAllWebViewSession()
         tencentCookieStore.clear()
         repository.setTxLikedSongIds(emptySet())
-        if (_browseState.value.module == "mine" && _selectedSource.value == LxSources.TENCENT) {
-            selectModule("board")
-        }
+        // 登出后停留在“我的”占位页，方便用户直接重新登录
     }
 
     fun logoutKugou() {
@@ -1473,9 +1470,7 @@ class LxMusicViewModel @Inject constructor(
         kugouCookieStore.clear()
         repository.clearKgCloudCache()
         repository.setKgLikedSongIds(emptySet())
-        if (_browseState.value.module == "mine" && _selectedSource.value == LxSources.KUGOU) {
-            selectModule("board")
-        }
+        // 登出后停留在“我的”占位页，方便用户直接重新登录
     }
 
     fun logoutKuwo() {
@@ -1483,9 +1478,7 @@ class LxMusicViewModel @Inject constructor(
         kuwoCookieStore.clear()
         repository.clearKwLikedListCache()
         repository.setKwLikedSongIds(emptySet())
-        if (_browseState.value.module == "mine" && _selectedSource.value == LxSources.KUWO) {
-            selectModule("board")
-        }
+        // 登出后停留在“我的”占位页，方便用户直接重新登录
     }
 
     private fun MineState.likedPlaylist(): LxPlaylist? =
