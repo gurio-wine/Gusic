@@ -50,6 +50,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ViewList
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -133,6 +134,7 @@ import com.gurio.gusic.data.model.MusicFolder
 import com.gurio.gusic.data.model.FolderSource
 import com.gurio.gusic.data.model.Song
 import com.gurio.gusic.data.lxmusic.LxQualities
+import com.gurio.gusic.data.lxmusic.LxSong
 import com.gurio.gusic.data.lxmusic.LxSongMapper
 import com.gurio.gusic.data.lxmusic.LxSources
 import com.gurio.gusic.data.model.SortOption
@@ -140,7 +142,11 @@ import com.gurio.gusic.data.model.StorageFilter
 import com.gurio.gusic.presentation.components.MiniPlayerHeight
 import com.gurio.gusic.presentation.components.SmartImage
 import com.gurio.gusic.presentation.screens.lxmusic.LxBatchDownloadQualityDialog
+import com.gurio.gusic.presentation.screens.lxmusic.LxLoginDialogsHost
 import com.gurio.gusic.presentation.screens.lxmusic.LxMusicViewModel
+import com.gurio.gusic.presentation.screens.lxmusic.LxScriptManagementSheet
+import com.gurio.gusic.presentation.screens.lxmusic.clearAllWebViewSession
+import com.gurio.gusic.presentation.screens.lxmusic.clearNeteaseWebViewSession
 import com.gurio.gusic.presentation.components.resolveMainScreenBottomGradientHeight
 import com.gurio.gusic.presentation.components.resolveNavBarOccupiedHeight
 import androidx.compose.foundation.layout.WindowInsets
@@ -311,16 +317,33 @@ fun LibraryScreen(
     val isLoadingPlatformSongs by likedStateHolder.loadingPlatformSongs.collectAsStateWithLifecycle()
     val platformSongsError by likedStateHolder.platformSongsError.collectAsStateWithLifecycle()
     val platformLikedCounts by likedStateHolder.platformLikedCounts.collectAsStateWithLifecycle()
+    // “歌单”三级结构：一级本软件歌单 / 二级平台歌单 / 三级歌单歌曲（平台登录态复用 liked 的 loggedInPlatforms）
+    val playlistsStateHolder = libraryViewModel.playlists
+    val playlistsScope by playlistsStateHolder.playlistsScope.collectAsStateWithLifecycle()
+    val platformPlaylists by playlistsStateHolder.platformPlaylists.collectAsStateWithLifecycle()
+    val isLoadingPlatformPlaylists by playlistsStateHolder.platformPlaylistsLoading.collectAsStateWithLifecycle()
+    val platformPlaylistsError by playlistsStateHolder.platformPlaylistsError.collectAsStateWithLifecycle()
+    val selectedPlatformPlaylist by playlistsStateHolder.selectedPlaylist.collectAsStateWithLifecycle()
+    val playlistSongs by playlistsStateHolder.playlistSongs.collectAsStateWithLifecycle()
+    val isLoadingPlaylistSongs by playlistsStateHolder.playlistSongsLoading.collectAsStateWithLifecycle()
+    val playlistSongsError by playlistsStateHolder.playlistSongsError.collectAsStateWithLifecycle()
     val favoriteSongCount by libraryViewModel.favoriteSongCountFlow.collectAsStateWithLifecycle(initialValue = 0)
     // Activity 级共享的 LxMusicViewModel（与 LxMusicScreen 等页面共用同一实例）
     val lxMusicViewModel: LxMusicViewModel = hiltViewModel(
         viewModelStoreOwner = LocalContext.current as androidx.activity.ComponentActivity
     )
+    // 音源脚本管理 sheet 与四平台登录弹窗（与发现页共用同一 VM 状态）
+    var showScriptSheet by remember { mutableStateOf(false) }
+    var showNeteaseLogin by remember { mutableStateOf(false) }
+    var showTencentLogin by remember { mutableStateOf(false) }
+    var showKugouLogin by remember { mutableStateOf(false) }
+    var showKuwoLogin by remember { mutableStateOf(false) }
     val onRefresh: () -> Unit = {
         isRefreshing = true
         when (currentTabId) {
-            LibraryTabId.SONGS,
-            LibraryTabId.PLAYLISTS -> Unit
+            LibraryTabId.SONGS -> Unit
+            // 平台层级走平台自己的强刷；一级本软件歌单维持本地刷新
+            LibraryTabId.PLAYLISTS -> playlistsStateHolder.refresh()
             LibraryTabId.LIKED -> when (likedScope) {
                 // 平台二级列表走平台自己的强刷；一级入口/本软件二级维持本地刷新
                 null, LxSources.LOCAL -> Unit
@@ -366,6 +389,38 @@ fun LibraryScreen(
                     startSong = song,
                     queueName = LxSources.labelRes(lxSong.source)?.let { context.getString(it) }
                         ?: LxSources.shortLabel(lxSong.source),
+                    origin = PlaybackOrigin.ONLINE
+                )
+            }
+        }
+    }
+    val latestPlaylistSongs by rememberUpdatedState(playlistSongs)
+    val latestSelectedPlatformPlaylist by rememberUpdatedState(selectedPlatformPlaylist)
+    // 平台歌单歌曲的五步播放链路（与 onPlayPlatformSong 逐字一致，仅队列来源与队列名不同）
+    val onPlayPlaylistSong: (LxSong) -> Unit = remember(lxMusicViewModel, playerViewModel, context) {
+        { song ->
+            scope.launch {
+                val resolved = lxMusicViewModel.ensureActiveScriptForPlayback()
+                if (resolved == null && song.source !in LxSources.ALL) {
+                    val hasDisabled = lxMusicViewModel.hasUserDisabledScripts()
+                    Toast.makeText(
+                        context,
+                        if (hasDisabled) context.getString(R.string.lx_msg_source_disabled)
+                        else context.getString(R.string.lxmusic_need_script_or_cookie),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@launch
+                }
+                val queueSongs = latestPlaylistSongs.ifEmpty { listOf(song) }
+                lxMusicViewModel.recordPlay(song)
+                lxMusicViewModel.cacheSongsMetadata(queueSongs)
+                lxMusicViewModel.setPlaybackQueueLxSongs(queueSongs)
+                playerViewModel.playSongs(
+                    songsToPlay = queueSongs.map { LxSongMapper.toSong(it) },
+                    startSong = LxSongMapper.toSong(song),
+                    queueName = latestSelectedPlatformPlaylist?.name
+                        ?: LxSources.labelRes(song.source)?.let { context.getString(it) }
+                        ?: LxSources.shortLabel(song.source),
                     origin = PlaybackOrigin.ONLINE
                 )
             }
@@ -609,8 +664,15 @@ fun LibraryScreen(
                     !isSortSheetVisible
         }
     }
+    val canHandlePlaylistsBack by remember {
+        derivedStateOf {
+            currentTabId == LibraryTabId.PLAYLISTS &&
+                    playlistsScope != null &&
+                    !isSortSheetVisible
+        }
+    }
 
-    BackHandler(enabled = hasSelectionInCurrentTab || canHandleFolderBack || canHandleLikedBack) {
+    BackHandler(enabled = hasSelectionInCurrentTab || canHandleFolderBack || canHandleLikedBack || canHandlePlaylistsBack) {
         when {
             hasSelectionInCurrentTab -> {
                 when (currentTabId) {
@@ -649,6 +711,10 @@ fun LibraryScreen(
 
             canHandleLikedBack -> {
                 likedStateHolder.backToLikedEntries()
+            }
+
+            canHandlePlaylistsBack -> {
+                playlistsStateHolder.back()
             }
         }
     }
@@ -771,6 +837,19 @@ fun LibraryScreen(
                         }
                     },
                     actions = {
+                        FilledIconButton(
+                            modifier = Modifier.padding(end = 8.dp),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            onClick = { showScriptSheet = true }
+                        ) {
+                            Icon(
+                                Icons.Rounded.Build,
+                                contentDescription = stringResource(R.string.lx_desc_script_management)
+                            )
+                        }
                         FilledIconButton(
                             modifier = Modifier.padding(end = 14.dp),
                             colors = IconButtonDefaults.filledIconButtonColors(
@@ -956,8 +1035,9 @@ fun LibraryScreen(
                         }
 
                         // 仅在选择模式、歌单或文件夹标签下才有动作行；其余标签整行不渲染也不占空间
+                        // 歌单平台层级（二级/三级）下隐藏新建/导入按钮，整行不渲染
                         val actionRowHasContent = hasSelectionInCurrentTab ||
-                            currentTabId == LibraryTabId.PLAYLISTS ||
+                            (currentTabId == LibraryTabId.PLAYLISTS && playlistsScope == null) ||
                             (currentTabId == LibraryTabId.FOLDERS &&
                                 (!playerUiState.isFoldersPlaylistView || playerUiState.currentFolder != null))
 
@@ -985,7 +1065,10 @@ fun LibraryScreen(
                                     SelectionActionRow(
                                         selectedCount = selectedPlaylists.size,
                                         onSelectAll = {
-                                            playerViewModel.playlistSelectionStateHolder.selectAll(visiblePlaylists)
+                                            // 仅在本软件歌单一级列表中全选；平台层级下为无副作用空操作
+                                            if (playlistsScope == null) {
+                                                playerViewModel.playlistSelectionStateHolder.selectAll(visiblePlaylists)
+                                            }
                                         },
                                         onDeselect = { playerViewModel.playlistSelectionStateHolder.clearSelection() },
                                         onOptionsClick = { showPlaylistMultiSelectionSheet = true }
@@ -1067,7 +1150,7 @@ fun LibraryScreen(
                                         showPlaylistCreationTypeDialog = true
                                     },
                                     iconRotation = iconRotation,
-                                    isPlaylistTab = currentTabId == LibraryTabId.PLAYLISTS,
+                                    isPlaylistTab = currentTabId == LibraryTabId.PLAYLISTS && playlistsScope == null,
                                     isFoldersTab = currentTabId == LibraryTabId.FOLDERS && (!playerUiState.isFoldersPlaylistView || playerUiState.currentFolder != null),
                                     onImportM3uClick = {
                                         m3uImportLauncher.launch(
@@ -1094,7 +1177,12 @@ fun LibraryScreen(
                         // 排序面板仅在“我喜欢”的本软件二级列表中可用（一级入口/平台列表不显示）
                         val likedSortSheetAllowed = currentTabId != LibraryTabId.LIKED ||
                             likedScope == LxSources.LOCAL
-                        if (isSortSheetVisible && sanitizedSortOptions.isNotEmpty() && likedSortSheetAllowed) {
+                        // 歌单排序面板仅在一级本软件歌单列表中可用（平台层级不显示）
+                        val playlistsSortSheetAllowed = currentTabId != LibraryTabId.PLAYLISTS ||
+                            playlistsScope == null
+                        if (isSortSheetVisible && sanitizedSortOptions.isNotEmpty() &&
+                            likedSortSheetAllowed && playlistsSortSheetAllowed
+                        ) {
                             val currentSelectionKey = currentSelectedSortOption?.storageKey
                             val selectedOptionForSheet = sanitizedSortOptions.firstOrNull { option ->
                                 option.storageKey == currentSelectionKey
@@ -1305,7 +1393,21 @@ fun LibraryScreen(
                                             selectedPlaylistIds = selectedPlaylistIds,
                                             onPlaylistLongPress = onPlaylistLongPress,
                                             onPlaylistSelectionToggle = onPlaylistSelectionToggle,
-                                            onPlaylistOptionsClick = { showPlaylistMultiSelectionSheet = true }
+                                            playlistsScope = playlistsScope,
+                                            loggedInPlatforms = loggedInPlatforms,
+                                            platformPlaylists = platformPlaylists,
+                                            isLoadingPlatformPlaylists = isLoadingPlatformPlaylists,
+                                            platformPlaylistsError = platformPlaylistsError,
+                                            selectedPlaylist = selectedPlatformPlaylist,
+                                            playlistSongs = playlistSongs,
+                                            isLoadingPlaylistSongs = isLoadingPlaylistSongs,
+                                            playlistSongsError = playlistSongsError,
+                                            onSelectPlaylistsScope = { playlistsStateHolder.selectPlaylistsScope(it) },
+                                            onOpenPlatformPlaylist = { playlistsStateHolder.openPlatformPlaylist(it) },
+                                            onPlayPlaylistSong = onPlayPlaylistSong,
+                                            onRefreshPlatform = { playlistsStateHolder.refresh() },
+                                            onBackToPlaylistsEntries = { playlistsStateHolder.backToPlaylistsEntries() },
+                                            onClosePlatformPlaylist = { playlistsStateHolder.closePlatformPlaylist() }
                                         )
                                     }
 
@@ -1771,6 +1873,28 @@ fun LibraryScreen(
             onDismiss = { showReorderTabsSheet = false }
         )
     }
+
+    if (showScriptSheet) {
+        LxScriptManagementSheet(
+            onDismiss = { showScriptSheet = false },
+            onShowNeteaseLogin = { clearNeteaseWebViewSession { showNeteaseLogin = true } },
+            onShowTencentLogin = { clearAllWebViewSession { showTencentLogin = true } },
+            onShowKugouLogin = { clearAllWebViewSession { showKugouLogin = true } },
+            onShowKuwoLogin = { clearAllWebViewSession { showKuwoLogin = true } },
+            lxMusicViewModel = lxMusicViewModel,
+        )
+    }
+    LxLoginDialogsHost(
+        lxMusicViewModel = lxMusicViewModel,
+        showNetease = showNeteaseLogin,
+        showTencent = showTencentLogin,
+        showKugou = showKugouLogin,
+        showKuwo = showKuwoLogin,
+        onDismissNetease = { showNeteaseLogin = false },
+        onDismissTencent = { showTencentLogin = false },
+        onDismissKugou = { showKugouLogin = false },
+        onDismissKuwo = { showKuwoLogin = false },
+    )
 
     if (showMergePlaylistDialog && pendingMergePlaylistIds.isNotEmpty()) {
         var mergePlaylistName by remember { mutableStateOf("") }

@@ -4978,4 +4978,18 @@ class LxMusicRepository @Inject constructor(
             }
         }.getOrNull()
     }
+
+    /**
+     * 按“我的”页歌单引用加载歌曲：tx/kg/kw 用户歌单 id 带平台前缀（tx_pl_/kg_cloud_/kw_pl_），
+     * wy 为裸数字 id。tx/kg/kw 一次性全量；wy 取第一页全量。
+     * 未带前缀的 id 仅网易歌单合法（tx/kg/kw 的裸 id 是红心引用），其余形态返回 null 走错误态，
+     * 避免把未知平台的引用误发给网易接口。
+     */
+    suspend fun fetchUserPlaylistSongsByRef(source: String, ref: String): List<LxSong>? = when {
+        ref.startsWith("kg_cloud_") -> fetchKgCloudPlaylistSongs(ref.removePrefix("kg_cloud_"))
+        ref.startsWith("kw_pl_") -> fetchKwUserPlaylistSongs(ref.removePrefix("kw_pl_"))
+        ref.startsWith("tx_pl_") -> fetchTxUserPlaylistSongs(ref.removePrefix("tx_pl_"))
+        source == LxSources.NETEASE -> fetchNeteasePlaylistSongs(ref).first
+        else -> null
+    }
 }

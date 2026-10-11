@@ -352,6 +352,7 @@
 <string name="lx_queue_name_playlist">播放列表</string>
 <string name="lx_msg_playlist_no_songs">歌单暂无歌曲</string>
 <string name="lx_desc_script_management">音源脚本管理</string>
+<string name="lx_account_chip_not_logged_in">未登录</string>
 <string name="lx_desc_settings">设置</string>
 <string name="lx_tab_mine">我的</string>
 <string name="lx_tab_board">排行榜</string>

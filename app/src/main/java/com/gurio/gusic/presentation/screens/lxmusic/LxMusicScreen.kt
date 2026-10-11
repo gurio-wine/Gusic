@@ -1,8 +1,6 @@
 package com.gurio.gusic.presentation.screens.lxmusic
 
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -24,9 +22,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -44,7 +39,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -63,8 +57,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
@@ -75,10 +67,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -95,25 +84,18 @@ import com.gurio.gusic.presentation.components.subcomps.SelectionCountPill
 import com.gurio.gusic.data.lxmusic.LxQualities
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.ExpandLess
-import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Leaderboard
-import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.MyLocation
-import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.UploadFile
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -179,7 +161,6 @@ import kotlinx.coroutines.launch
 import kotlinx.collections.immutable.toImmutableList
 import kotlin.math.abs
 import com.gurio.gusic.R
-import com.gurio.gusic.data.lxmusic.LxScriptMeta
 import com.gurio.gusic.data.lxmusic.LxSongMapper
 import com.gurio.gusic.data.lxmusic.LxSources
 import com.gurio.gusic.presentation.components.MiniPlayerHeight
@@ -217,12 +198,8 @@ fun LxMusicScreen(
         viewModelStoreOwner = LocalContext.current as androidx.activity.ComponentActivity
     ),
 ) {
-    val scripts by viewModel.scripts.collectAsStateWithLifecycle()
-    val activeScript by viewModel.activeScript.collectAsStateWithLifecycle()
-    val runtimePaths by viewModel.runtimePaths.collectAsStateWithLifecycle()
     val searchState by viewModel.searchState.collectAsStateWithLifecycle()
     val selectedSource by viewModel.selectedSource.collectAsStateWithLifecycle()
-    val loadState by viewModel.loadState.collectAsStateWithLifecycle()
 
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     LaunchedEffect(stablePlayerState.currentSong?.id) {
@@ -237,15 +214,10 @@ fun LxMusicScreen(
     val playerSheetState by playerViewModel.sheetState.collectAsStateWithLifecycle()
     val queueSheetVisible by playerViewModel.isQueueSheetVisible.collectAsStateWithLifecycle()
 
-    var showScriptSheet by remember { mutableStateOf(false) }
     var lxInfoSong by remember { mutableStateOf<com.gurio.gusic.data.lxmusic.LxSong?>(null) }
     var showLxArtistPicker by remember { mutableStateOf(false) }
     var lxArtistPickerCandidates by remember { mutableStateOf<List<com.gurio.gusic.data.lxmusic.LxArtist>>(emptyList()) }
     var lxArtistPickerSource by remember { mutableStateOf("") }
-    var showUrlImport by remember { mutableStateOf(false) }
-    var urlInput by remember { mutableStateOf("") }
-    var urlImporting by remember { mutableStateOf(false) }
-    var scriptToDelete by remember { mutableStateOf<LxScriptMeta?>(null) }
     var showPlatformOrderSheet by remember { mutableStateOf(false) }
     var showLoginDialog by remember { mutableStateOf(false) }
     var showTxWebLoginDialog by remember { mutableStateOf(false) }
@@ -253,24 +225,16 @@ fun LxMusicScreen(
     var showKwLoginDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    val neteaseCookie by viewModel.neteaseCookie.collectAsStateWithLifecycle()
     val neteaseVipType by viewModel.neteaseVipType.collectAsStateWithLifecycle()
-    val neteaseCookieValid by viewModel.neteaseCookieValid.collectAsStateWithLifecycle()
     val neteaseLoggedIn by viewModel.neteaseLoggedIn.collectAsStateWithLifecycle()
     val neteaseNickname by viewModel.neteaseNickname.collectAsStateWithLifecycle()
     val neteaseAvatar by viewModel.neteaseAvatar.collectAsStateWithLifecycle()
-    val tencentCookie by viewModel.tencentCookie.collectAsStateWithLifecycle()
-    val tencentCookieValid by viewModel.tencentCookieValid.collectAsStateWithLifecycle()
     val tencentNickname by viewModel.tencentNickname.collectAsStateWithLifecycle()
     val tencentAvatar by viewModel.tencentAvatar.collectAsStateWithLifecycle()
     val tencentLoggedIn by viewModel.tencentLoggedIn.collectAsStateWithLifecycle()
-    val kugouCookie by viewModel.kugouCookie.collectAsStateWithLifecycle()
-    val kugouCookieValid by viewModel.kugouCookieValid.collectAsStateWithLifecycle()
     val kugouNickname by viewModel.kugouNickname.collectAsStateWithLifecycle()
     val kugouAvatar by viewModel.kugouAvatar.collectAsStateWithLifecycle()
     val kugouLoggedIn by viewModel.kugouLoggedIn.collectAsStateWithLifecycle()
-    val kuwoCookie by viewModel.kuwoCookie.collectAsStateWithLifecycle()
-    val kuwoCookieValid by viewModel.kuwoCookieValid.collectAsStateWithLifecycle()
     val kuwoNickname by viewModel.kuwoNickname.collectAsStateWithLifecycle()
     val kuwoAvatar by viewModel.kuwoAvatar.collectAsStateWithLifecycle()
     val kuwoLoggedIn by viewModel.kuwoLoggedIn.collectAsStateWithLifecycle()
@@ -308,8 +272,6 @@ fun LxMusicScreen(
         }
     }
     val mineState by viewModel.mineState.collectAsStateWithLifecycle()
-    val preferredQuality by viewModel.preferredQuality.collectAsStateWithLifecycle()
-    var showQualityDialog by remember { mutableStateOf(false) }
 
     val multiSelectionState = remember { MultiSelectionStateHolder() }
     val selectedSongs by multiSelectionState.selectedSongs.collectAsStateWithLifecycle()
@@ -421,12 +383,6 @@ fun LxMusicScreen(
         }
     }
 
-    val filePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        uri?.let { viewModel.importFromFile(it) { } }
-    }
-
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
     val bottomBarHeightDp = resolveNavBarOccupiedHeight(systemNavBarInset, navBarCompactMode)
@@ -440,7 +396,7 @@ fun LxMusicScreen(
         browseState.isPlaylistSearchMode ||
         browseState.module == "board" || browseState.module == "search"
     val topLayerVisible = playerSheetState == com.gurio.gusic.presentation.viewmodel.PlayerSheetState.EXPANDED ||
-        queueSheetVisible || showScriptSheet || showUrlImport || showLoginDialog
+        queueSheetVisible || showLoginDialog
     BackHandler(enabled = isSelectionMode && !topLayerVisible) {
         multiSelectionState.clearSelection()
     }
@@ -449,9 +405,6 @@ fun LxMusicScreen(
     }
 
     val headerContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-    val activeScriptName = remember(activeScript, scripts) {
-        scripts.firstOrNull { it.assetPath == activeScript }?.name
-    }
 
     val brandTitle = stringResource(R.string.tab_online)
     val moodWord = remember {
@@ -491,16 +444,41 @@ fun LxMusicScreen(
                     )
                 },
                 actions = {
-                    FilledIconButton(
-                        modifier = Modifier.padding(end = 14.dp),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        ),
-                        onClick = { showScriptSheet = true },
-                    ) {
-                        Icon(Icons.Rounded.Build, contentDescription = stringResource(R.string.lx_desc_script_management))
+                    val chipNickname: String?
+                    val chipAvatar: String?
+                    when (selectedSource) {
+                        LxSources.TENCENT -> {
+                            chipNickname = tencentNickname
+                            chipAvatar = tencentAvatar
+                        }
+                        LxSources.KUGOU -> {
+                            chipNickname = kugouNickname
+                            chipAvatar = kugouAvatar
+                        }
+                        LxSources.KUWO -> {
+                            chipNickname = kuwoNickname
+                            chipAvatar = kuwoAvatar
+                        }
+                        else -> {
+                            chipNickname = neteaseNickname
+                            chipAvatar = neteaseAvatar
+                        }
                     }
+                    LxAccountChip(
+                        loggedIn = currentSourceLoggedIn,
+                        nickname = chipNickname,
+                        avatarUrl = chipAvatar,
+                        fallbackPlatformName = platformName(selectedSource),
+                        notLoggedInText = stringResource(R.string.lx_account_chip_not_logged_in),
+                        onClick = {
+                            when (selectedSource) {
+                                LxSources.TENCENT -> clearAllWebViewSession { showTxWebLoginDialog = true }
+                                LxSources.KUGOU -> clearAllWebViewSession { showKgLoginDialog = true }
+                                LxSources.KUWO -> clearAllWebViewSession { showKwLoginDialog = true }
+                                else -> clearNeteaseWebViewSession { showLoginDialog = true }
+                            }
+                        },
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -1119,501 +1097,6 @@ fun LxMusicScreen(
         }
     }
 
-    if (showScriptSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showScriptSheet = false },
-            sheetState = rememberModalSheetState(skipPartiallyExpanded = true),
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
-            Column(modifier = Modifier
-                .padding(horizontal = 20.dp, vertical = 8.dp)
-                .verticalScroll(rememberScrollState())) {
-                var scriptIntroExpanded by remember { mutableStateOf(false) }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.lx_title_source_scripts),
-                        fontFamily = RoundedSans,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 24.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    IconButton(
-                        onClick = { scriptIntroExpanded = !scriptIntroExpanded },
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Icon(
-                            imageVector = if (scriptIntroExpanded) {
-                                Icons.Rounded.ExpandLess
-                            } else {
-                                Icons.Rounded.ExpandMore
-                            },
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                AnimatedVisibility(visible = scriptIntroExpanded) {
-                    Text(
-                        text = stringResource(R.string.lx_msg_script_intro),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 6.dp),
-                    )
-                }
-
-                if (activeScriptName != null) {
-                    Surface(
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                Icons.Rounded.MusicNote,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.lx_title_current_source),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                                )
-                                Text(
-                                    text = activeScriptName,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (loadState.loading) {
-                    Text(
-                        text = stringResource(R.string.lx_msg_loading),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = 4.dp),
-                    )
-                }
-                loadState.error?.let { err ->
-                    Text(
-                        text = err,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(vertical = 4.dp),
-                    )
-                }
-                if (loadState.loadedSources.isNotEmpty()) {
-                    Text(
-                        text = stringResource(R.string.lx_msg_declared_sources, loadState.loadedSources.joinToString(", ")),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = 4.dp),
-                    )
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    FilledTonalButton(
-                        onClick = { showUrlImport = true },
-                        shape = RoundedCornerShape(26.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 6.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(42.dp),
-                    ) {
-                        Icon(Icons.Rounded.Link, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.lx_btn_url_import), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Medium)
-                    }
-                    FilledTonalButton(
-                        onClick = { filePicker.launch(arrayOf("application/javascript", "text/plain", "*/*")) },
-                        shape = RoundedCornerShape(26.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 6.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(42.dp),
-                    ) {
-                        Icon(Icons.Rounded.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.lx_btn_file_import), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Medium)
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                val loginStatusText = when {
-                    neteaseCookie.isNullOrBlank() -> stringResource(R.string.lx_msg_not_logged_in)
-                    !neteaseCookieValid -> stringResource(R.string.lx_msg_login_expired_status)
-                    neteaseVipType == 13 ->
-                        neteaseNickname?.let { stringResource(R.string.lx_status_nickname_svip, it) } ?: stringResource(R.string.lx_status_logged_in_svip)
-                    neteaseVipType == 11 ->
-                        neteaseNickname?.let { stringResource(R.string.lx_status_nickname_vip, it) } ?: stringResource(R.string.lx_status_logged_in_vip)
-                    neteaseVipType == 0 ->
-                        neteaseNickname?.let { stringResource(R.string.lx_status_nickname_logged_in, it) } ?: stringResource(R.string.lx_status_logged_in)
-                    else -> neteaseNickname ?: stringResource(R.string.lx_status_logged_in)
-                }
-                @Composable
-                fun platformStatusText(
-                    cookie: String?, valid: Boolean, nickname: String?, appLoggedIn: Boolean = false,
-                ): String = when {
-                    appLoggedIn || (!cookie.isNullOrBlank() && valid) ->
-                        nickname?.let { stringResource(R.string.lx_status_nickname_logged_in, it) }
-                            ?: stringResource(R.string.lx_status_logged_in)
-                    cookie.isNullOrBlank() -> stringResource(R.string.lx_msg_not_logged_in_platform)
-                    else -> stringResource(R.string.lx_msg_login_expired_status)
-                }
-                @Composable
-                fun PlatformLoginRow(
-                    title: String,
-                    statusText: String,
-                    avatarUrl: String?,
-                    trailing: @Composable () -> Unit,
-                    onClick: () -> Unit,
-                ) {
-                    Surface(
-                        onClick = onClick,
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (!avatarUrl.isNullOrBlank()) {
-                                SmartImage(
-                                    model = avatarUrl,
-                                    contentDescription = null,
-                                    targetSize = SmartImageListTargetSize,
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape),
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Rounded.Person,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp),
-                                )
-                            }
-                            Spacer(Modifier.width(10.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    text = title,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    text = statusText,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            trailing()
-                        }
-                    }
-                }
-                PlatformLoginRow(
-                    title = platformName("tx"),
-                    statusText = platformStatusText(tencentCookie, tencentCookieValid, tencentNickname),
-                    avatarUrl = if (!tencentCookie.isNullOrBlank() && tencentCookieValid) tencentAvatar else null,
-                    trailing = {
-                        Icon(Icons.Rounded.ChevronRight, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                    },
-                    onClick = { clearAllWebViewSession { showTxWebLoginDialog = true } },
-                )
-                Spacer(Modifier.height(8.dp))
-                PlatformLoginRow(
-                    title = platformName("wy"),
-                    statusText = loginStatusText,
-                    avatarUrl = if (!neteaseCookie.isNullOrBlank() && neteaseCookieValid) neteaseAvatar else null,
-                    trailing = {
-                        Icon(Icons.Rounded.ChevronRight, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                    },
-                    onClick = {
-                        clearNeteaseWebViewSession { showLoginDialog = true }
-                    },
-                )
-                Spacer(Modifier.height(8.dp))
-                PlatformLoginRow(
-                    title = platformName("kg"),
-                    statusText = platformStatusText(kugouCookie, kugouCookieValid, kugouNickname, appLoggedIn = kugouLoggedIn),
-                    avatarUrl = if (kugouLoggedIn) kugouAvatar else null,
-                    trailing = {
-                        Icon(Icons.Rounded.ChevronRight, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                    },
-                    onClick = { clearAllWebViewSession { showKgLoginDialog = true } },
-                )
-                Spacer(Modifier.height(8.dp))
-                PlatformLoginRow(
-                    title = platformName("kw"),
-                    statusText = platformStatusText(kuwoCookie, kuwoCookieValid, kuwoNickname),
-                    avatarUrl = if (!kuwoCookie.isNullOrBlank() && kuwoCookieValid) kuwoAvatar else null,
-                    trailing = {
-                        Icon(Icons.Rounded.ChevronRight, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                    },
-                    onClick = { clearAllWebViewSession { showKwLoginDialog = true } },
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                val qualityLabel = when (preferredQuality) {
-                    "128k" -> stringResource(R.string.lxmusic_quality_128k)
-                    "320k" -> stringResource(R.string.lxmusic_quality_320k)
-                    "flac" -> stringResource(R.string.lxmusic_quality_flac)
-                    "flac24bit" -> stringResource(R.string.lxmusic_quality_flac24bit)
-                    "atmos" -> stringResource(R.string.lxmusic_quality_atmos)
-                    "master" -> stringResource(R.string.lxmusic_quality_master)
-                    else -> stringResource(R.string.lxmusic_quality_320k)
-                }
-                Surface(
-                    onClick = { showQualityDialog = true },
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            Icons.Rounded.MusicNote,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.lxmusic_quality_title),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = qualityLabel,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Icon(
-                            Icons.Rounded.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                scripts.forEachIndexed { index, meta ->
-                    ScriptRow(
-                        meta = meta,
-                        isPreferred = activeScript == meta.assetPath,
-                        isEnabled = meta.assetPath in runtimePaths,
-                        shape = when {
-                            scripts.size == 1 -> RoundedCornerShape(24.dp)
-                            index == 0 -> RoundedCornerShape(
-                                topStart = 24.dp, topEnd = 24.dp,
-                                bottomStart = 4.dp, bottomEnd = 4.dp,
-                            )
-                            index == scripts.size - 1 -> RoundedCornerShape(
-                                topStart = 4.dp, topEnd = 4.dp,
-                                bottomStart = 24.dp, bottomEnd = 24.dp,
-                            )
-                            else -> RoundedCornerShape(4.dp)
-                        },
-                        onToggle = { checked ->
-                            if (checked) viewModel.selectScript(meta.assetPath)
-                            else viewModel.unloadScript(meta.assetPath)
-                        },
-                        onSetPreferred = { viewModel.makePreferred(meta.assetPath) },
-                        onDelete = {
-                            scriptToDelete = meta
-                        },
-                    )
-                    if (index < scripts.size - 1) Spacer(Modifier.height(2.dp))
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                Spacer(Modifier.height(24.dp))
-            }
-        }
-    }
-
-    if (showUrlImport) {
-        val urlFieldColor = MaterialTheme.colorScheme.secondaryContainer
-            .compositeOver(MaterialTheme.colorScheme.surface)
-        val onUrlFieldColor = MaterialTheme.colorScheme.onSecondaryContainer
-        AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            onDismissRequest = { if (!urlImporting) showUrlImport = false },
-            title = { Text(stringResource(R.string.lx_title_import_from_url)) },
-            text = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .shadow(4.dp, RoundedCornerShape(18.dp))
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(urlFieldColor)
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    BasicTextField(
-                        value = urlInput,
-                        onValueChange = { urlInput = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        enabled = !urlImporting,
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = onUrlFieldColor),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done,
-                        ),
-                        keyboardActions = KeyboardActions(onDone = {
-                            if (urlInput.isNotBlank() && !urlImporting) {
-                                urlImporting = true
-                                viewModel.importFromUrl(urlInput) {
-                                    urlImporting = false
-                                    showUrlImport = false
-                                    urlInput = ""
-                                }
-                            }
-                        }),
-                    ) { innerTextField ->
-                        if (urlInput.isEmpty()) {
-                            Text("https://example.com/source.js",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = onUrlFieldColor.copy(alpha = 0.6f))
-                        }
-                        innerTextField()
-                    }
-                }
-            },
-            confirmButton = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    FilledTonalIconButton(
-                        enabled = !urlImporting,
-                        onClick = { showUrlImport = false },
-                        shape = lxDialogCancelShape,
-                        modifier = Modifier
-                            .shadow(2.dp, lxDialogCancelShape)
-                            .size(42.dp),
-                    ) {
-                        Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.lx_desc_cancel))
-                    }
-                    FilledTonalIconButton(
-                        enabled = urlInput.isNotBlank() && !urlImporting,
-                        onClick = {
-                            urlImporting = true
-                            viewModel.importFromUrl(urlInput) {
-                                urlImporting = false
-                                showUrlImport = false
-                                urlInput = ""
-                            }
-                        },
-                        shape = lxDialogConfirmShape,
-                        modifier = Modifier
-                            .then(
-                                if (urlInput.isNotBlank()) Modifier.shadow(2.dp, lxDialogConfirmShape)
-                                else Modifier
-                            )
-                            .size(42.dp),
-                    ) {
-                        if (urlImporting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                            )
-                        } else {
-                            Icon(Icons.Rounded.KeyboardArrowRight, contentDescription = stringResource(R.string.lx_desc_import))
-                        }
-                    }
-                }
-            },
-        )
-    }
-
-    if (scriptToDelete != null) {
-        AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            onDismissRequest = { scriptToDelete = null },
-            title = { Text(stringResource(R.string.lx_title_delete_script)) },
-            text = { Text(stringResource(R.string.lx_msg_delete_script_confirm, scriptToDelete?.name ?: "")) },
-            confirmButton = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    FilledTonalIconButton(
-                        onClick = { scriptToDelete = null },
-                        shape = lxDialogCancelShape,
-                        modifier = Modifier
-                            .shadow(2.dp, lxDialogCancelShape)
-                            .size(42.dp),
-                    ) {
-                        Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.lx_desc_cancel))
-                    }
-                    FilledTonalIconButton(
-                        onClick = {
-                            scriptToDelete?.let { viewModel.deleteScript(it.assetPath) }
-                            scriptToDelete = null
-                        },
-                        shape = lxDialogConfirmShape,
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
-                        modifier = Modifier
-                            .shadow(2.dp, lxDialogConfirmShape)
-                            .size(42.dp),
-                    ) {
-                        Icon(Icons.Rounded.Check, contentDescription = stringResource(R.string.lx_desc_delete))
-                    }
-                }
-            },
-        )
-    }
-
     if (showPlatformOrderSheet) {
         ReorderPlatformsSheet(
             platforms = platformOrder.toImmutableList(),
@@ -1634,235 +1117,17 @@ fun LxMusicScreen(
             onDismiss = viewModel::dismissUncollectConfirm,
         )
     }
-    if (showLoginDialog) {
-        NeteaseLoginDialog(
-            onDismiss = { showLoginDialog = false },
-            onValidate = { cookie, callback ->
-                viewModel.validateAndLogin(cookie) { ok, error ->
-                    callback(ok, error)
-                    if (ok) showLoginDialog = false
-                }
-            },
-        )
-    }
-    if (showTxWebLoginDialog) {
-        TencentWebLoginDialog(
-            onDismiss = { showTxWebLoginDialog = false },
-            onValidate = { cookie, callback ->
-                viewModel.validateAndLoginTencent(cookie) { ok, error ->
-                    callback(ok, error)
-                    if (ok) showTxWebLoginDialog = false
-                }
-            },
-        )
-    }
-    if (showKgLoginDialog) {
-        KugouSmsLoginDialog(
-            onDismiss = { showKgLoginDialog = false },
-            onSendCode = { mobile, callback ->
-                viewModel.sendKugouSmsCode(mobile) { ok, error -> callback(ok, error) }
-            },
-            onLogin = { mobile, code, callback ->
-                viewModel.loginKugouBySms(mobile, code) { ok, error ->
-                    callback(ok, error)
-                    if (ok) showKgLoginDialog = false
-                }
-            },
-        )
-    }
-    if (showKwLoginDialog) {
-        KuwoLoginDialog(
-            onDismiss = { showKwLoginDialog = false },
-            onValidate = { cookie, callback ->
-                viewModel.validateAndLoginKuwo(cookie) { ok, error ->
-                    callback(ok, error)
-                    if (ok) showKwLoginDialog = false
-                }
-            },
-        )
-    }
-    if (showQualityDialog) {
-        val options = listOf(
-            "master" to (R.string.lxmusic_quality_master to R.string.lxmusic_quality_master_desc),
-            "atmos" to (R.string.lxmusic_quality_atmos to R.string.lxmusic_quality_atmos_desc),
-            "flac24bit" to (R.string.lxmusic_quality_flac24bit to R.string.lxmusic_quality_flac24bit_desc),
-            "flac" to (R.string.lxmusic_quality_flac to R.string.lxmusic_quality_flac_desc),
-            "320k" to (R.string.lxmusic_quality_320k to R.string.lxmusic_quality_320k_desc),
-            "128k" to (R.string.lxmusic_quality_128k to R.string.lxmusic_quality_128k_desc),
-        )
-        AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            onDismissRequest = { showQualityDialog = false },
-            title = { Text(stringResource(R.string.lxmusic_quality_title)) },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                ) {
-                    options.forEach { (key, labelDesc) ->
-                        val (labelRes, descRes) = labelDesc
-                        val isSelected = preferredQuality == key
-                        Surface(
-                            onClick = {
-                                viewModel.setPreferredQuality(key)
-                                showQualityDialog = false
-                            },
-                            shape = RoundedCornerShape(18.dp),
-                            color = if (isSelected)
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                MaterialTheme.colorScheme.surfaceContainer,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 64.dp),
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(labelRes),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Medium,
-                                        color = if (isSelected)
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        else
-                                            MaterialTheme.colorScheme.onSurface,
-                                    )
-                                    Text(
-                                        text = stringResource(descRes),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (isSelected)
-                                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                                        else
-                                            MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                if (isSelected) {
-                                    Icon(
-                                        Icons.Rounded.Check,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                FilledTonalIconButton(
-                    onClick = { showQualityDialog = false },
-                    shape = lxDialogCancelShape,
-                    modifier = Modifier
-                        .shadow(2.dp, lxDialogCancelShape)
-                        .size(42.dp),
-                ) {
-                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.lx_desc_cancel))
-                }
-            },
-        )
-    }
-}
-
-@Composable
-private fun ScriptRow(
-    meta: LxScriptMeta,
-    isPreferred: Boolean,
-    isEnabled: Boolean,
-    shape: RoundedCornerShape,
-    onToggle: (Boolean) -> Unit,
-    onSetPreferred: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    val haptics = LocalHapticFeedback.current
-    val containerColor = if (isPreferred) MaterialTheme.colorScheme.primaryContainer
-    else MaterialTheme.colorScheme.surfaceContainer
-    val titleColor = when {
-        isPreferred -> MaterialTheme.colorScheme.onPrimaryContainer
-        isEnabled -> MaterialTheme.colorScheme.onSurface
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Surface(
-        color = containerColor,
-        shape = shape,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .combinedClickable(
-                onClick = { if (isEnabled && !isPreferred) onSetPreferred() },
-                onLongClick = { if (!meta.isDefault) onDelete() },
-            ),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = meta.name + if (isPreferred) stringResource(R.string.lx_msg_preferred_suffix) else "",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (isPreferred) FontWeight.Bold else FontWeight.Medium,
-                    color = titleColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                val detail = buildList {
-                    if (meta.author.isNotBlank()) add(meta.author)
-                    if (meta.version.isNotBlank()) add("v" + meta.version)
-                }.joinToString(" · ")
-                if (detail.isNotBlank()) {
-                    Text(
-                        text = detail,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (isPreferred) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            if (!meta.isDefault) {
-                Switch(
-                    checked = isEnabled,
-                    onCheckedChange = { checked ->
-                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onToggle(checked)
-                    },
-                    thumbContent = {
-                        AnimatedContent(
-                            targetState = isEnabled,
-                            transitionSpec = { fadeIn(tween(100)) togetherWith fadeOut(tween(100)) },
-                            label = "script_switch_thumb_icon",
-                        ) { isChecked ->
-                            Icon(
-                                imageVector = if (isChecked) Icons.Rounded.Check else Icons.Rounded.Close,
-                                contentDescription = null,
-                                modifier = Modifier.size(SwitchDefaults.IconSize),
-                            )
-                        }
-                    },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primary,
-                        checkedIconColor = MaterialTheme.colorScheme.primary,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurface,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        uncheckedIconColor = MaterialTheme.colorScheme.surfaceVariant,
-                    ),
-                )
-            }
-        }
-    }
+    LxLoginDialogsHost(
+        lxMusicViewModel = viewModel,
+        showNetease = showLoginDialog,
+        showTencent = showTxWebLoginDialog,
+        showKugou = showKgLoginDialog,
+        showKuwo = showKwLoginDialog,
+        onDismissNetease = { showLoginDialog = false },
+        onDismissTencent = { showTxWebLoginDialog = false },
+        onDismissKugou = { showKgLoginDialog = false },
+        onDismissKuwo = { showKwLoginDialog = false },
+    )
 }
 
 private val searchTabs = listOf(
@@ -2055,6 +1320,70 @@ private fun LxMineNotLoggedInPlaceholder(
                 shape = RoundedCornerShape(20.dp),
             ) {
                 Text(text = stringResource(R.string.presentation_batch_g_lx_mine_login))
+            }
+        }
+    }
+}
+
+// 发现页顶栏账号区：昵称在左、头像在右；未登录显示占位图标与文案；点击进入当前平台登录弹窗
+@Composable
+private fun LxAccountChip(
+    loggedIn: Boolean,
+    nickname: String?,
+    avatarUrl: String?,
+    fallbackPlatformName: String,
+    notLoggedInText: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .padding(end = 14.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = if (loggedIn) (nickname ?: fallbackPlatformName) else notLoggedInText,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Medium,
+            color = if (loggedIn) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 120.dp),
+        )
+        if (loggedIn && !avatarUrl.isNullOrBlank()) {
+            SmartImage(
+                model = avatarUrl,
+                contentDescription = null,
+                targetSize = SmartImageListTargetSize,
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape),
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.Person,
+                    contentDescription = null,
+                    tint = if (loggedIn) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    },
+                    modifier = Modifier.size(20.dp),
+                )
             }
         }
     }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_playlists_platform_load_failed">加载失败，请重试</string>
+    <string name="library_playlists_platform_empty">还没有歌单</string>
+    <string name="library_playlists_platform_songs_load_failed">加载失败，请重试</string>
+    <string name="library_playlists_platform_songs_empty">歌单里还没有歌曲</string>
+</resources>

@@ -578,4 +578,11 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>Notification no longer shows lyrics: song title on the first line, artist below; the notification-lyrics setting is removed</item>
         <item>Platform liked lists no longer show the source tag; the local liked list keeps it</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101203_whats_new">
+        <item>Playlists tab: online platform playlists are merged in — platform entries on the first level, your playlists open with playable songs</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101203_changes">
+        <item>The source-script button moves to the top bar of the Library page, left of Settings</item>
+        <item>The Discover top bar now shows the current platform account: nickname with avatar on its right; tap it to open that platform sign-in</item>
+    </string-array>
 </resources>

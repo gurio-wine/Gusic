@@ -578,4 +578,11 @@
         <item>播放通知不再顯示歌詞：第一行歌名、第二行歌手，通知欄歌詞設定一併移除</item>
         <item>平台喜歡列表不再顯示平台標籤，本軟體喜歡列表保留</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101203_whats_new">
+        <item>歌單分類併入線上平台歌單：第一層按平台添加入口，點開歌單即可查看並播放歌曲</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101203_changes">
+        <item>音源腳本按鈕移到「我的」頁頂欄、設定按鈕左側</item>
+        <item>發現頁頂欄顯示當前平台帳號：使用者名稱加右側頭像，未登入按未登入顯示，點擊進入對應平台登入</item>
+    </string-array>
 </resources>

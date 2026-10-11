@@ -59,19 +59,16 @@ import com.gurio.gusic.data.model.SortOption
 import com.gurio.gusic.data.model.StorageFilter
 import com.gurio.gusic.presentation.components.ExpressiveScrollBar
 import com.gurio.gusic.presentation.components.MiniPlayerHeight
-import com.gurio.gusic.presentation.components.PlaylistContainer
 import com.gurio.gusic.presentation.components.albumFastScrollLabel
 import com.gurio.gusic.presentation.components.artistFastScrollLabel
 import com.gurio.gusic.presentation.viewmodel.ColorSchemePair
 import com.gurio.gusic.presentation.viewmodel.PlayerViewModel
-import com.gurio.gusic.presentation.viewmodel.PlaylistUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import androidx.compose.ui.text.style.TextOverflow
-import kotlinx.collections.immutable.ImmutableList
 
 private val EmptyColorSchemePairFlow: StateFlow<ColorSchemePair?> = MutableStateFlow(null)
 
@@ -688,34 +685,3 @@ fun LibraryArtistsTab(
     }
 }
 
-@androidx.annotation.OptIn(UnstableApi::class)
-@Composable
-fun LibraryPlaylistsTab(
-    playlistUiState: PlaylistUiState,
-    filteredPlaylists: ImmutableList<com.gurio.gusic.data.model.Playlist> = playlistUiState.playlists,
-    navController: NavController,
-    playerViewModel: PlayerViewModel,
-    bottomBarHeight: Dp,
-    isRefreshing: Boolean,
-    onRefresh: () -> Unit,
-    isSelectionMode: Boolean = false,
-    selectedPlaylistIds: Set<String> = emptySet(),
-    onPlaylistLongPress: (com.gurio.gusic.data.model.Playlist) -> Unit = {},
-    onPlaylistSelectionToggle: (com.gurio.gusic.data.model.Playlist) -> Unit = {},
-    onPlaylistOptionsClick: () -> Unit = {}
-) {
-    PlaylistContainer(
-        playlistUiState = playlistUiState,
-        filteredPlaylists = filteredPlaylists,
-        currentSortOption = playlistUiState.currentPlaylistSortOption,
-        isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
-        bottomBarHeight = bottomBarHeight,
-        navController = navController,
-        playerViewModel = playerViewModel,
-        isSelectionMode = isSelectionMode,
-        selectedPlaylistIds = selectedPlaylistIds,
-        onPlaylistLongPress = onPlaylistLongPress,
-        onPlaylistSelectionToggle = onPlaylistSelectionToggle
-    )
-}

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_playlists_platform_load_failed">Failed to load, try again</string>
+    <string name="library_playlists_platform_empty">No playlists yet</string>
+    <string name="library_playlists_platform_songs_load_failed">Failed to load, try again</string>
+    <string name="library_playlists_platform_songs_empty">No songs in this playlist yet</string>
+</resources>

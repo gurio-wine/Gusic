@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -206,6 +207,8 @@ class LibraryLikedStateHolder @Inject constructor(
         _loadingPlatformSongs.value = true
         platformLoadJob = holderScope.launch {
             val result = lxMusicRepository.fetchPlatformLikedLxSongs(source)
+            // 被取消的加载（切走后立刻重入同平台）不落地状态，防止过期结果覆盖新一次加载
+            if (!isActive) return@launch
             // 结果返回前用户可能已切换作用域，丢弃过期结果
             if (_likedScope.value != source) return@launch
             if (result == null) {

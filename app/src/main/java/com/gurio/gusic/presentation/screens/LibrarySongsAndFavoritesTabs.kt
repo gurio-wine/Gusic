@@ -872,9 +872,10 @@ private fun LibraryPlatformLikedSongsContent(
 
 /**
  * “我喜欢”二级页顶部返回行：返回按钮 + 标题（本软件二级用“我喜欢”，平台二级用平台名）。
+ * 歌单 tab 的平台二级/三级页复用同一返回行样式。
  */
 @Composable
-private fun LibraryLikedSubScreenHeader(
+internal fun LibraryLikedSubScreenHeader(
     title: String,
     onBack: () -> Unit
 ) {

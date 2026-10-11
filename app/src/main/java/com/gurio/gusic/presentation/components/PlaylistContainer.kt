@@ -106,7 +106,8 @@ fun PlaylistContainer(
     selectedPlaylistIds: Set<String> = emptySet(),
     onPlaylistLongPress: (Playlist) -> Unit = {},
     onPlaylistSelectionToggle: (Playlist) -> Unit = {},
-    playlistSelectionStateHolder: PlaylistSelectionStateHolder? = null
+    playlistSelectionStateHolder: PlaylistSelectionStateHolder? = null,
+    footerContent: (@Composable () -> Unit)? = null
 ) {
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -125,39 +126,46 @@ fun PlaylistContainer(
                 contentAlignment = Alignment.TopCenter
             ) {
                 Column(
-                    modifier = Modifier.padding(top = 28.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    SineWaveLine(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(32.dp)
-                            .padding(horizontal = 8.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
-                        alpha = 0.95f,
-                        strokeWidth = 3.dp,
-                        amplitude = 4.dp,
-                        waves = 7.6f,
-                        phase = 0f
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Icon(
-                        Icons.AutoMirrored.Rounded.PlaylistPlay,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        stringResource(R.string.presentation_batch_e_no_playlist_created),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        stringResource(R.string.presentation_batch_e_new_playlist_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Column(
+                        modifier = Modifier.padding(top = 28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        SineWaveLine(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(32.dp)
+                                .padding(horizontal = 8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
+                            alpha = 0.95f,
+                            strokeWidth = 3.dp,
+                            amplitude = 4.dp,
+                            waves = 7.6f,
+                            phase = 0f
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Icon(
+                            Icons.AutoMirrored.Rounded.PlaylistPlay,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(R.string.presentation_batch_e_no_playlist_created),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            stringResource(R.string.presentation_batch_e_new_playlist_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    // 空态下方仍追加平台歌单入口，保持与有歌单时一致的一级结构
+                    footerContent?.invoke()
                 }
             }
         } else {
@@ -170,7 +178,8 @@ fun PlaylistContainer(
                     isAddingToPlaylist = true,
                     filteredPlaylists = filteredPlaylists,
                     selectedPlaylists = selectedPlaylists,
-                    currentSortOption = currentSortOption
+                    currentSortOption = currentSortOption,
+                    footerContent = footerContent
                 )
             } else {
                 val playlistPullToRefreshState = rememberPullToRefreshState()
@@ -196,7 +205,8 @@ fun PlaylistContainer(
                         isSelectionMode = isSelectionMode,
                         selectedPlaylistIds = selectedPlaylistIds,
                         onPlaylistLongPress = onPlaylistLongPress,
-                        onPlaylistSelectionToggle = onPlaylistSelectionToggle
+                        onPlaylistSelectionToggle = onPlaylistSelectionToggle,
+                        footerContent = footerContent
                     )
                 }
             }
@@ -232,7 +242,8 @@ fun PlaylistItems(
     isSelectionMode: Boolean = false,
     selectedPlaylistIds: Set<String> = emptySet(),
     onPlaylistLongPress: (Playlist) -> Unit = {},
-    onPlaylistSelectionToggle: (Playlist) -> Unit = {}
+    onPlaylistSelectionToggle: (Playlist) -> Unit = {},
+    footerContent: (@Composable () -> Unit)? = null
 ) {
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
@@ -310,6 +321,12 @@ fun PlaylistItems(
                     onLongPress = { onPlaylistLongPress(playlist) },
                     onPlaylistSelectionToggle = { onPlaylistSelectionToggle(playlist) }
                 )
+            }
+            // 列表末尾追加平台歌单入口等额外内容（如“我的”页各平台歌单入口行）
+            footerContent?.let { footer ->
+                item(key = "playlist_container_footer", contentType = "playlist_footer") {
+                    Box(modifier = Modifier.fillMaxWidth()) { footer() }
+                }
             }
         }
         

@@ -578,4 +578,11 @@
         <item>播放通知不再显示歌词：第一行歌名、第二行歌手，通知栏歌词设置一并移除</item>
         <item>平台喜欢列表不再显示平台标签，本软件喜欢列表保留</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101203_whats_new">
+        <item>歌单分类并入在线平台歌单：第一层按平台添加入口，点开歌单即可查看并播放歌曲</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101203_changes">
+        <item>音源脚本按钮移到“我的”页顶栏、设置按钮左侧</item>
+        <item>发现页顶栏显示当前平台账号：用户名加右侧头像，未登录按未登录显示，点击进入对应平台登录</item>
+    </string-array>
 </resources>
