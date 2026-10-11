@@ -536,4 +536,13 @@
     <string-array name="presentation_batch_g_changelog_v26101107_changes">
         <item>播放頁：播放/暫停按鈕顏色重新與上一首/下一首區分</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101108_whats_new">
+        <item>QQ 收藏：改走網頁模式請求（g_tk 票據雜湊），80105/500003 之後的第三版方案</item>
+        <item>播放頁：播放/暫停與循環/收藏/歌詞按鈕背景完全同色</item>
+        <item>我的頁：圖示與發現頁「我的」模組一致，刪除專輯、藝術家分類</item>
+        <item>我的頁：歌曲分類改名歷史，按最近播放排序（最新在前）</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101108_changes">
+        <item>通知按鈕順序保持 上一首、播放/暫停、下一首、循環、收藏（系統槽位限制）</item>
+    </string-array>
 </resources>

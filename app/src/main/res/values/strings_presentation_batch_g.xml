@@ -536,4 +536,13 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
     <string-array name="presentation_batch_g_changelog_v26101107_changes">
         <item>Player page: play/pause button color distinct from previous/next again</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101108_whats_new">
+        <item>QQ favorites: switched to the web-mode request (g_tk token hash), third attempt after 80105/500003</item>
+        <item>Player page: play/pause now shares the exact background of the cycle/favorite/lyrics chips</item>
+        <item>Mine page: icon now matches the Discover "Mine" module; Albums and Artists categories removed</item>
+        <item>Mine page: Songs renamed to History, sorted by recently played first</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101108_changes">
+        <item>Notification order kept as previous, play/pause, next, cycle, favorite (system slot limit)</item>
+    </string-array>
 </resources>

@@ -83,9 +83,17 @@ sealed class SortOption(
     object SongDurationAsc : SortOption(
         storageKey = "song_duration_asc",
         displayName = "Duration (Shortest First)",
-        methodLabel = "Duration",
+        methodLabel = "Date Added",
         methodKey = "song_duration",
         direction = SortDirection.Ascending
+    )
+
+    // “历史”分类专用：按最近播放时间倒序，未播放过的歌曲按默认顺序排在有播放记录之后
+    object SongRecentlyPlayed : SortOption(
+        storageKey = "song_recently_played",
+        displayName = "Recently Played",
+        methodLabel = "Recently Played",
+        methodKey = "song_recently_played"
     )
 
     object AlbumTitleAZ : SortOption(

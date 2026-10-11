@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="library_tab_songs">歌曲</string>
+    <string name="library_tab_songs">歷史</string>
     <string name="library_tab_albums">專輯</string>
     <string name="library_tab_artists">藝術家</string>
     <string name="library_tab_playlists">歌單</string>

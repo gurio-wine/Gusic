@@ -711,7 +711,8 @@ interface MusicDao {
     ): Flow<List<FolderSongRow>>
 
     @Query("""
-        SELECT id FROM songs
+        SELECT songs.id FROM songs
+        LEFT JOIN song_engagements ON song_engagements.song_id = CAST(songs.id AS TEXT)
         WHERE (:applyDirectoryFilter = 0 OR id < 0 OR source_type = 8 OR parent_directory_path IN (:allowedParentDirs))
         AND (
             :filterMode = 0
@@ -725,6 +726,13 @@ interface MusicDao {
             )
         )
         ORDER BY
+            CASE WHEN :sortOrder = 'song_recently_played'
+                THEN CASE WHEN COALESCE(song_engagements.last_played_timestamp, 0) > 0 THEN 0 ELSE 1 END END ASC,
+            CASE WHEN :sortOrder = 'song_recently_played'
+                THEN song_engagements.last_played_timestamp END DESC,
+            CASE WHEN :sortOrder = 'song_recently_played'
+                    AND COALESCE(song_engagements.last_played_timestamp, 0) <= 0
+                THEN track_number END ASC,
             CASE WHEN :sortOrder = 'song_default_order' THEN track_number END ASC,
             CASE WHEN :sortOrder = 'song_title_az' THEN title END COLLATE NOCASE ASC,
             CASE WHEN :sortOrder = 'song_title_za' THEN title END COLLATE NOCASE DESC,
@@ -795,9 +803,13 @@ interface MusicDao {
     /**
      * Returns a PagingSource for songs, enabling efficient pagination for large libraries.
      * Room auto-generates the PagingSource implementation.
+     *
+     * “历史”排序（song_recently_played）：有播放记录的歌曲在前并按最近播放时间倒序，
+     * 从未播放过的歌曲排在最后且保持原有默认顺序（曲号 → 标题 → id）。
      */
     @Query("""
-        SELECT * FROM songs
+        SELECT songs.* FROM songs
+        LEFT JOIN song_engagements ON song_engagements.song_id = CAST(songs.id AS TEXT)
         WHERE (:applyDirectoryFilter = 0 OR id < 0 OR source_type = 8 OR parent_directory_path IN (:allowedParentDirs))
         AND (
             :filterMode = 0
@@ -811,6 +823,13 @@ interface MusicDao {
             )
         )
         ORDER BY
+            CASE WHEN :sortOrder = 'song_recently_played'
+                THEN CASE WHEN COALESCE(song_engagements.last_played_timestamp, 0) > 0 THEN 0 ELSE 1 END END ASC,
+            CASE WHEN :sortOrder = 'song_recently_played'
+                THEN song_engagements.last_played_timestamp END DESC,
+            CASE WHEN :sortOrder = 'song_recently_played'
+                    AND COALESCE(song_engagements.last_played_timestamp, 0) <= 0
+                THEN track_number END ASC,
             CASE WHEN :sortOrder = 'song_default_order' THEN track_number END ASC,
             CASE WHEN :sortOrder = 'song_title_az' THEN title END COLLATE NOCASE ASC,
             CASE WHEN :sortOrder = 'song_title_za' THEN title END COLLATE NOCASE DESC,
@@ -840,6 +859,7 @@ interface MusicDao {
         filterMode: Int
     ): PagingSource<Int, SongEntity>
 
+    /** 分页查询歌曲；ORDER BY CASE 不支持 `song_recently_played` 排序键，传入会退化为 title 升序。 */
     @Query("""
         SELECT """ + SONG_LIST_PROJECTION + """
         FROM songs

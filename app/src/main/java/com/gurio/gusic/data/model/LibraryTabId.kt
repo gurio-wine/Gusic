@@ -10,7 +10,7 @@ enum class LibraryTabId(
     @StringRes val titleRes: Int,
     val defaultSort: SortOption
 ) {
-    SONGS("SONGS", R.string.library_tab_songs, SortOption.SongTitleAZ),
+    SONGS("SONGS", R.string.library_tab_songs, SortOption.SongRecentlyPlayed),
     ALBUMS("ALBUMS", R.string.library_tab_albums, SortOption.AlbumTitleAZ),
     ARTISTS("ARTIST", R.string.library_tab_artists, SortOption.ArtistNameAZ),
     PLAYLISTS("PLAYLISTS", R.string.library_tab_playlists, SortOption.PlaylistNameAZ),

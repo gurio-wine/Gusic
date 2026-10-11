@@ -536,4 +536,13 @@
     <string-array name="presentation_batch_g_changelog_v26101107_changes">
         <item>播放页：播放/暂停按钮颜色重新与上一首/下一首区分</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101108_whats_new">
+        <item>QQ 收藏：改走网页模式请求（g_tk 票据哈希），80105/500003 之后的第三版方案</item>
+        <item>播放页：播放/暂停与循环/收藏/歌词按钮背景完全同色</item>
+        <item>我的页：图标与发现页“我的”模块一致，删除专辑、艺术家分类</item>
+        <item>我的页：歌曲分类改名历史，按最近播放排序（最新在前）</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101108_changes">
+        <item>通知按钮顺序保持 上一首、播放/暂停、下一首、循环、收藏（系统槽位限制）</item>
+    </string-array>
 </resources>

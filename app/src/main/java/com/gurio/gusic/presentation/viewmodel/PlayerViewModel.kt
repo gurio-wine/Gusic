@@ -1113,12 +1113,12 @@ class PlayerViewModel @Inject constructor(
             initialValue = 0
         )
 
-    // “我的”页固定顺序：我喜欢第一、歌单第二、不再提供文件夹分类；已保存的顺序里也会剔除 FOLDERS
+    // “我的”页默认顺序：我喜欢 → 歌单 → 历史（原“歌曲”）。
+    // 专辑/艺术家/文件夹分类已下线：保留用户自定义顺序，仅过滤已下线分类并补全缺失项。
     private fun normalizeLibraryTabs(raw: List<String>): ImmutableList<String> {
-        val withoutFolders = raw.filter { it != "FOLDERS" && it.isNotBlank() }
-            .ifEmpty { listOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS") }
-        val rest = withoutFolders.filter { it != "LIKED" && it != "PLAYLISTS" }
-        return (listOf("LIKED", "PLAYLISTS") + rest).toImmutableList()
+        val valid = listOf("LIKED", "PLAYLISTS", "SONGS")
+        val filtered = raw.filter { it in valid }.distinct()
+        return (filtered + valid).distinct().toImmutableList()
     }
 
     val libraryTabsFlow: StateFlow<ImmutableList<String>> = userPreferencesRepository.libraryTabsOrderFlow
@@ -1149,7 +1149,8 @@ class PlayerViewModel @Inject constructor(
             Trace.beginSection("PlayerViewModel.availableSortOptionsMapping")
             try {
                 when (tabId) {
-                    LibraryTabId.SONGS -> SortOption.SONGS
+                    // “历史”分类固定按最近播放排序，不提供其它排序方式
+                    LibraryTabId.SONGS -> listOf(SortOption.SongRecentlyPlayed)
                     LibraryTabId.ALBUMS -> SortOption.ALBUMS
                     LibraryTabId.ARTISTS -> SortOption.ARTISTS
                     LibraryTabId.PLAYLISTS -> SortOption.PLAYLISTS
@@ -1884,11 +1885,8 @@ class PlayerViewModel @Inject constructor(
             }
 
             viewModelScope.launch {
-                val initialSongSort = resolveSortOption(
-                    userPreferencesRepository.songsSortOptionFlow.first(),
-                    SortOption.SONGS,
-                    SortOption.SongTitleAZ
-                )
+                // “历史”分类固定按最近播放排序，不再恢复旧的歌曲排序偏好
+                val initialSongSort = SortOption.SongRecentlyPlayed
                 val initialAlbumSort = resolveSortOption(
                     userPreferencesRepository.albumsSortOptionFlow.first(),
                     SortOption.ALBUMS,

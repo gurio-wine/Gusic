@@ -32,8 +32,6 @@ internal class TencentAccountApi(
     companion object {
         private const val TAG = "TencentAccountApi"
         private const val MUSICU_URL = "https://u.y.qq.com/cgi-bin/musicu.fcg"
-        private const val MUSICS_URL = "https://u.y.qq.com/cgi-bin/musics.fcg"
-        private const val CLIENT_VERSION_CODE = 13020508L
         private const val PROFILE_URL = "https://c.y.qq.com/rsc/fcgi-bin/fcg_get_profile_homepage.fcg"
         private const val CREATED_DISS_URL = "https://c.y.qq.com/rsc/fcgi-bin/fcg_user_created_diss"
         private const val ORDER_ASSET_URL = "https://c.y.qq.com/fav/fcgi-bin/fcg_get_profile_order_asset.fcg"
@@ -101,6 +99,38 @@ internal class TencentAccountApi(
             }
         }
 
+        /** hash33：QQ web 票据哈希，g_tk 由它对 musickey 计算。 */
+        internal fun hash33(s: String, h: Int = 0): Int {
+            var acc = h
+            s.forEach { c -> acc = ((acc shl 5) + acc + c.code) }
+            return acc and 0x7FFFFFFF
+        }
+
+        /**
+         * musicu.fcg WEB 平台的 comm 块（参照 qqmusic-api WEB profile）：
+         * ct=24 + platform=yqq.json + g_tk（musickey 的 hash33），无需 sign 与设备指纹。
+         */
+        internal fun webComm(cookie: String?): JsonObject {
+            val cookies = parseCookieMap(cookie)
+            val key = musicKey(cookies)
+            val uin = cookieUin(cookies)
+            val gtk = if (key.isNotEmpty()) hash33(key, 5381) else 5381
+            return JsonObject().apply {
+                addProperty("ct", 24)
+                addProperty("cv", 4747474)
+                addProperty("platform", "yqq.json")
+                addProperty("chid", "0")
+                addProperty("uin", uin.ifEmpty { "0" })
+                addProperty("g_tk", gtk)
+                addProperty("g_tk_new_20200303", gtk)
+                addProperty("format", "json")
+                addProperty("inCharset", "utf-8")
+                addProperty("outCharset", "utf-8")
+                addProperty("notice", 0)
+                addProperty("need_new_code", 1)
+            }
+        }
+
         /**
          * musicu.fcg 写接口的 URL sign（web 端 getSecuritySign 的 zza 版）：
          * "zza" + 10~16 位随机小写字母数字 + MD5("CJBPACrRuNy7" + 请求体)。
@@ -116,53 +146,6 @@ internal class TencentAccountApi(
         private fun md5Hex(input: String): String =
             MessageDigest.getInstance("MD5").digest(input.toByteArray(Charsets.UTF_8))
                 .joinToString("") { "%02x".format(it) }
-
-        /**
-         * musics.fcg 客户端协议的 comm 块（参照安卓客户端 13.2.5.8 / qqmusic-api）：
-         * ct=11 + tmeAppID；带票据时附 qq/authst/tmeLoginType。
-         */
-        internal fun clientComm(cookie: String?): JsonObject {
-            val cookies = parseCookieMap(cookie)
-            val key = musicKey(cookies)
-            return JsonObject().apply {
-                addProperty("ct", "11")
-                addProperty("tmeAppID", "qqmusic")
-                addProperty("format", "json")
-                addProperty("inCharset", "utf-8")
-                addProperty("outCharset", "utf-8")
-                addProperty("uid", "3931641530")
-                addProperty("cv", CLIENT_VERSION_CODE)
-                addProperty("v", CLIENT_VERSION_CODE)
-                if (key.isNotEmpty()) {
-                    addProperty("qq", cookieUin(cookies))
-                    addProperty("authst", key)
-                    addProperty("tmeLoginType", cookies["login_type"]?.takeIf(String::isNotEmpty) ?: "1")
-                }
-            }
-        }
-
-        /**
-         * musics.fcg 的 zzb 签名：对请求体做无盐 MD5 后按固定位置取字符、
-         * 剩余 hex 两两异或混淆字节再 base64（来自 qqmusic-api 客户端实现）。
-         */
-        internal fun zzbSign(body: String): String {
-            val md5 = md5Hex(body)
-            val head = intArrayOf(21, 4, 9, 26, 16, 20, 27, 30).map { md5[it] }.joinToString("")
-            val tail = intArrayOf(18, 11, 3, 2, 1, 7, 6, 25).map { md5[it] }.joinToString("")
-            val scramble = intArrayOf(
-                212, 45, 80, 68, 195, 163, 163, 203,
-                157, 220, 254, 91, 204, 79, 104, 6,
-            )
-            val middle = ByteArray(16) { i ->
-                val one = Character.digit(md5[i * 2], 16)
-                val two = Character.digit(md5[i * 2 + 1], 16)
-                ((one * 16) xor two xor scramble[i]).toByte()
-            }
-            val b64 = java.util.Base64.getEncoder().encodeToString(middle)
-            return ("zzb" + head + b64 + tail)
-                .lowercase()
-                .filter { it != '/' && it != '+' && it != '=' }
-        }
 
         internal fun albumCover(albumMid: String): String =
             if (albumMid.isBlank()) ""
@@ -286,8 +269,8 @@ internal class TencentAccountApi(
     suspend fun fetchLikedSongs(): List<LxSong>? = fetchDissSongs(liked = true, disstid = null)
 
     /**
-     * 红心开关：musicu.fcg 的 web 式请求（zza 签名 + tid/bFmtUtf8）实测被 80105 拒绝，
-     * 改走 musics.fcg 客户端协议（zzb 签名 + ct=11 comm），param 只需 dirId=201 + v_songInfo。
+     * 红心开关：按 qqmusic-api WEB 模式调用（musicu.fcg 无 sign + ct=24 comm + g_tk +
+     * tid/bFmtUtf8 参数），musics.fcg 客户端协议实测被 500003 拒绝，此为第三版配方。
      */
     suspend fun applySongLike(songId: Long, songType: Int, like: Boolean): TxSongLikeResult =
         withContext(Dispatchers.IO) {
@@ -295,6 +278,8 @@ internal class TencentAccountApi(
                 ?: return@withContext TxSongLikeResult(false, -1, "not logged in")
             val param = JsonObject().apply {
                 addProperty("dirId", 201L)
+                addProperty("tid", 0L)
+                addProperty("bFmtUtf8", true)
                 add("v_songInfo", JsonArray().apply {
                     add(JsonObject().apply {
                         addProperty("songType", songType)
@@ -303,14 +288,18 @@ internal class TencentAccountApi(
                 })
             }
             val method = if (like) "AddSonglist" else "DelSonglist"
-            val block = musicsCall(cookie, "music.musicasset.PlaylistDetailWrite", method, param)
-                ?: return@withContext TxSongLikeResult(false, -1, "network error")
+            val block = musicuCall(
+                cookie, "req_1", "music.musicasset.PlaylistDetailWrite", method, param,
+                comm = webComm(cookie), withSign = false,
+            ) ?: return@withContext TxSongLikeResult(false, -1, "network error")
             val code = block.intField("code") ?: -1
             if (code != 0) {
                 Timber.w("$TAG: $method rejected code=$code block=$block")
                 return@withContext TxSongLikeResult(false, code, "gateway")
             }
+            // retCode 可能在业务块顶层或 data 内层，两处都查
             val retCode = block.intField("retCode")
+                ?: (block.get("data") as? JsonObject)?.intField("retCode")
             if (retCode != null && retCode != 0) {
                 Timber.w("$TAG: $method retCode=$retCode")
                 return@withContext TxSongLikeResult(false, retCode, "retCode")
@@ -467,62 +456,29 @@ internal class TencentAccountApi(
         )
     }
 
-    /**
-     * musics.fcg 客户端协议调用：zzb 签名，请求体以 "module.method" 为顶层键，
-     * 响应块同名返回。写接口（AddSonglist 等）必须走此端点，musicu.fcg 会以 80105 拒绝。
-     */
-    private suspend fun musicsCall(
-        cookie: String,
-        module: String,
-        method: String,
-        param: JsonObject,
-    ): JsonObject? {
-        val key = "$module.$method"
-        val payload = JsonObject().apply {
-            add("comm", clientComm(cookie))
-            add(key, param)
-        }
-        val body = payload.toString()
-        val request = Request.Builder()
-            .url("$MUSICS_URL?sign=${zzbSign(body)}")
-            .header("User-Agent", USER_AGENT)
-            .header("Referer", "https://y.qq.com/")
-            .header("Cookie", cookie)
-            .post(body.toRequestBody(JSON_MEDIA_TYPE))
-            .build()
-        return runCatching {
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@use null
-                val root = runCatching {
-                    JsonParser.parseString(response.body?.string().orEmpty()).asJsonObject
-                }.getOrNull() ?: return@use null
-                root.getAsJsonObject(key)
-            }
-        }.getOrElse { e ->
-            Timber.w(e, "$TAG: musics call failed ($method)")
-            null
-        }
-    }
-
     private suspend fun musicuCall(
         cookie: String,
         reqKey: String,
         module: String,
         method: String,
         param: JsonObject,
+        comm: JsonObject? = null,
+        withSign: Boolean = true,
     ): JsonObject? {
         val payload = JsonObject().apply {
-            add("comm", authComm(cookie))
+            add("comm", comm ?: authComm(cookie))
             add(reqKey, JsonObject().apply {
                 addProperty("module", module)
                 addProperty("method", method)
                 add("param", param)
             })
         }
-        // sign 只含字母数字，可直接拼进 query；写接口（AddSonglist 等）缺 sign 会被 80105 拒绝
+        // sign 只含字母数字，可直接拼进 query；WEB 模式（webComm：ct=24 + g_tk）的写接口可免 sign；
+        // 仅客户端模式 comm 缺 sign 才会被 80105 拒绝
         val body = payload.toString()
+        val url = if (withSign) "$MUSICU_URL?sign=${getSecuritySign(body)}" else MUSICU_URL
         val request = Request.Builder()
-            .url("$MUSICU_URL?sign=${getSecuritySign(body)}")
+            .url(url)
             .header("User-Agent", USER_AGENT)
             .header("Referer", "https://y.qq.com/")
             .header("Cookie", cookie)

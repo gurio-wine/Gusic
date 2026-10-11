@@ -14,7 +14,8 @@ internal data class MainRootTabSpec(
 internal val mainRootTabSpecs = listOf(
     MainRootTabSpec(R.string.tab_home, R.drawable.rounded_home_24, R.drawable.home_24_rounded_filled, Screen.Home),
     MainRootTabSpec(R.string.tab_online, R.drawable.rounded_headphones_24, R.drawable.rounded_headphones_24, Screen.LxMusic),
-    MainRootTabSpec(R.string.tab_library, R.drawable.rounded_library_music_24, R.drawable.rounded_library_music_24, Screen.Library),
+    // “我的”tab 图标与发现页“我的”模块按钮保持一致（person 图标）
+    MainRootTabSpec(R.string.tab_library, R.drawable.rounded_person_24, R.drawable.rounded_person_24, Screen.Library),
 )
 
 internal fun isMainRootRoute(route: String?): Boolean = when (route) {

@@ -49,7 +49,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -341,10 +340,12 @@ fun FullPlayerContent(
         container = playerAccentColor,
         content = playerOnAccentColor
     )
-    // 上一首/下一首/循环/收藏用主题色；播放/暂停大按钮单独用 tertiary，
-    // 与传输按钮形成主次区分
-    val transportPlayPauseColors = expressivePlayPauseButtonColors(LocalMaterialTheme.current)
-    val transportSkipColors = transportSkipButtonColors
+    // 播放/暂停与元数据区循环/收藏/歌词按钮（chipColor = onPrimary@80%）同色同图标色；
+    // 上一首/下一首保持主题色，形成主次区分
+    val transportPlayPauseColors = TransportButtonColors(
+        container = playerOnAccentColor.copy(alpha = 0.8f),
+        content = playerAccentColor
+    )
     val progressActiveColor = playerOnBaseColor
 
     val placeholderColor = playerOnBaseColor.copy(alpha = 0.1f)
@@ -2819,11 +2820,4 @@ private data class TransportButtonColors(
     val container: Color,
     val content: Color
 )
-
-private fun expressivePlayPauseButtonColors(colorScheme: ColorScheme): TransportButtonColors {
-    return TransportButtonColors(
-        container = colorScheme.tertiaryFixedDim,
-        content = colorScheme.onTertiaryFixed
-    )
-}
 

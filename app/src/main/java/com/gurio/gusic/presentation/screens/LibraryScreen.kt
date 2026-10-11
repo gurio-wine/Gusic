@@ -298,8 +298,6 @@ fun LibraryScreen(
     val tabTitles by playerViewModel.libraryTabsFlow.collectAsStateWithLifecycle()
     val currentTabId by playerViewModel.currentLibraryTabId.collectAsStateWithLifecycle()
     val allSongsLazyPagingItems = libraryViewModel.songsPagingFlow.collectAsLazyPagingItems()
-    val albumsLazyPagingItems = libraryViewModel.albumsPagingFlow.collectAsLazyPagingItems()
-    val artistsLazyPagingItems = libraryViewModel.artistsPagingFlow.collectAsLazyPagingItems()
     val favoritePagingItems = libraryViewModel.favoritesPagingFlow.collectAsLazyPagingItems()
     val onRefresh: () -> Unit = {
         isRefreshing = true
@@ -307,8 +305,9 @@ fun LibraryScreen(
             LibraryTabId.SONGS,
             LibraryTabId.LIKED,
             LibraryTabId.PLAYLISTS -> Unit
-            LibraryTabId.ALBUMS -> albumsLazyPagingItems.refresh()
-            LibraryTabId.ARTISTS -> artistsLazyPagingItems.refresh()
+            // 专辑/艺术家 tab 已下线，无可刷新的分页流（保留分支以保枚举穷尽性）
+            LibraryTabId.ALBUMS,
+            LibraryTabId.ARTISTS -> Unit
             LibraryTabId.FOLDERS -> playerViewModel.loadFoldersFromRepository()
         }
         scope.launch {
@@ -1217,61 +1216,8 @@ fun LibraryScreen(
                                             hasCurrentSong = hasCurrentSong
                                         )
                                     }
-                                    LibraryTabId.ALBUMS -> {
-                                        val isLoading = playerUiState.isLoadingLibraryCategories
-
-                                        val stableOnAlbumClick: (Long) -> Unit = remember(navController) {
-                                            { albumId: Long ->
-                                                navController.navigateSafelyReplacing(
-                                                    route = Screen.AlbumDetail.createRoute(albumId),
-                                                    patternToPop = Screen.AlbumDetail.route
-                                                )
-                                            }
-                                        }
-                                        LibraryAlbumsTab(
-                                            albums = albumsLazyPagingItems,
-                                            isLoading = isLoading,
-                                            playerViewModel = playerViewModel,
-                                            bottomBarHeight = bottomBarHeightDp,
-                                            isListView = playerUiState.isAlbumsListView,
-                                            currentAlbumSortOption = playerUiState.currentAlbumSortOption,
-                                            onAlbumClick = stableOnAlbumClick,
-                                            isRefreshing = isRefreshing,
-                                            onRefresh = onRefresh,
-                                            isSelectionMode = isAlbumSelectionMode,
-                                            selectedAlbumIds = selectedAlbumIds,
-                                            onAlbumLongPress = onAlbumLongPress,
-                                            onAlbumSelectionToggle = onAlbumSelectionToggle,
-                                            getSelectionIndex = getAlbumSelectionIndex,
-                                            storageFilter = playerUiState.currentStorageFilter
-                                        )
-                                    }
-
-                                    LibraryTabId.ARTISTS -> {
-                                        val isLoading = playerUiState.isLoadingLibraryCategories
-
-                                        LibraryArtistsTab(
-                                            artists = artistsLazyPagingItems,
-                                            isLoading = isLoading,
-                                            playerViewModel = playerViewModel,
-                                            bottomBarHeight = bottomBarHeightDp,
-                                            currentArtistSortOption = playerUiState.currentArtistSortOption,
-                                            onArtistClick = { artistId ->
-                                                navController.navigateSafelyReplacing(
-                                                    route = Screen.ArtistDetail.createRoute(artistId),
-                                                    patternToPop = Screen.ArtistDetail.route
-                                                )
-                                            },
-                                            isRefreshing = isRefreshing,
-                                            onRefresh = onRefresh,
-                                            isSelectionMode = isArtistSelectionMode,
-                                            selectedArtistIds = selectedArtistIds,
-                                            onArtistLongPress = onArtistLongPress,
-                                            onArtistSelectionToggle = onArtistSelectionToggle,
-                                            getSelectionIndex = getArtistSelectionIndex,
-                                            storageFilter = playerUiState.currentStorageFilter
-                                        )
-                                    }
+                                    // 专辑/艺术家分类已从“我的”页下线（分类 tabs 只保留 我喜欢/歌单/历史），
+                                    // 专辑、艺术家详情页仍可通过其它入口（推荐页、播放页等深链）进入
 
                                     LibraryTabId.PLAYLISTS -> {
                                         LibraryPlaylistsTab(
@@ -1366,7 +1312,8 @@ fun LibraryScreen(
                                         )
                                     }
 
-                                    null -> Unit
+                                    // 其余枚举值（ALBUMS/ARTISTS）已不再作为“我的”页 tab 出现
+                                    else -> Unit
                                 }
                                 }
                             }

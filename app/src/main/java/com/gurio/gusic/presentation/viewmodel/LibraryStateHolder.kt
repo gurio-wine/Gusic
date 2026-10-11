@@ -67,7 +67,8 @@ class LibraryStateHolder @Inject constructor(
     private val _isLoadingCategories = MutableStateFlow(false)
     val isLoadingCategories = _isLoadingCategories.asStateFlow()
 
-    private val _currentSongSortOption = MutableStateFlow<SortOption>(SortOption.SongDefaultOrder)
+    // “历史”分类固定按最近播放排序
+    private val _currentSongSortOption = MutableStateFlow<SortOption>(SortOption.SongRecentlyPlayed)
     val currentSongSortOption = _currentSongSortOption.asStateFlow()
 
     private val _currentStorageFilter = MutableStateFlow(com.gurio.gusic.data.model.StorageFilter.ALL)
@@ -188,8 +189,8 @@ class LibraryStateHolder @Inject constructor(
     fun initialize(scope: CoroutineScope) {
         this.scope = scope
         scope.launch {
-            val songSortKey = userPreferencesRepository.songsSortOptionFlow.first()
-            _currentSongSortOption.value = SortOption.SONGS.find { it.storageKey == songSortKey } ?: SortOption.SongDefaultOrder
+            // “历史”分类固定按最近播放排序，忽略 DataStore 中旧的歌曲排序偏好
+            _currentSongSortOption.value = SortOption.SongRecentlyPlayed
 
             val albumSortKey = userPreferencesRepository.albumsSortOptionFlow.first()
             _currentAlbumSortOption.value = SortOption.ALBUMS.find { it.storageKey == albumSortKey } ?: SortOption.AlbumTitleAZ
