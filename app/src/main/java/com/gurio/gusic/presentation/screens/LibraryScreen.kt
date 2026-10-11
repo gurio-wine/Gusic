@@ -1897,8 +1897,8 @@ private fun LibraryNavigationCompactTitle(
                         )
                     )
                 ),
-                fontSize = 40.sp,
-                lineHeight = 40.sp,
+                fontSize = 36.sp,
+                lineHeight = 36.sp,
                 letterSpacing = (-0.2).sp,
                 platformStyle = PlatformTextStyle(includeFontPadding = false),
                 lineHeightStyle = LineHeightStyle(
@@ -1958,7 +1958,7 @@ private fun LibraryNavigationCompactTitle(
                 val ratio = (conservativeRatio / 0.4f).coerceIn(0f, 1f)
                 (14f + (26f * ratio)).sp
             } else {
-                40.sp
+                36.sp
             }
         }
 

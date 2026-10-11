@@ -301,16 +301,16 @@ fun UnifiedPlayerSheetV2(
                 currentSheetContentState == PlayerSheetState.COLLAPSED
 
         previousSheetState = currentSheetContentState
-        animatePlayerSheet(targetExpanded = targetExpanded)
 
         if (showPlayerContentArea) {
-            scope.launch {
+            // effect 的子协程：状态翻转时随 effect 一起取消，避免快速开合时动画排队
+            launch {
                 visualOvershootScaleY.snapTo(1f)
                 if (targetExpanded) {
                     visualOvershootScaleY.animateTo(
                         targetValue = 1f,
                         animationSpec = keyframes {
-                            durationMillis = 50
+                            durationMillis = 250
                             1.0f at 0
                             1.05f at 125
                             1.0f at 250
@@ -330,8 +330,10 @@ fun UnifiedPlayerSheetV2(
                 }
             }
         } else {
-            scope.launch { visualOvershootScaleY.snapTo(1f) }
+            launch { visualOvershootScaleY.snapTo(1f) }
         }
+
+        animatePlayerSheet(targetExpanded = targetExpanded)
     }
 
     val sheetVisualState = rememberSheetVisualState(

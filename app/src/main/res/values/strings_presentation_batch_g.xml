@@ -545,4 +545,14 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
     <string-array name="presentation_batch_g_changelog_v26101108_changes">
         <item>Notification order kept as previous, play/pause, next, cycle, favorite (system slot limit)</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101109_whats_new">
+        <item>Notification: cycle moved to the front — order is now cycle, previous, play/pause, next, favorite</item>
+        <item>History: a song jumps to the top the moment it starts playing, no need to finish first</item>
+        <item>Player page: opening animation no longer jumps at the end; cover is exactly 1:1; more bottom breathing room</item>
+        <item>Mine page: top tab title font reduced</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101109_changes">
+        <item>QQ favorites: fourth request recipe (token embedded in the hybrid comm), after 80105</item>
+        <item>Previous-track notification button restored as the native system button, stays visible in repeat-one</item>
+    </string-array>
 </resources>

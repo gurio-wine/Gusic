@@ -76,6 +76,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.CornerRadius
@@ -1085,14 +1086,13 @@ private fun FullPlayerAlbumCoverSection(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
     ) {
         val carouselHeight = when (carouselStyle) {
             CarouselStyle.NO_PEEK -> maxWidth
             CarouselStyle.ONE_PEEK -> maxWidth * 0.8f
             CarouselStyle.TWO_PEEK -> maxWidth * 0.6f
             else -> maxWidth * 0.8f
-        }.coerceAtMost(maxHeight - 16.dp)
+        }.coerceAtMost(maxHeight)
 
         DelayedContent(
             shouldDelay = shouldDelay,
@@ -1453,7 +1453,7 @@ private fun FullPlayerPortraitContent(
                 .weight(1f),
             contentAlignment = Alignment.BottomCenter
         ) {
-            albumCoverSection(Modifier.aspectRatio(1f))
+            albumCoverSection(Modifier.padding(vertical = 4.dp).aspectRatio(1f))
         }
 
         lyricsSection()
@@ -1471,7 +1471,7 @@ private fun FullPlayerPortraitContent(
         controlsSection()
 
         val portraitNavBarBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        Spacer(Modifier.height((portraitNavBarBottomInset / 2).coerceAtLeast(8.dp)))
+        Spacer(Modifier.height((portraitNavBarBottomInset + 12.dp).coerceAtLeast(28.dp)))
     }
 }
 
@@ -2317,7 +2317,10 @@ private fun DelayedContent(
             }
             if (showPlaceholders && placeholderBlendAlpha > 0.001f) {
                 Box(
-                    modifier = Modifier.graphicsLayer { alpha = placeholderBlendAlpha }
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clipToBounds()
+                        .graphicsLayer { alpha = placeholderBlendAlpha }
                 ) {
                     placeholder()
                 }

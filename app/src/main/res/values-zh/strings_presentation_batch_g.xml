@@ -545,4 +545,14 @@
     <string-array name="presentation_batch_g_changelog_v26101108_changes">
         <item>通知按鈕順序保持 上一首、播放/暫停、下一首、循環、收藏（系統槽位限制）</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101109_whats_new">
+        <item>播放通知：循環移到最前面，順序為 循環、上一首、播放/暫停、下一首、收藏</item>
+        <item>歷史頁：歌開始播放即置頂，不用等播完</item>
+        <item>播放頁：開啟動畫結束不再跳一下；封面精確 1:1；底部留白加大</item>
+        <item>我的頁：頂部標籤字號縮小</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101109_changes">
+        <item>QQ 收藏：第四版請求方案（票據內嵌混合參數，80105 之後）</item>
+        <item>通知上一首改回系統原生按鈕，單曲循環下保持可見</item>
+    </string-array>
 </resources>

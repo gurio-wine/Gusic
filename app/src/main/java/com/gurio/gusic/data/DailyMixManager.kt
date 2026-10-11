@@ -248,6 +248,20 @@ class DailyMixManager @Inject constructor(
         )
     }
 
+    /**
+     * Marks a song as playing now: refreshes last-played timestamp only,
+     * leaving play count for session finalization.
+     */
+    suspend fun touchLastPlayed(
+        songId: String,
+        timestamp: Long = System.currentTimeMillis()
+    ) {
+        engagementDao.touchLastPlayed(
+            songId = songId,
+            timestamp = timestamp.coerceAtLeast(0L)
+        )
+    }
+
     suspend fun incrementScore(songId: String) {
         recordPlay(songId)
     }

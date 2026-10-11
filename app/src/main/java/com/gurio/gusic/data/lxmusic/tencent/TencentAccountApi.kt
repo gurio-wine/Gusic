@@ -99,35 +99,30 @@ internal class TencentAccountApi(
             }
         }
 
-        /** hash33：QQ web 票据哈希，g_tk 由它对 musickey 计算。 */
-        internal fun hash33(s: String, h: Int = 0): Int {
-            var acc = h
-            s.forEach { c -> acc = ((acc shl 5) + acc + c.code) }
-            return acc and 0x7FFFFFFF
-        }
-
         /**
-         * musicu.fcg WEB 平台的 comm 块（参照 qqmusic-api WEB profile）：
-         * ct=24 + platform=yqq.json + g_tk（musickey 的 hash33），无需 sign 与设备指纹。
+         * musicu.fcg 写接口的混合 comm（lx-music-desktop-enhanced 同款配方）：
+         * ct=11 + authst=musickey + tmeAppID/tmeLoginType，鉴权内嵌在 comm 中，
+         * 无需 sign、无需 g_tk、无需设备指纹；配合完整 Cookie 头与 Origin 使用。
          */
-        internal fun webComm(cookie: String?): JsonObject {
+        internal fun hybridComm(cookie: String?): JsonObject {
             val cookies = parseCookieMap(cookie)
             val key = musicKey(cookies)
             val uin = cookieUin(cookies)
-            val gtk = if (key.isNotEmpty()) hash33(key, 5381) else 5381
+            // W_X 前缀的 musickey 对应微信登录（tmeLoginType=1），否则 QQ 登录（2）
+            val loginType = if (key.startsWith("W_X")) 1L else 2L
             return JsonObject().apply {
-                addProperty("ct", 24)
-                addProperty("cv", 4747474)
-                addProperty("platform", "yqq.json")
-                addProperty("chid", "0")
-                addProperty("uin", uin.ifEmpty { "0" })
-                addProperty("g_tk", gtk)
-                addProperty("g_tk_new_20200303", gtk)
+                addProperty("ct", 11)
+                addProperty("cv", 14090008)
+                addProperty("v", 14090008)
+                addProperty("chid", "10003505")
+                addProperty("uid", uin.ifEmpty { "0" })
+                addProperty("qq", uin.ifEmpty { "0" })
+                addProperty("authst", key)
+                addProperty("tmeAppID", "qqmusic")
+                addProperty("tmeLoginType", loginType)
                 addProperty("format", "json")
                 addProperty("inCharset", "utf-8")
                 addProperty("outCharset", "utf-8")
-                addProperty("notice", 0)
-                addProperty("need_new_code", 1)
             }
         }
 
@@ -269,8 +264,9 @@ internal class TencentAccountApi(
     suspend fun fetchLikedSongs(): List<LxSong>? = fetchDissSongs(liked = true, disstid = null)
 
     /**
-     * 红心开关：按 qqmusic-api WEB 模式调用（musicu.fcg 无 sign + ct=24 comm + g_tk +
-     * tid/bFmtUtf8 参数），musics.fcg 客户端协议实测被 500003 拒绝，此为第三版配方。
+     * 红心开关：第四版配方（lx-music-desktop-enhanced 同款）——musicu.fcg 免 sign，
+     * 混合 comm（ct=11 + authst + tmeAppID）+ 完整 Cookie + Origin。
+     * 前三版（zza 客户端 sign、zzb+musics.fcg、WEB g_tk 模式）分别被 80105/500003/80105 拒绝。
      */
     suspend fun applySongLike(songId: Long, songType: Int, like: Boolean): TxSongLikeResult =
         withContext(Dispatchers.IO) {
@@ -289,17 +285,20 @@ internal class TencentAccountApi(
             }
             val method = if (like) "AddSonglist" else "DelSonglist"
             val block = musicuCall(
-                cookie, "req_1", "music.musicasset.PlaylistDetailWrite", method, param,
-                comm = webComm(cookie), withSign = false,
+                cookie, "req_0", "music.musicasset.PlaylistDetailWrite", method, param,
+                comm = hybridComm(cookie), withSign = false,
             ) ?: return@withContext TxSongLikeResult(false, -1, "network error")
             val code = block.intField("code") ?: -1
             if (code != 0) {
                 Timber.w("$TAG: $method rejected code=$code block=$block")
                 return@withContext TxSongLikeResult(false, code, "gateway")
             }
-            // retCode 可能在业务块顶层或 data 内层，两处都查
+            // retCode 变体兼容：顶层/ret_code/data 内层都可能
+            val data = block.get("data") as? JsonObject
             val retCode = block.intField("retCode")
-                ?: (block.get("data") as? JsonObject)?.intField("retCode")
+                ?: block.intField("ret_code")
+                ?: data?.intField("retCode")
+                ?: (data?.get("result") as? JsonObject)?.intField("retCode")
             if (retCode != null && retCode != 0) {
                 Timber.w("$TAG: $method retCode=$retCode")
                 return@withContext TxSongLikeResult(false, retCode, "retCode")
@@ -473,14 +472,15 @@ internal class TencentAccountApi(
                 add("param", param)
             })
         }
-        // sign 只含字母数字，可直接拼进 query；WEB 模式（webComm：ct=24 + g_tk）的写接口可免 sign；
-        // 仅客户端模式 comm 缺 sign 才会被 80105 拒绝
+        // sign 只含字母数字，可直接拼进 query。写接口走混合 comm（hybridComm：ct=11 + authst）
+        // 时免 sign；读接口默认 authComm 仍带 sign（zza）保持既有稳定行为
         val body = payload.toString()
         val url = if (withSign) "$MUSICU_URL?sign=${getSecuritySign(body)}" else MUSICU_URL
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", USER_AGENT)
             .header("Referer", "https://y.qq.com/")
+            .header("Origin", "https://y.qq.com")
             .header("Cookie", cookie)
             .post(body.toRequestBody(JSON_MEDIA_TYPE))
             .build()

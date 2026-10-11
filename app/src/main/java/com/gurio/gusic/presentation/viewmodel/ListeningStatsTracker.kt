@@ -132,6 +132,20 @@ class ListeningStatsTracker @Inject constructor(
         }
         if (isPlaying) {
             scrobbleManager.onPlayingNow(safeSongId)
+            touchLastPlayedAsync(safeSongId)
+        }
+    }
+
+    /**
+     * 历史置顶：开始/恢复播放即刷新 last_played_timestamp（播放数仍在结算时累加），
+     * 否则正在播放的歌要等播完或切走才会排到历史第一位。
+     */
+    private fun touchLastPlayedAsync(songId: String) {
+        persistenceScope.launch {
+            runCatching { dailyMixManager.touchLastPlayed(songId) }
+                .onFailure { throwable ->
+                    Timber.e(throwable, "Failed to touch last played for song=%s", songId)
+                }
         }
     }
 
@@ -147,6 +161,7 @@ class ListeningStatsTracker @Inject constructor(
         session.lastUpdateEpochMs = System.currentTimeMillis()
         if (!wasPlaying && isPlaying) {
             scrobbleManager.onPlayingNow(session.songId)
+            touchLastPlayedAsync(session.songId)
         }
     }
 
@@ -217,6 +232,7 @@ class ListeningStatsTracker @Inject constructor(
             existing.lastUpdateEpochMs = System.currentTimeMillis()
             if (!wasPlaying && isPlaying) {
                 scrobbleManager.onPlayingNow(existing.songId)
+                touchLastPlayedAsync(existing.songId)
             }
             return
         }

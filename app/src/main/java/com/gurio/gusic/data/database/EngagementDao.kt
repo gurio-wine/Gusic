@@ -51,9 +51,23 @@ interface EngagementDao {
         ON CONFLICT(song_id) DO UPDATE SET
             play_count = play_count + 1,
             total_play_duration_ms = total_play_duration_ms + :durationMs,
-            last_played_timestamp = :timestamp
+            last_played_timestamp = MAX(last_played_timestamp, :timestamp)
     """)
     suspend fun recordPlay(songId: String, durationMs: Long, timestamp: Long)
+
+    /**
+     * Refreshes only the last played timestamp without touching play count,
+     * so the currently playing song moves to the top of history immediately
+     * on play start instead of at session finalization.
+     * MAX() keeps the newer value so a late touch can never demote a song.
+     */
+    @Query("""
+        INSERT INTO song_engagements (song_id, play_count, total_play_duration_ms, last_played_timestamp)
+        VALUES (:songId, 0, 0, :timestamp)
+        ON CONFLICT(song_id) DO UPDATE SET
+            last_played_timestamp = MAX(last_played_timestamp, :timestamp)
+    """)
+    suspend fun touchLastPlayed(songId: String, timestamp: Long)
 
     /**
      * Get top songs by play count for quick access.

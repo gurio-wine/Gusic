@@ -9,7 +9,6 @@ object MusicNotificationProvider {
     const val EXTRA_SHUFFLE_ENABLED = "com.gurio.gusic.extra.SHUFFLE_ENABLED"
     const val CUSTOM_COMMAND_CYCLE_REPEAT_MODE = "com.gurio.gusic.CYCLE_REPEAT"
     const val CUSTOM_COMMAND_CYCLE_PLAY_MODE = "com.gurio.gusic.CYCLE_PLAY_MODE"
-    const val CUSTOM_COMMAND_SEEK_PREVIOUS = "com.gurio.gusic.SEEK_PREVIOUS"
     const val CUSTOM_COMMAND_LIKE = "com.gurio.gusic.LIKE"
     const val CUSTOM_COMMAND_SET_FAVORITE_STATE = "com.gurio.gusic.SET_FAVORITE_STATE"
     const val EXTRA_FAVORITE_ENABLED = "com.gurio.gusic.extra.FAVORITE_ENABLED"
