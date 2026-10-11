@@ -158,7 +158,7 @@ class LxMusicViewModel @Inject constructor(
     private var currentLoadJob: Job? = null
     private var playlistListDirty = false
 
-    enum class SearchType { SONG, ARTIST, ALBUM }
+    enum class SearchType { SONG, ARTIST, ALBUM, PLAYLIST }
 
     data class SearchState(
         val keyword: String = "",
@@ -184,6 +184,9 @@ class LxMusicViewModel @Inject constructor(
         val loadingMoreAlbums: Boolean = false,
         val canLoadMoreAlbums: Boolean = false,
         val albumUnsupported: Boolean = false,
+        val playlistResults: List<LxPlaylist> = emptyList(),
+        val searchingPlaylists: Boolean = false,
+        val canLoadMorePlaylists: Boolean = false,
         val searchEpoch: Long = 0L,
     )
 
@@ -714,13 +717,18 @@ class LxMusicViewModel @Inject constructor(
         persistSelectedSource()
 
         val st = _browseState.value
-        perSourceModule[oldSource] = st.module
+        // 搜索态不属于浏览模块，切换音源时不覆盖记忆的模块
+        if (st.module != "search") {
+            perSourceModule[oldSource] = st.module
+        }
         resetMineNavigation()
         val restoredModule = when (val remembered = perSourceModule[source]) {
             null -> "board"
             // “我的”模块固定保留，未登录时由界面显示占位
             "mine" -> "mine"
-            else -> remembered
+            // "playlist" 仅作为歌单详情的内部模块值，不作为恢复目标；
+            // 兼容历史记忆值（如 "search"/"playlist"），一律回退浏览根模块
+            else -> "board"
         }
         _browseState.value = st.copy(
             module = restoredModule,
@@ -768,6 +776,9 @@ class LxMusicViewModel @Inject constructor(
             loadingMoreAlbums = false,
             canLoadMoreAlbums = false,
             albumUnsupported = false,
+            playlistResults = emptyList(),
+            searchingPlaylists = false,
+            canLoadMorePlaylists = false,
         )
         _searchArtistOverlay.value = false
         _searchArtistPageState.value = SearchArtistPageState()
@@ -890,10 +901,6 @@ class LxMusicViewModel @Inject constructor(
         currentLoadJob?.cancel()
         loadEpoch++
 
-        if (_browseState.value.module == "search") {
-            _searchArtistOverlay.value = false
-        }
-
         if (module == "mine") {
             // 未登录也允许进入“我的”模块：界面显示未登录占位与登录入口
             _browseState.value = _browseState.value.copy(module = "mine", error = null)
@@ -904,7 +911,6 @@ class LxMusicViewModel @Inject constructor(
         val source = _selectedSource.value
         _browseState.value = _browseState.value.copy(module = module, error = null)
         perSourceModule[source] = module
-        if (module == "search") return
         startModuleLoad(module, source, force = false)
     }
 
@@ -1059,6 +1065,16 @@ class LxMusicViewModel @Inject constructor(
             return false
         }
         if (st.selectedPlaylist != null) {
+            if (st.module == "search") {
+                // 搜索结果中打开的歌单详情：返回搜索结果列表
+                _browseState.value = st.copy(
+                    selectedPlaylist = null, playlistSongs = emptyList(),
+                    loadingPlaylistSongs = false, playlistSongsPage = 1,
+                    playlistSongsHasMore = false, playlistSongsLoadingMore = false,
+                    error = null,
+                )
+                return true
+            }
             if (st.playlistTags.isEmpty() && st.playlists.isEmpty() && !st.isPlaylistSearchMode) {
                 _browseState.value = st.copy(
                     selectedPlaylist = null, playlistSongs = emptyList(),
@@ -1082,7 +1098,12 @@ class LxMusicViewModel @Inject constructor(
             selectModule(rootModule)
             return true
         }
-        // board/search 返回也回到“我的”（未登录时是占位页）
+        if (st.module == "search") {
+            // 搜索态返回 = 退出搜索，回到浏览态
+            exitSearch()
+            return true
+        }
+        // board 返回也回到“我的”（未登录时是占位页）
         selectModule("mine")
         return true
     }
@@ -3067,6 +3088,11 @@ class LxMusicViewModel @Inject constructor(
                 }
             st.module == "board" ->
                 startModuleLoad("board", source, force = true)
+            st.module == "search" -> {
+                // 搜索态刷新：按当前分类重发搜索
+                val kw = _searchState.value.keyword
+                if (kw.isNotBlank()) search(kw)
+            }
             else -> {
                 val kw = _searchState.value.keyword
                 if (kw.isNotBlank()) search(kw)
@@ -3243,6 +3269,7 @@ class LxMusicViewModel @Inject constructor(
             searchedSource = null,
             page = 1,
             canLoadMore = false,
+            loadingMore = false,
             artistResults = emptyList(),
             artistTotal = 0,
             artistPage = 1,
@@ -3255,9 +3282,36 @@ class LxMusicViewModel @Inject constructor(
             loadingMoreAlbums = false,
             canLoadMoreAlbums = false,
             albumUnsupported = false,
+            playlistResults = emptyList(),
+            searchingPlaylists = false,
+            canLoadMorePlaylists = false,
         )
         _searchArtistOverlay.value = false
-        resetMineNavigation()
+    }
+
+    /**
+     * 退出搜索态：清空全部搜索状态并作废在途请求，浏览回到排行榜根模块。
+     */
+    fun exitSearch() {
+        clearSearchResults()
+        dismissSearchArtistOverlay()
+        dismissSearchAlbumOverlay()
+        _searchState.value = _searchState.value.copy(
+            searchEpoch = _searchState.value.searchEpoch + 1,
+            // 分类重置回歌曲，避免下次搜索静默走上一轮的歌单/歌手/专辑类型
+            type = SearchType.SONG,
+        )
+        val st = _browseState.value
+        if (st.module == "search") {
+            _browseState.value = st.copy(
+                module = "board",
+                error = null,
+                selectedPlaylist = null,
+                playlistSongs = emptyList(),
+                loadingPlaylistSongs = false,
+            )
+            startModuleLoad("board", _selectedSource.value, force = false)
+        }
     }
 
     private fun persistActiveScript(scriptPath: String?) {
@@ -3274,15 +3328,36 @@ class LxMusicViewModel @Inject constructor(
         when (type) {
             SearchType.ARTIST -> if (!cur.searchingArtists) searchArtists(cur.keyword)
             SearchType.ALBUM -> if (!cur.searchingAlbums) searchAlbums(cur.keyword)
+            SearchType.PLAYLIST -> if (!cur.searchingPlaylists) searchPlaylistsInSearch(cur.keyword)
             else -> if (!cur.searching) searchSongs(cur.keyword)
         }
     }
 
     fun search(keyword: String) {
+        val trimmed = keyword.trim()
+        if (trimmed.isEmpty()) return
+        if (_searchState.value.type == SearchType.PLAYLIST) {
+            // 歌单类型：链接 / ID 直开优先，识别不出再走歌单搜索
+            viewModelScope.launch {
+                val ref = runCatching {
+                    repository.resolvePlaylistRef(trimmed, _selectedSource.value)
+                }.getOrNull()
+                if (ref != null) {
+                    openPlaylistDirect(ref.first, ref.second)
+                    // 从搜索态直开的歌单保持 module=search：返回时回到搜索结果而非“我的”
+                    _browseState.value = _browseState.value.copy(module = "search")
+                } else {
+                    searchPlaylistsInSearch(trimmed)
+                }
+            }
+            return
+        }
+        // 进入搜索态（隐藏模块行，显示分类 tab 与结果区）
+        enterSearchState()
         when (_searchState.value.type) {
-            SearchType.ARTIST -> searchArtists(keyword)
-            SearchType.ALBUM -> searchAlbums(keyword)
-            else -> searchSongs(keyword)
+            SearchType.ARTIST -> searchArtists(trimmed)
+            SearchType.ALBUM -> searchAlbums(trimmed)
+            else -> searchSongs(trimmed)
         }
     }
 
@@ -3290,7 +3365,55 @@ class LxMusicViewModel @Inject constructor(
         when (_searchState.value.type) {
             SearchType.ARTIST -> loadMoreArtists()
             SearchType.ALBUM -> loadMoreAlbums()
+            // 歌单搜索暂无分页游标，加载更多为空操作
+            SearchType.PLAYLIST -> {}
             else -> loadMoreSongs()
+        }
+    }
+
+    /**
+     * 进入搜索态：隐藏模块行并显示结果区；同时关闭可能打开着的歌单详情，
+     * 否则详情态（selectedPlaylist != null）渲染优先级更高会一直盖住搜索结果。
+     */
+    private fun enterSearchState() {
+        val st = _browseState.value
+        _browseState.value = st.copy(
+            module = "search",
+            selectedPlaylist = null,
+            playlistSongs = emptyList(),
+            loadingPlaylistSongs = false,
+        )
+    }
+
+    fun searchPlaylistsInSearch(keyword: String) {
+        val trimmed = keyword.trim()
+        if (trimmed.isEmpty()) return
+        val source = _selectedSource.value
+        val epoch = _searchState.value.searchEpoch + 1
+        enterSearchState()
+        viewModelScope.launch {
+            _searchState.value = _searchState.value.copy(
+                keyword = trimmed,
+                searchingPlaylists = true,
+                error = null,
+                playlistResults = emptyList(),
+                searchedSource = null,
+                searchEpoch = epoch,
+            )
+            val result = runCatching { repository.searchPlaylists(source, trimmed, 1) }
+                .onFailure { Timber.w(it, "searchPlaylistsInSearch $source failed") }
+            val results = result.getOrElse { emptyList() }
+            val cur = _searchState.value
+            if (cur.searchEpoch != epoch || _selectedSource.value != source) return@launch
+            _searchState.value = cur.copy(
+                searchingPlaylists = false,
+                playlistResults = results,
+                searchedSource = source,
+                canLoadMorePlaylists = false,
+                error = result.exceptionOrNull()?.let {
+                    context.getString(R.string.lx_error_search_failed, it.message ?: "")
+                },
+            )
         }
     }
 

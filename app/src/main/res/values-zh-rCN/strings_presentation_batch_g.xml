@@ -555,4 +555,13 @@
         <item>QQ 收藏：第四版请求方案（票据内嵌混合参数，80105 之后）</item>
         <item>通知上一首改回系统原生按钮，单曲循环下保持可见</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101110_whats_new">
+        <item>播放通知：上一首回来了——顺序为 循环、上一首、播放/暂停、下一首、收藏</item>
+        <item>发现页：搜索框移到顶部独占一排，模块只剩 我的 和 排行榜</item>
+        <item>发现页：搜索分类新增 歌单（歌曲/专辑/歌手/歌单四档），支持粘贴链接/ID 直接打开歌单</item>
+        <item>发现页：搜索时隐藏浏览模块、显示结果；未搜索时隐藏结果区；搜索态下搜索框左侧变为返回按钮</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101110_changes">
+        <item>上一首消失的根因：Media3 在存在自定义前置槽按钮（循环）时不再补原生上一首，现改为显式插入带语义的上一首按钮</item>
+    </string-array>
 </resources>

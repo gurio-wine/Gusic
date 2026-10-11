@@ -555,4 +555,13 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>QQ favorites: fourth request recipe (token embedded in the hybrid comm), after 80105</item>
         <item>Previous-track notification button restored as the native system button, stays visible in repeat-one</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101110_whats_new">
+        <item>Notification: previous is back — order is cycle, previous, play/pause, next, favorite</item>
+        <item>Discover: search box moved to a full-width row at the top; only Mine and Charts modules remain</item>
+        <item>Discover: search categories now include Playlists (songs/albums/artists/playlists); pasting a link or ID opens the playlist directly</item>
+        <item>Discover: browsing modules hide while searching, results hide before searching; the leading icon becomes a back button in search mode</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101110_changes">
+        <item>Root cause of the vanishing previous button: Media3 skips the native previous when a custom back-slot button exists — now inserted explicitly with a semantic action</item>
+    </string-array>
 </resources>

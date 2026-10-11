@@ -411,6 +411,7 @@
 <string name="lx_text_song_type">歌曲</string>
 <string name="lx_text_artist_type">歌手</string>
 <string name="lx_text_album_type">專輯</string>
+<string name="lx_text_playlist_type">歌單</string>
 <string name="lx_text_search_results">搜尋結果</string>
 <string name="lx_btn_load_more_default">載入更多</string>
 <string name="lx_btn_refresh_batch">換一批</string>

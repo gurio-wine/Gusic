@@ -454,6 +454,7 @@
     <string name="lx_text_song_type">Songs</string>
     <string name="lx_text_artist_type">Artists</string>
     <string name="lx_text_album_type">Albums</string>
+    <string name="lx_text_playlist_type">Playlists</string>
     <string name="lx_text_search_results">Search results</string>
 
     <!-- LX Music: Mine page strings -->

@@ -419,6 +419,7 @@
 <string name="lx_text_song_type">歌曲</string>
 <string name="lx_text_artist_type">歌手</string>
 <string name="lx_text_album_type">专辑</string>
+<string name="lx_text_playlist_type">歌单</string>
 <string name="lx_text_search_results">搜索结果</string>
 
 <!-- LX Music: Mine page strings -->

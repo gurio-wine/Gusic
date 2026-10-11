@@ -509,23 +509,21 @@ fun LxMusicScreen(
             )
         },
     ) { innerPadding ->
-        // “我的”模块固定保留（未登录时显示登录引导占位），四个模块页序固定
+        // “我的”模块固定保留（未登录时显示登录引导占位），浏览态仅 mine/board 两页
         fun modulePageIndex(module: String): Int = when (module) {
             "mine" -> 0
-            "board" -> 1
-            "playlist" -> 2
-            else -> 3
+            else -> 1
         }
         fun pageIndexToModule(page: Int): String = when (page) {
-            0 -> "mine"; 1 -> "board"; 2 -> "playlist"; else -> "search"
+            0 -> "mine"; else -> "board"
         }
 
         val pagerState = rememberPagerState(
             initialPage = modulePageIndex(browseState.module),
-            pageCount = { 4 },
+            pageCount = { 2 },
         )
         val isListScrolling = remember { mutableStateOf(false) }
-        LaunchedEffect(browseState.module, mineAvailable) {
+        LaunchedEffect(browseState.module, browseState.selectedPlaylist != null, mineAvailable) {
             isListScrolling.value = false
             val target = modulePageIndex(browseState.module)
             if (pagerState.currentPage != target) {
@@ -600,12 +598,72 @@ fun LxMusicScreen(
                 Column(modifier = Modifier.fillMaxSize()) {
                     val mineLabel = stringResource(R.string.lx_tab_mine)
                     val boardLabel = stringResource(R.string.lx_tab_board)
-                    val playlistLabel = stringResource(R.string.lx_tab_playlist)
-                    val searchLabel = stringResource(R.string.lx_tab_search)
+                    val searchActive = browseState.module == "search"
+                    val playlistDetailActive = browseState.module == "playlist" ||
+                        browseState.selectedPlaylist != null
+                    // 常驻搜索框：浏览态提交搜索进入搜索态，搜索态左侧变为返回按钮
+                    LxDockedSearchBar(
+                        query = searchState.keyword,
+                        onQueryChange = viewModel::updateSearchQuery,
+                        onSearch = { viewModel.search(it) },
+                        onClear = { viewModel.updateSearchQuery("") },
+                        placeholder = stringResource(R.string.lx_placeholder_search_songs),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 12.dp, end = 12.dp, top = 12.dp),
+                        leadingBack = searchActive,
+                        // 与系统返回键同一条路径：搜索态内若开着歌单详情，先回结果列表再退出搜索
+                        onLeadingBack = { viewModel.back() },
+                        enableInnerBox = false,
+                    )
+                    if (playlistDetailActive) {
+                        // 歌单详情模式（含搜索直开）：隐藏模块行与 pager
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            LxPlaylistPage(browseState, viewModel, playerViewModel, playLxSong,
+                                playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
+                                onScrollingChange = { isListScrolling.value = it },
+                                onSongMoreOptions = { lxInfoSong = it },
+                                isSelectionMode = isSelectionMode,
+                                selectedSongIds = selectedSongIds,
+                                onSongLongPress = toggleLxSongSelection,
+                                onSongSelectionToggle = toggleLxSongSelection,
+                                getSelectionIndex = { songId ->
+                                    multiSelectionState.getSelectionIndex(songId)
+                                },
+                                multiSelectionState = multiSelectionState,
+                                onSelectionOptionsClick = { showMultiSelectionSheet = true })
+                        }
+                    } else if (searchActive) {
+                        // 搜索态：隐藏模块行，显示分类切换与搜索结果
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            LxSearchTypeSwitch(
+                                selected = searchState.type,
+                                onSelect = viewModel::setSearchType,
+                                modifier = Modifier
+                                    .align(Alignment.CenterHorizontally)
+                                    .padding(top = 10.dp, bottom = 6.dp),
+                            )
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                LxSearchPage(browseState, searchState, viewModel, playerViewModel, playSearchSong,
+                                    playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
+                                    onScrollingChange = { isListScrolling.value = it },
+                                    onSongMoreOptions = { lxInfoSong = it },
+                                    isSelectionMode = isSelectionMode,
+                                    selectedSongIds = selectedSongIds,
+                                    onSongLongPress = toggleLxSongSelection,
+                                    onSongSelectionToggle = toggleLxSongSelection,
+                                    getSelectionIndex = { songId ->
+                                        multiSelectionState.getSelectionIndex(songId)
+                                    },
+                                    multiSelectionState = multiSelectionState,
+                                    onSelectionOptionsClick = { showMultiSelectionSheet = true })
+                            }
+                        }
+                    } else {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 8.dp),
+                            .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         LxModuleButton(
@@ -618,13 +676,6 @@ fun LxMusicScreen(
                         // “排行榜”三字更长，多分一点宽度保证完整显示
                         LxModuleButton(boardLabel, Icons.Rounded.Leaderboard,
                             indicatorModule == "board", { viewModel.selectModule("board") }, Modifier.weight(1.3f))
-                        LxModuleButton(playlistLabel, Icons.Rounded.QueueMusic,
-                            indicatorModule == "playlist", { viewModel.selectModule("playlist") }, Modifier.weight(1f))
-                        LxModuleButton(searchLabel, Icons.Rounded.Search,
-                            indicatorModule == "search", {
-                                viewModel.updateSearchQuery("")
-                                viewModel.selectModule("search")
-                            }, Modifier.weight(1f))
                     }
                     Box(modifier = Modifier.fillMaxSize()) {
                     HorizontalPager(
@@ -709,7 +760,7 @@ fun LxMusicScreen(
                                     )
                                 }
                             }
-                            1 -> LxBoardPage(browseState, viewModel, playerViewModel, playLxSong,
+                            else -> LxBoardPage(browseState, viewModel, playerViewModel, playLxSong,
                                 playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
                                 onScrollingChange = { if (pagerState.currentPage == 1) isListScrolling.value = it },
                                 onSongMoreOptions = { lxInfoSong = it },
@@ -722,33 +773,8 @@ fun LxMusicScreen(
                                 },
                                 multiSelectionState = multiSelectionState,
                                 onSelectionOptionsClick = { showMultiSelectionSheet = true })
-                            2 -> LxPlaylistPage(browseState, viewModel, playerViewModel, playLxSong,
-                                playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
-                                onScrollingChange = { if (pagerState.currentPage == 2) isListScrolling.value = it },
-                                onSongMoreOptions = { lxInfoSong = it },
-                                isSelectionMode = isSelectionMode,
-                                selectedSongIds = selectedSongIds,
-                                onSongLongPress = toggleLxSongSelection,
-                                onSongSelectionToggle = toggleLxSongSelection,
-                                getSelectionIndex = { songId ->
-                                    multiSelectionState.getSelectionIndex(songId)
-                                },
-                                multiSelectionState = multiSelectionState,
-                                onSelectionOptionsClick = { showMultiSelectionSheet = true })
-                            else -> LxSearchPage(browseState, searchState, viewModel, playerViewModel, playSearchSong,
-                                playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
-                                onScrollingChange = { if (pagerState.currentPage == 3) isListScrolling.value = it },
-                                onSongMoreOptions = { lxInfoSong = it },
-                                isSelectionMode = isSelectionMode,
-                                selectedSongIds = selectedSongIds,
-                                onSongLongPress = toggleLxSongSelection,
-                                onSongSelectionToggle = toggleLxSongSelection,
-                                getSelectionIndex = { songId ->
-                                    multiSelectionState.getSelectionIndex(songId)
-                                },
-                                multiSelectionState = multiSelectionState,
-                                onSelectionOptionsClick = { showMultiSelectionSheet = true })
                         }
+                    }
                     }
                     }
                 }
@@ -2033,6 +2059,8 @@ private fun LxDockedSearchBar(
     modifier: Modifier = Modifier,
     solidBackground: Boolean = false,
     enableInnerBox: Boolean = true,
+    leadingBack: Boolean = false,
+    onLeadingBack: (() -> Unit)? = null,
 ) {
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -2056,13 +2084,39 @@ private fun LxDockedSearchBar(
             .background(fieldColor),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Spacer(Modifier.width(16.dp))
-        Icon(
-            Icons.Rounded.Search,
-            contentDescription = null,
-            tint = onFieldColor,
-            modifier = Modifier.size(24.dp),
-        )
+        if (leadingBack && onLeadingBack != null) {
+            // 搜索态：左侧返回按钮，与右侧搜索按钮镜像对称
+            FilledIconButton(
+                onClick = onLeadingBack,
+                shape = RoundedCornerShape(
+                    topStart = 24.dp,
+                    bottomStart = 24.dp,
+                    topEnd = 8.dp,
+                    bottomEnd = 8.dp,
+                ),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+                modifier = Modifier
+                    .padding(start = 5.dp)
+                    .size(42.dp),
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = stringResource(R.string.lx_desc_back),
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+        } else {
+            Spacer(Modifier.width(16.dp))
+            Icon(
+                Icons.Rounded.Search,
+                contentDescription = null,
+                tint = onFieldColor,
+                modifier = Modifier.size(24.dp),
+            )
+        }
         Spacer(Modifier.width(10.dp))
         if (enableInnerBox) {
             Box(
@@ -3206,6 +3260,7 @@ private fun LxSearchPage(
                 LxMusicViewModel.SearchType.SONG -> it.results.isNotEmpty()
                 LxMusicViewModel.SearchType.ARTIST -> it.artistResults.isNotEmpty()
                 LxMusicViewModel.SearchType.ALBUM -> it.albumResults.isNotEmpty()
+                LxMusicViewModel.SearchType.PLAYLIST -> it.playlistResults.isNotEmpty()
             }
         }
         withFrameNanos { }
@@ -3226,6 +3281,7 @@ private fun LxSearchPage(
         val isSearching = when (searchState.type) {
             LxMusicViewModel.SearchType.ARTIST -> searchState.searchingArtists
             LxMusicViewModel.SearchType.ALBUM -> searchState.searchingAlbums
+            LxMusicViewModel.SearchType.PLAYLIST -> searchState.searchingPlaylists
             else -> searchState.searching
         }
         PullToRefreshBox(
@@ -3236,7 +3292,7 @@ private fun LxSearchPage(
             indicator = {
                 PullToRefreshDefaults.LoadingIndicator(
                     state = pullToRefreshState, isRefreshing = isSearching,
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 96.dp),
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
                 )
             },
         ) {
@@ -3260,7 +3316,7 @@ private fun LxSearchPage(
                 contentPadding = PaddingValues(
                     start = 8.dp,
                     end = 14.dp,
-                    top = 102.dp,
+                    top = 8.dp,
                     bottom = bottomBarHeightDp + MiniPlayerHeight + ListExtraBottomGap,
                 ),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -3337,6 +3393,43 @@ private fun LxSearchPage(
                             }
                         }
                     }
+                } else if (searchState.type == LxMusicViewModel.SearchType.PLAYLIST) {
+                    if (searchState.searchingPlaylists && searchState.playlistResults.isEmpty()) {
+                        item(key = "playlist_loading") {
+                            LxLoadingSkeletonRows(3)
+                        }
+                    } else {
+                        if (searchState.playlistResults.isNotEmpty()) {
+                            items(searchState.playlistResults, key = { "spl_${it.id}" }) { playlist ->
+                                LxPlaylistItem(playlist = playlist, onClick = { viewModel.selectPlaylist(playlist) })
+                            }
+                            item(key = "search_playlist_count_footer") {
+                                Text(stringResource(R.string.lx_text_total_playlists_count, searchState.playlistResults.size),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                            }
+                        } else if (searchState.error != null) {
+                            item(key = "playlist_error") {
+                                Text(
+                                    searchState.error,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                )
+                            }
+                        } else if (searchState.searchedSource != null) {
+                            item(key = "playlist_empty") {
+                                Text(
+                                    stringResource(R.string.lx_search_no_results),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp),
+                                )
+                            }
+                        }
+                    }
                 } else {
                 if (searchState.error != null) {
                     item {
@@ -3407,7 +3500,7 @@ private fun LxSearchPage(
         }
         ExpressiveScrollBar(
             modifier = Modifier.align(Alignment.CenterEnd)
-                .padding(end = 4.dp, top = 102.dp, bottom = bottomBarHeightDp + MiniPlayerHeight + 16.dp),
+                .padding(end = 4.dp, top = 8.dp, bottom = bottomBarHeightDp + MiniPlayerHeight + 16.dp),
             listState = listState,
         )
         LxLocateCurrentSongFab(
@@ -3451,23 +3544,6 @@ private fun LxSearchPage(
                 }
             }
         }
-        LxDockedSearchBar(
-            query = searchState.keyword,
-            onQueryChange = viewModel::updateSearchQuery,
-            onSearch = { if (searchState.keyword.isNotBlank()) viewModel.search(searchState.keyword) },
-            onClear = { viewModel.updateSearchQuery("") },
-            placeholder = stringResource(R.string.lx_placeholder_search_songs),
-            modifier = Modifier.align(Alignment.TopCenter)
-                .padding(horizontal = 20.dp)
-                .offset(y = 8.dp),
-            enableInnerBox = false,
-        )
-        LxSearchTypeSwitch(
-            selected = searchState.type,
-            onSelect = viewModel::setSearchType,
-            modifier = Modifier.align(Alignment.TopCenter)
-                .offset(y = 64.5.dp),
-        )
         LxFloatingSelectionRow(
             visible = isSelectionMode,
             selectedCount = selectedSongIds.size,
@@ -3478,7 +3554,7 @@ private fun LxSearchPage(
             onOptionsClick = onSelectionOptionsClick,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 102.dp + 4.dp),
+                .padding(top = 4.dp),
         )
     }
 }
@@ -3496,6 +3572,7 @@ private fun LxSearchTypeSwitch(
             LxMusicViewModel.SearchType.SONG -> 0f
             LxMusicViewModel.SearchType.ALBUM -> 1f
             LxMusicViewModel.SearchType.ARTIST -> 2f
+            LxMusicViewModel.SearchType.PLAYLIST -> 3f
         },
         animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
         label = "searchTypeThumb",
@@ -3521,19 +3598,26 @@ private fun LxSearchTypeSwitch(
             MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = tween(220), label = "albumColor",
     )
+    val playlistColor by animateColorAsState(
+        targetValue = if (selected == LxMusicViewModel.SearchType.PLAYLIST)
+            MaterialTheme.colorScheme.onPrimary
+        else
+            MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(220), label = "playlistColor",
+    )
     BoxWithConstraints(
         modifier = modifier
-            .width(162.dp)
+            .width(216.dp)
             .height(30.dp)
             .shadow(4.dp, RoundedCornerShape(28.dp))
             .clip(RoundedCornerShape(28.dp))
             .background(fieldColor),
     ) {
-        val thirdWidthPx = with(LocalDensity.current) { (maxWidth / 3).toPx() }
+        val quarterWidthPx = with(LocalDensity.current) { (maxWidth / 4).toPx() }
         Box(
             Modifier
-                .offset { IntOffset((fraction * thirdWidthPx).roundToInt(), 0) }
-                .width(maxWidth / 3)
+                .offset { IntOffset((fraction * quarterWidthPx).roundToInt(), 0) }
+                .width(maxWidth / 4)
                 .fillMaxHeight()
                 .padding(3.dp)
                 .clip(RoundedCornerShape(50))
@@ -3583,6 +3667,21 @@ private fun LxSearchTypeSwitch(
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Medium,
                     color = artistColor,
+                )
+            }
+            Box(
+                modifier = Modifier.weight(1f).fillMaxHeight()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { onSelect(LxMusicViewModel.SearchType.PLAYLIST) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    stringResource(R.string.lx_text_playlist_type),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = playlistColor,
                 )
             }
         }
