@@ -564,4 +564,11 @@
     <string-array name="presentation_batch_g_changelog_v26101110_changes">
         <item>上一首消失的根因：Media3 在存在自訂前置槽按鈕（循環）時不再補原生上一首，現改為顯式插入帶語義的上一首按鈕</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101201_whats_new">
+        <item>排行榜改為選單網格：每行兩張榜單卡片，顯示榜名和前三首歌曲；點擊卡片進入榜單</item>
+        <item>「我喜歡」分類改為兩級：第一級為本軟體和已登入平台入口，第二級為對應平台的我喜歡的音樂；未登入的平台不顯示</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101201_changes">
+        <item>收藏和取消收藏不再彈出成功提示，僅失敗時提示</item>
+    </string-array>
 </resources>

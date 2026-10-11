@@ -133,11 +133,14 @@ import com.gurio.gusic.data.model.MusicFolder
 import com.gurio.gusic.data.model.FolderSource
 import com.gurio.gusic.data.model.Song
 import com.gurio.gusic.data.lxmusic.LxQualities
+import com.gurio.gusic.data.lxmusic.LxSongMapper
+import com.gurio.gusic.data.lxmusic.LxSources
 import com.gurio.gusic.data.model.SortOption
 import com.gurio.gusic.data.model.StorageFilter
 import com.gurio.gusic.presentation.components.MiniPlayerHeight
 import com.gurio.gusic.presentation.components.SmartImage
 import com.gurio.gusic.presentation.screens.lxmusic.LxBatchDownloadQualityDialog
+import com.gurio.gusic.presentation.screens.lxmusic.LxMusicViewModel
 import com.gurio.gusic.presentation.components.resolveMainScreenBottomGradientHeight
 import com.gurio.gusic.presentation.components.resolveNavBarOccupiedHeight
 import androidx.compose.foundation.layout.WindowInsets
@@ -158,6 +161,7 @@ import com.gurio.gusic.presentation.components.subcomps.SelectionActionRow
 import com.gurio.gusic.presentation.components.subcomps.SelectionCountPill
 import com.gurio.gusic.presentation.viewmodel.ColorSchemePair
 import com.gurio.gusic.presentation.viewmodel.PlayerUiState
+import com.gurio.gusic.presentation.viewmodel.PlaybackOrigin
 import com.gurio.gusic.presentation.viewmodel.PlayerViewModel
 import com.gurio.gusic.presentation.viewmodel.CloudDownloadsViewModel
 import com.gurio.gusic.presentation.viewmodel.StablePlayerState
@@ -299,12 +303,28 @@ fun LibraryScreen(
     val currentTabId by playerViewModel.currentLibraryTabId.collectAsStateWithLifecycle()
     val allSongsLazyPagingItems = libraryViewModel.songsPagingFlow.collectAsLazyPagingItems()
     val favoritePagingItems = libraryViewModel.favoritesPagingFlow.collectAsLazyPagingItems()
+    // “我喜欢”两级结构：一级平台入口 / 本软件二级 / 在线平台二级
+    val likedStateHolder = libraryViewModel.liked
+    val likedScope by likedStateHolder.likedScope.collectAsStateWithLifecycle()
+    val loggedInPlatforms by likedStateHolder.loggedInPlatforms.collectAsStateWithLifecycle()
+    val platformSongs by likedStateHolder.platformSongs.collectAsStateWithLifecycle()
+    val isLoadingPlatformSongs by likedStateHolder.loadingPlatformSongs.collectAsStateWithLifecycle()
+    val platformSongsError by likedStateHolder.platformSongsError.collectAsStateWithLifecycle()
+    val favoriteSongCount by libraryViewModel.favoriteSongCountFlow.collectAsStateWithLifecycle(initialValue = 0)
+    // Activity 级共享的 LxMusicViewModel（与 LxMusicScreen 等页面共用同一实例）
+    val lxMusicViewModel: LxMusicViewModel = hiltViewModel(
+        viewModelStoreOwner = LocalContext.current as androidx.activity.ComponentActivity
+    )
     val onRefresh: () -> Unit = {
         isRefreshing = true
         when (currentTabId) {
             LibraryTabId.SONGS,
-            LibraryTabId.LIKED,
             LibraryTabId.PLAYLISTS -> Unit
+            LibraryTabId.LIKED -> when (likedScope) {
+                // 平台二级列表走平台自己的强刷；一级入口/本软件二级维持本地刷新
+                null, LxSources.LOCAL -> Unit
+                else -> likedStateHolder.refreshPlatformSongs()
+            }
             // 专辑/艺术家 tab 已下线，无可刷新的分页流（保留分支以保枚举穷尽性）
             LibraryTabId.ALBUMS,
             LibraryTabId.ARTISTS -> Unit
@@ -313,6 +333,41 @@ fun LibraryScreen(
         scope.launch {
             kotlinx.coroutines.delay(600L)
             isRefreshing = false
+        }
+    }
+    val latestPlatformLikedSongs by rememberUpdatedState(platformSongs)
+    // 在线平台“喜欢”歌曲的五步播放链路（与 LxMusicScreen.playLxSong 行为一致）：
+    // ① 确保音源可用 ② 播放记录 ③ 元数据缓存 ④ 在线播放队列 ⑤ 播放
+    val onPlayPlatformSong: (Song) -> Unit = remember(lxMusicViewModel, playerViewModel, context) {
+        { song ->
+            scope.launch {
+                val lxSong = LxSongMapper.toLxSong(song)
+                if (lxSong == null) return@launch
+                val resolved = lxMusicViewModel.ensureActiveScriptForPlayback()
+                if (resolved == null && lxSong.source !in LxSources.ALL) {
+                    val hasDisabled = lxMusicViewModel.hasUserDisabledScripts()
+                    Toast.makeText(
+                        context,
+                        if (hasDisabled) context.getString(R.string.lx_msg_source_disabled)
+                        else context.getString(R.string.lxmusic_need_script_or_cookie),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@launch
+                }
+                val queueSongs = latestPlatformLikedSongs.ifEmpty { listOf(song) }
+                val lxQueueSongs = queueSongs.mapNotNull { LxSongMapper.toLxSong(it) }
+                    .ifEmpty { listOf(lxSong) }
+                lxMusicViewModel.recordPlay(lxSong)
+                lxMusicViewModel.cacheSongsMetadata(lxQueueSongs)
+                lxMusicViewModel.setPlaybackQueueLxSongs(lxQueueSongs)
+                playerViewModel.playSongs(
+                    songsToPlay = queueSongs,
+                    startSong = song,
+                    queueName = LxSources.labelRes(lxSong.source)?.let { context.getString(it) }
+                        ?: LxSources.shortLabel(lxSong.source),
+                    origin = PlaybackOrigin.ONLINE
+                )
+            }
         }
     }
     // 曲库导航固定为紧凑胶囊+网格
@@ -546,8 +601,15 @@ fun LibraryScreen(
                     !isSortSheetVisible
         }
     }
+    val canHandleLikedBack by remember {
+        derivedStateOf {
+            currentTabId == LibraryTabId.LIKED &&
+                    likedScope != null &&
+                    !isSortSheetVisible
+        }
+    }
 
-    BackHandler(enabled = hasSelectionInCurrentTab || canHandleFolderBack) {
+    BackHandler(enabled = hasSelectionInCurrentTab || canHandleFolderBack || canHandleLikedBack) {
         when {
             hasSelectionInCurrentTab -> {
                 when (currentTabId) {
@@ -582,6 +644,10 @@ fun LibraryScreen(
 
             canHandleFolderBack -> {
                 playerViewModel.navigateBackFolder()
+            }
+
+            canHandleLikedBack -> {
+                likedStateHolder.backToLikedEntries()
             }
         }
     }
@@ -967,7 +1033,10 @@ fun LibraryScreen(
                                         onSelectAll = {
                                             when (tabTitles.getOrNull(currentTabIndex)?.toLibraryTabIdOrNull()) {
                                                 LibraryTabId.LIKED -> {
-                                                    multiSelectionState.selectAll(favoritePagingItems.itemSnapshotList.items)
+                                                    // 仅在本软件“我喜欢”二级列表中全选；一级入口/平台列表下为无副作用空操作
+                                                    if (likedScope == LxSources.LOCAL) {
+                                                        multiSelectionState.selectAll(favoritePagingItems.itemSnapshotList.items)
+                                                    }
                                                 }
                                                 LibraryTabId.FOLDERS -> {
                                                     val songsToSelect =
@@ -1021,7 +1090,10 @@ fun LibraryScreen(
                             }
                         }
 
-                        if (isSortSheetVisible && sanitizedSortOptions.isNotEmpty()) {
+                        // 排序面板仅在“我喜欢”的本软件二级列表中可用（一级入口/平台列表不显示）
+                        val likedSortSheetAllowed = currentTabId != LibraryTabId.LIKED ||
+                            likedScope == LxSources.LOCAL
+                        if (isSortSheetVisible && sanitizedSortOptions.isNotEmpty() && likedSortSheetAllowed) {
                             val currentSelectionKey = currentSelectedSortOption?.storageKey
                             val selectedOptionForSheet = sanitizedSortOptions.firstOrNull { option ->
                                 option.storageKey == currentSelectionKey
@@ -1256,7 +1328,16 @@ fun LibraryScreen(
                                             onLocateCurrentSongVisibilityChanged = { likedShowLocateButton = it },
                                             onRegisterLocateCurrentSongAction = { likedLocateAction = it },
                                             storageFilter = playerUiState.currentStorageFilter,
-                                            hasCurrentSong = hasCurrentSong
+                                            hasCurrentSong = hasCurrentSong,
+                                            likedScope = likedScope,
+                                            favoriteSongCount = favoriteSongCount,
+                                            loggedInPlatforms = loggedInPlatforms,
+                                            platformSongs = platformSongs,
+                                            isLoadingPlatformSongs = isLoadingPlatformSongs,
+                                            platformSongsError = platformSongsError,
+                                            onSelectLikedScope = { likedStateHolder.selectLikedScope(it) },
+                                            onPlayPlatformSong = onPlayPlatformSong,
+                                            onRefreshPlatformSongs = { likedStateHolder.refreshPlatformSongs() }
                                         )
                                     }
 

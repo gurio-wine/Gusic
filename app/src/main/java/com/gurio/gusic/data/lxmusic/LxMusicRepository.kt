@@ -4951,4 +4951,31 @@ class LxMusicRepository @Inject constructor(
             return extra
         }
     }
+
+    /**
+     * 聚合获取单个在线平台的“喜欢/我喜欢的音乐”完整歌曲列表。
+     * - "tx"/"kg"/"kw"：转发各自的 fetchXLikedSongs()
+     * - "wy"：uid → 我喜欢的歌单(specialType==5) → fetchNeteasePlaylistSongs(id)
+     * 返回 null 表示平台不支持、未登录或请求失败；成功但列表为空时返回空列表。
+     */
+    suspend fun fetchPlatformLikedLxSongs(source: String): List<LxSong>? = withContext(Dispatchers.IO) {
+        runCatching {
+            when (source) {
+                LxSources.TENCENT -> fetchTxLikedSongs()
+                LxSources.KUGOU -> fetchKgLikedSongs()
+                LxSources.KUWO -> fetchKwLikedSongs()
+                LxSources.NETEASE -> {
+                    var uid: Long? = neteaseCookieStore.getAccountId().takeIf { it >= 0 }
+                    if (uid == null) {
+                        uid = runCatching { fetchNeteaseLoginProfile() }.getOrNull()?.uid
+                    }
+                    val uidStr = uid?.toString() ?: return@runCatching null
+                    val likedPlaylist = fetchNeteaseMyPlaylists(uidStr)
+                        .firstOrNull { it.specialType == 5 } ?: return@runCatching null
+                    fetchNeteasePlaylistSongs(likedPlaylist.id).first
+                }
+                else -> null
+            }
+        }.getOrNull()
+    }
 }

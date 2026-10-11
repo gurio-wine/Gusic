@@ -564,4 +564,11 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
     <string-array name="presentation_batch_g_changelog_v26101110_changes">
         <item>Root cause of the vanishing previous button: Media3 skips the native previous when a custom back-slot button exists — now inserted explicitly with a semantic action</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101201_whats_new">
+        <item>Leaderboards redesigned as a menu grid: two board cards per row, each showing the board name and its top three tracks; tap a card to open the board</item>
+        <item>The Liked category is now two-level: level one lists this app plus each logged-in platform, level two shows that source&#8217;s liked songs; platforms you are not logged into are hidden</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101201_changes">
+        <item>Favoriting and unfavoriting no longer show success toasts; only failures are reported</item>
+    </string-array>
 </resources>

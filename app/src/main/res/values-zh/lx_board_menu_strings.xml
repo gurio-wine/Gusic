@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 排行榜菜单页：榜单卡片预览为空时的占位文案 -->
+    <string name="lx_board_preview_empty">暫無數據</string>
+</resources>

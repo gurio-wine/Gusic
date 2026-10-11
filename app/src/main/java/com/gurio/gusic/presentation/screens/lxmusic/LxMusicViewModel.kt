@@ -44,6 +44,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import timber.log.Timber
 
 @HiltViewModel
@@ -157,6 +159,10 @@ class LxMusicViewModel @Inject constructor(
     private var loadEpoch = 0L
     private var currentLoadJob: Job? = null
     private var playlistListDirty = false
+
+    // 排行榜菜单页前三预览：独立 job 渐进加载，key="${source}:${board.id}" 的会话级缓存
+    private var boardPreviewJob: Job? = null
+    private val boardPreviewCache = mutableMapOf<String, List<LxSong>>()
 
     enum class SearchType { SONG, ARTIST, ALBUM, PLAYLIST }
 
@@ -710,6 +716,7 @@ class LxMusicViewModel @Inject constructor(
     fun selectSource(source: String) {
         if (source == _selectedSource.value) return
         currentLoadJob?.cancel()
+        boardPreviewJob?.cancel()
         loadEpoch++
 
         val oldSource = _selectedSource.value
@@ -737,6 +744,8 @@ class LxMusicViewModel @Inject constructor(
             selectedBoard = null,
             boardSongs = emptyList(),
             loadingBoard = false,
+            boardPreviews = emptyMap(),
+            loadingBoardPreviews = false,
             playlistTags = emptyList(),
             selectedTag = null,
             playlists = emptyList(),
@@ -875,6 +884,8 @@ class LxMusicViewModel @Inject constructor(
         val selectedBoard: LxBoard? = null,
         val boardSongs: List<LxSong> = emptyList(),
         val loadingBoard: Boolean = false,
+        val boardPreviews: Map<String, List<LxSong>> = emptyMap(),
+        val loadingBoardPreviews: Boolean = false,
         val playlistTags: List<LxPlaylistTag> = emptyList(),
         val selectedTag: LxPlaylistTag? = null,
         val playlists: List<LxPlaylist> = emptyList(),
@@ -951,11 +962,12 @@ class LxMusicViewModel @Inject constructor(
                     loadingBoard = false,
                     error = null,
                 )
-                val first = boards.firstOrNull() ?: run {
+                if (boards.isEmpty()) {
                     _browseState.value = _browseState.value.copy(error = context.getString(R.string.lx_error_board_unsupported))
                     return
                 }
-                loadBoardSongsInternal(first, source, epoch)
+                // 进入排行榜模块直接显示菜单页，selectedBoard 保持 null
+                startBoardPreviews(boards, source)
             }
             "playlist" -> {
                 _browseState.value = _browseState.value.copy(
@@ -1014,6 +1026,82 @@ class LxMusicViewModel @Inject constructor(
         loadBrowsePics(songs)
     }
 
+    /**
+     * 排行榜菜单页：并发拉取每个榜单的前三首歌做预览。
+     * 先查会话级缓存，未命中才发请求；每完成一榜就渐进写入状态。
+     * 状态写入前校验音源与模块未变，不匹配时只写缓存不改状态。
+     */
+    private fun startBoardPreviews(boards: List<LxBoard>, source: String) {
+        boardPreviewJob?.cancel()
+        val allCached = boards.all { boardPreviewCache.containsKey("${source}:${it.id}") }
+        if (allCached) {
+            val previews = boards.mapNotNull { board ->
+                boardPreviewCache["${source}:${board.id}"]?.let { board.id to it }
+            }.toMap()
+            val cur = _browseState.value
+            if (_selectedSource.value == source && cur.module == "board") {
+                _browseState.value = cur.copy(boardPreviews = previews, loadingBoardPreviews = false)
+            }
+            return
+        }
+        boardPreviewJob = viewModelScope.launch {
+            _browseState.value = _browseState.value.copy(loadingBoardPreviews = true)
+            val semaphore = Semaphore(4)
+            coroutineScope {
+                boards.map { board ->
+                    async {
+                        semaphore.withPermit {
+                            val key = "${source}:${board.id}"
+                            val cached = boardPreviewCache[key]
+                            if (cached != null) {
+                                publishBoardPreview(board.id, cached, source)
+                            } else {
+                                val result = runCatching {
+                                    repository.fetchBoardSongs(source, board.bangid).take(3)
+                                }
+                                if (result.isSuccess) {
+                                    val songs = result.getOrDefault(emptyList())
+                                    boardPreviewCache[key] = songs
+                                    publishBoardPreview(board.id, songs, source)
+                                } else {
+                                    Timber.w(result.exceptionOrNull(), "board preview failed ${board.id}")
+                                    // 失败不写缓存：状态置空便于显示占位，重进模块时自动重试
+                                    publishBoardPreview(board.id, emptyList(), source)
+                                }
+                            }
+                        }
+                    }
+                }.awaitAll()
+            }
+            val cur = _browseState.value
+            // 该标志仅被菜单页消费，切走模块时也必须落 false，否则重进排行榜会卡住刷新指示器
+            if (_selectedSource.value == source) {
+                _browseState.value = cur.copy(loadingBoardPreviews = false)
+            }
+        }
+    }
+
+    private fun publishBoardPreview(boardId: String, songs: List<LxSong>, source: String) {
+        val cur = _browseState.value
+        if (_selectedSource.value != source || cur.module != "board") return
+        _browseState.value = cur.copy(boardPreviews = cur.boardPreviews + (boardId to songs))
+    }
+
+    private fun clearBoardPreviewCache(source: String) {
+        boardPreviewCache.keys.removeAll { it.startsWith("$source:") }
+    }
+
+    /** 从榜单详情返回菜单页：取消详情加载，保留菜单预览。 */
+    fun backToBoardMenu() {
+        currentLoadJob?.cancel()
+        _browseState.value = _browseState.value.copy(
+            selectedBoard = null,
+            boardSongs = emptyList(),
+            loadingBoard = false,
+            error = null,
+        )
+    }
+
     fun selectPlaylistTag(tag: LxPlaylistTag) {
         currentLoadJob?.cancel()
         val epoch = ++loadEpoch
@@ -1055,6 +1143,11 @@ class LxMusicViewModel @Inject constructor(
 
     fun back(): Boolean {
         val st = _browseState.value
+        // 排行榜详情返回菜单页，再返回才回到“我的”
+        if (st.module == "board" && st.selectedBoard != null) {
+            backToBoardMenu()
+            return true
+        }
         // “我的”模块固定保留，返回的根模块始终为 mine（未登录时显示占位）
         val rootModule = "mine"
         if (st.module == "mine") {
@@ -3086,8 +3179,11 @@ class LxMusicViewModel @Inject constructor(
                 currentLoadJob = viewModelScope.launch {
                     loadBoardSongsInternal(st.selectedBoard, source, epoch)
                 }
-            st.module == "board" ->
+            st.module == "board" -> {
+                // 菜单态下拉刷新：清当前音源预览缓存后重新拉取
+                clearBoardPreviewCache(source)
                 startModuleLoad("board", source, force = true)
+            }
             st.module == "search" -> {
                 // 搜索态刷新：按当前分类重发搜索
                 val kw = _searchState.value.keyword

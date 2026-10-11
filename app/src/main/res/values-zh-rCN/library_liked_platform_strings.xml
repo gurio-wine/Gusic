@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_liked_scope_local">本软件</string>
+    <string name="library_liked_platform_load_failed">加载失败，请重试</string>
+    <string name="library_liked_platform_empty">还没有喜欢的歌曲</string>
+</resources>

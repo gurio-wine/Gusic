@@ -760,19 +760,30 @@ fun LxMusicScreen(
                                     )
                                 }
                             }
-                            else -> LxBoardPage(browseState, viewModel, playerViewModel, playLxSong,
-                                playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
-                                onScrollingChange = { if (pagerState.currentPage == 1) isListScrolling.value = it },
-                                onSongMoreOptions = { lxInfoSong = it },
-                                isSelectionMode = isSelectionMode,
-                                selectedSongIds = selectedSongIds,
-                                onSongLongPress = toggleLxSongSelection,
-                                onSongSelectionToggle = toggleLxSongSelection,
-                                getSelectionIndex = { songId ->
-                                    multiSelectionState.getSelectionIndex(songId)
-                                },
-                                multiSelectionState = multiSelectionState,
-                                onSelectionOptionsClick = { showMultiSelectionSheet = true })
+                            else -> if (browseState.selectedBoard == null) {
+                                // 排行榜菜单页：榜单卡片网格
+                                LxBoardMenuPage(
+                                    browseState = browseState,
+                                    source = selectedSource,
+                                    bottomBarHeightDp = bottomBarHeightDp,
+                                    onSelectBoard = { viewModel.selectBoard(it) },
+                                    onRefresh = { viewModel.refreshBrowse() },
+                                )
+                            } else {
+                                LxBoardPage(browseState, viewModel, playerViewModel, playLxSong,
+                                    playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
+                                    onScrollingChange = { if (pagerState.currentPage == 1) isListScrolling.value = it },
+                                    onSongMoreOptions = { lxInfoSong = it },
+                                    isSelectionMode = isSelectionMode,
+                                    selectedSongIds = selectedSongIds,
+                                    onSongLongPress = toggleLxSongSelection,
+                                    onSongSelectionToggle = toggleLxSongSelection,
+                                    getSelectionIndex = { songId ->
+                                        multiSelectionState.getSelectionIndex(songId)
+                                    },
+                                    multiSelectionState = multiSelectionState,
+                                    onSelectionOptionsClick = { showMultiSelectionSheet = true })
+                            }
                         }
                     }
                     }
@@ -2475,16 +2486,6 @@ private fun LxBoardPage(
 
     val pullToRefreshState = rememberPullToRefreshState()
     val boardHeaderHeight = 66.dp
-    val consumeHorizontalScroll = remember {
-        object : NestedScrollConnection {
-            override fun onPostScroll(
-                consumed: Offset, available: Offset, source: NestedScrollSource
-            ): Offset = Offset(available.x, 0f)
-            override suspend fun onPreFling(available: Velocity): Velocity = Velocity(available.x, 0f)
-            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
-                Velocity(available.x, 0f)
-        }
-    }
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val boardSongIds = remember(browseState.boardSongs) {
         browseState.boardSongs.map { LxSongMapper.unifiedSongId(it.source, it.songmid).toString() }
@@ -2578,75 +2579,65 @@ private fun LxBoardPage(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .padding(vertical = 5.dp)
-                .nestedScroll(consumeHorizontalScroll),
-            contentAlignment = Alignment.CenterEnd,
+                .padding(vertical = 5.dp),
         ) {
-            androidx.compose.foundation.lazy.LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(start = 10.dp, end = 162.dp),
-            ) {
-                    items(browseState.boards, key = { it.id }) { board ->
-                        Surface(
-                            onClick = { viewModel.selectBoard(board) },
-                            shape = RoundedCornerShape(16.dp),
-                            color = if (browseState.selectedBoard?.id == board.id)
-                                MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.secondaryContainer,
-                        ) {
-                            Text(
-                                text = board.name,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = if (browseState.selectedBoard?.id == board.id)
-                                    MaterialTheme.colorScheme.onPrimary
-                                else MaterialTheme.colorScheme.onSecondaryContainer,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                softWrap = false,
+            val boardCollectState = if (browseState.moduleSource == LxSources.KUGOU ||
+                browseState.moduleSource == LxSources.KUWO ||
+                (browseState.moduleSource != LxSources.NETEASE &&
+                    !viewModel.accountWritesEnabled)
+            ) null else
+                rememberCollectState(
+                    viewModel, LxMusicViewModel.CollectKind.PLAYLIST, boardPlaylistId,
+                    name = browseState.selectedBoard?.name,
+                )
+            val boardCapsule = @Composable {
+                LxFolderActionCapsule(
+                    modifier = Modifier.padding(start = 7.dp, end = 17.dp, top = 4.dp, bottom = 4.dp),
+                    showLocate = boardLocateVisible,
+                    onLocate = {
+                        if (boardLocateIndex >= 0) boardScope.launch {
+                            listState.animateScrollToItem(boardLocateIndex)
+                        }
+                    },
+                    collectState = boardCollectState,
+                    collectBusy = boardPlaylistId != null && collectBusyKeys.contains(
+                        viewModel.collectKey(LxMusicViewModel.CollectKind.PLAYLIST, boardPlaylistId)
+                    ),
+                    onCollectClick = {
+                        boardPlaylistId?.let {
+                            viewModel.onCollectButtonClick(
+                                LxMusicViewModel.CollectKind.PLAYLIST, it,
+                                name = browseState.selectedBoard?.name,
                             )
                         }
-                    }
-                }
-                val boardCollectState = if (browseState.moduleSource == LxSources.KUGOU ||
-                    browseState.moduleSource == LxSources.KUWO ||
-                    (browseState.moduleSource != LxSources.NETEASE &&
-                        !viewModel.accountWritesEnabled)
-                ) null else
-                    rememberCollectState(
-                        viewModel, LxMusicViewModel.CollectKind.PLAYLIST, boardPlaylistId,
-                        name = browseState.selectedBoard?.name,
-                    )
-                val boardCapsule = @Composable {
-                    LxFolderActionCapsule(
-                        modifier = Modifier.padding(start = 7.dp, end = 17.dp, top = 4.dp, bottom = 4.dp),
-                        showLocate = boardLocateVisible,
-                        onLocate = {
-                            if (boardLocateIndex >= 0) boardScope.launch {
-                                listState.animateScrollToItem(boardLocateIndex)
-                            }
-                        },
-                        collectState = boardCollectState,
-                        collectBusy = boardPlaylistId != null && collectBusyKeys.contains(
-                            viewModel.collectKey(LxMusicViewModel.CollectKind.PLAYLIST, boardPlaylistId)
-                        ),
-                        onCollectClick = {
-                            boardPlaylistId?.let {
-                                viewModel.onCollectButtonClick(
-                                    LxMusicViewModel.CollectKind.PLAYLIST, it,
-                                    name = browseState.selectedBoard?.name,
-                                )
-                            }
-                        },
-                        onShare = {
-                            boardPlaylistId?.let {
-                                onFolderShare(LxMusicViewModel.CollectKind.PLAYLIST, it)
-                            }
-                        },
-                        buttonElevation = if (boardCollectState == null) 4.dp else 0.dp,
+                    },
+                    onShare = {
+                        boardPlaylistId?.let {
+                            onFolderShare(LxMusicViewModel.CollectKind.PLAYLIST, it)
+                        }
+                    },
+                    buttonElevation = if (boardCollectState == null) 4.dp else 0.dp,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = { viewModel.backToBoardMenu() }) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = stringResource(R.string.lx_desc_back),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                Text(
+                    text = browseState.selectedBoard?.name.orEmpty(),
+                    modifier = Modifier.weight(1f),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 if (boardCollectState == null) {
                     boardCapsule()
                 } else {
@@ -2658,6 +2649,7 @@ private fun LxBoardPage(
                     }
                 }
             }
+        }
         ExpressiveScrollBar(
             modifier = Modifier
                 .align(Alignment.CenterEnd)

@@ -22,6 +22,7 @@ data class LibrarySafImportUiState(
 class LibraryViewModel @Inject constructor(
     private val libraryStateHolder: LibraryStateHolder,
     private val safImportAction: LibrarySafImportAction,
+    val liked: LibraryLikedStateHolder,
 ) : ViewModel() {
 
     private val _safImportUiState = MutableStateFlow(LibrarySafImportUiState())

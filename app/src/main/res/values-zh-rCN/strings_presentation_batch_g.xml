@@ -564,4 +564,11 @@
     <string-array name="presentation_batch_g_changelog_v26101110_changes">
         <item>上一首消失的根因：Media3 在存在自定义前置槽按钮（循环）时不再补原生上一首，现改为显式插入带语义的上一首按钮</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101201_whats_new">
+        <item>排行榜改为菜单网格：每行两张榜单卡片，显示榜名和前三首歌曲；点击卡片进入榜单</item>
+        <item>“我喜欢”分类改为两级：第一级为本软件和已登录平台入口，第二级为对应平台的我喜欢的音乐；未登录的平台不显示</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101201_changes">
+        <item>收藏和取消收藏不再弹出成功提示，仅失败时提示</item>
+    </string-array>
 </resources>

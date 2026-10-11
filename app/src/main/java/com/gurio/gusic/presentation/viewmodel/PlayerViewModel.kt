@@ -3670,7 +3670,7 @@ class PlayerViewModel @Inject constructor(
                         if (target) current + mid else current - mid
                     )
                 }
-                showFavoriteToast(if (target) "已添加到我喜欢" else "已从我喜欢移除")
+                // 成功不提示，仅失败时告知业务码
             } else {
                 showFavoriteToast("操作失败(${result.code})，请稍后再试")
             }
