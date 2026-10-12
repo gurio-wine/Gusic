@@ -2,14 +2,14 @@
 <resources>
     <string name="library_tab_songs">历史</string>
     <string name="library_tab_albums">专辑</string>
-    <string name="library_tab_artists">艺术家</string>
+    <string name="library_tab_artists">歌手</string>
     <string name="library_tab_playlists">歌单</string>
     <string name="library_tab_folders">文件夹</string>
     <string name="library_tab_liked">我喜欢</string>
     <string name="library_tab_collections">收藏</string>
     <string name="library_error_loading_songs">加载歌曲出错</string>
     <string name="library_error_loading_albums">加载专辑出错</string>
-    <string name="library_error_loading_artists">加载艺术家出错</string>
+    <string name="library_error_loading_artists">加载歌手出错</string>
     <string name="library_retry">重试</string>
 
     <string name="library_no_songs_in_library_message">音乐库内未找到歌曲。</string>
@@ -26,7 +26,7 @@
     <string name="cd_sort_options">排序选项</string>
 
     <string name="lyrics_synced_badge">已同步</string>
-    <string name="song_field_artist_optional">艺术家（选填）</string>
+    <string name="song_field_artist_optional">歌手（选填）</string>
 
     <string name="song_picker_title">添加歌曲</string>
     <string name="cd_confirm_add_songs">添加选中歌曲</string>
@@ -49,12 +49,12 @@
     <string name="lib_empty_albums_offline_subtitle">需要存在本地歌曲才能生成本地专辑分组。</string>
     <string name="lib_empty_albums_online_title">未找到云端专辑</string>
     <string name="lib_empty_albums_online_subtitle">同步完成后，带有专辑信息的云端歌曲将会展示在此。</string>
-    <string name="lib_empty_artists_all_title">暂无艺术家</string>
-    <string name="lib_empty_artists_all_subtitle">任意来源的歌曲完成索引后就会显示艺术家。</string>
-    <string name="lib_empty_artists_offline_title">未找到本地艺术家</string>
-    <string name="lib_empty_artists_offline_subtitle">当前本地歌曲缺少艺术家元数据。</string>
-    <string name="lib_empty_artists_online_title">未找到云端艺术家</string>
-    <string name="lib_empty_artists_online_subtitle">同步远程歌曲之后，云端艺术家条目就会出现。</string>
+    <string name="lib_empty_artists_all_title">暂无歌手</string>
+    <string name="lib_empty_artists_all_subtitle">任意来源的歌曲完成索引后就会显示歌手。</string>
+    <string name="lib_empty_artists_offline_title">未找到本地歌手</string>
+    <string name="lib_empty_artists_offline_subtitle">当前本地歌曲缺少歌手元数据。</string>
+    <string name="lib_empty_artists_online_title">未找到云端歌手</string>
+    <string name="lib_empty_artists_online_subtitle">同步远程歌曲之后，云端歌手条目就会出现。</string>
     <string name="lib_empty_liked_all_title">还没有喜欢的歌曲</string>
     <string name="lib_empty_liked_all_subtitle">播放歌曲时点击爱心图标，即可收藏到这里。</string>
     <string name="lib_empty_liked_offline_title">暂无本地收藏歌曲</string>

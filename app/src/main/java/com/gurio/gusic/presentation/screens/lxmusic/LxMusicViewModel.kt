@@ -1951,7 +1951,9 @@ class LxMusicViewModel @Inject constructor(
             }.getOrDefault(emptyList<LxSong>() to before.songsTotal)
             if (_searchArtistPageState.value.artist?.id != before.artist?.id) return@launch
             val merged = (before.songs + batch).distinctBy { it.songmid }
-            val hasMore = batch.isNotEmpty() && when {
+            // merged.size > before.songs.size：本轮去重后有实际增长才允许继续加载，
+            // 防止 batch 全是跨页重复时 hasMore 恒真导致“加载更多”空转
+            val hasMore = batch.isNotEmpty() && merged.size > before.songs.size && when {
                 total > 0 -> merged.size < total
                 else -> batch.size >= artistSongsPageSize
             }

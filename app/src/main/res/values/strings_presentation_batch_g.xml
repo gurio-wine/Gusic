@@ -618,4 +618,14 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>The in-platform My tab is removed from Discover; NetEase gains Recommendations as a peer of Top charts, and a profile strip keeps sign-out within reach</item>
         <item>Liked, Playlists and Collections refresh the moment you enter a platform</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101208_whats_new">
+        <item>Tapping a followed artist in Collections opens that platform&#8217;s artist page — hot songs and albums in one place</item>
+        <item>QQ Music search finds artists and albums again, and artist pages list their songs once more</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101208_changes">
+        <item>Kuwo liked counts load again: requests now carry the Secret header the Kuwo web gateway requires</item>
+        <item>Kugou collected albums no longer appear among playlists — the list source flag now tells them apart</item>
+        <item>The profile strip above Top charts is gone</item>
+        <item>Chinese labels now say 歌手 where they used to say 艺术家</item>
+    </string-array>
 </resources>

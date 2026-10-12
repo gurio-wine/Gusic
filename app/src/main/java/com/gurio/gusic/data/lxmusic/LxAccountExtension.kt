@@ -379,7 +379,7 @@ internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExt
                 }
         }.onFailure { Timber.w(it, "kgFetchUserPlaylists failed") }.getOrNull()
 
-    /** kg 收藏的专辑：云歌单列表中 gid 非 collection_ 前缀的条目，点击可用同一 listid 拉取歌曲。 */
+    /** kg 收藏的专辑：云歌单列表中 source==2（或 musiclib_id>0）的条目，点击可用同一 listid 拉取歌曲。 */
     override suspend fun kgFetchCollectedAlbums(): List<LxPlaylist>? =
         runCatching {
             kugouCloudApi.fetchAllCloudLists()

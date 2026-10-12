@@ -23,7 +23,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.ChevronRight
@@ -394,82 +393,8 @@ fun LxRecommendPage(
 }
 
 
-/**
- * 平台资料条：原“我的”页头部（头像/昵称/VIP 标签/退出）的最小保留。
- * “我的”页签下线后，它是应用内唯一的登出入口，常驻显示在发现页模块行上方。
- */
-@Composable
-internal fun LxProfileStrip(
-    nickname: String?,
-    avatarUrl: String?,
-    vipType: Int,
-    onLogout: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (!avatarUrl.isNullOrBlank()) {
-            SmartImage(
-                model = avatarUrl,
-                contentDescription = null,
-                targetSize = SmartImageListTargetSize,
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape),
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondaryContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Rounded.Person,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
-        Spacer(Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = nickname?.takeIf { it.isNotBlank() }
-                    ?: stringResource(R.string.lx_default_nickname),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            // VIP 标签仅网易音源有取值（13=SVIP、11=VIP），其他平台不展示
-            val vipLabel = when (vipType) {
-                13 -> stringResource(R.string.lx_text_netease_svip)
-                11 -> stringResource(R.string.lx_text_netease_vip)
-                else -> null
-            }
-            if (vipLabel != null) {
-                Text(
-                    text = vipLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                )
-            }
-        }
-        IconButton(onClick = onLogout) {
-            Icon(
-                Icons.AutoMirrored.Rounded.Logout,
-                contentDescription = stringResource(R.string.lx_desc_logout),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
+
+
 
 
 @Composable

@@ -143,10 +143,8 @@ class LibraryCollectionsStateHolder @Inject constructor(
         _collectionsTab.value = tab
     }
 
-    /** 进入三级：歌手热门歌曲 */
-    fun openArtist(artist: LxArtist) {
-        openDetail(CollectionDetail(CollectionsContentTab.ARTISTS, artist.id, artist.name))
-    }
+    // 歌手点击不再进三级列表：跳发现页歌手详情浮层（LibraryScreen 接 lxMusicViewModel.openArtistFromSearch），
+    // 三级仅保留专辑曲目
 
     /** 进入三级：专辑曲目 */
     fun openAlbum(album: LxAlbum) {

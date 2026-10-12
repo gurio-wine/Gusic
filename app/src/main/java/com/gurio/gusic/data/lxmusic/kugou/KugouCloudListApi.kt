@@ -220,14 +220,17 @@ internal class KugouCloudListApi(
             ?: obj.strOf("gid")?.takeIf(String::isNotBlank)
         val sourceListid = obj.longOf("list_create_listid")?.takeIf { it > 0 }
             ?: parseListidFromGid(gid)
-        val isDefault = obj.boolOf("is_default") == true
-        // 专辑区分依据：收藏歌单的 gid 形如 collection_<n>_<uid>_<listid>_<n>（分享 URL 实证）；
-        // 收藏专辑条目带其他前缀的 gid。留日志便于真机核对判定的准确性。
-        val isAlbum = gid != null && !gid.startsWith("collection_")
+        // is_def 数值形态：0=自建、1=默认收藏、2=我喜欢（部分客户端只回 is_default 布尔，双兼容；
+        // 只认 is_def==2，避免把“默认收藏”误标成“我喜欢”导致红心读写落到错误列表）
+        val isDefault = obj.boolOf("is_default") == true || obj.longOf("is_def") == 2L
+        // 专辑判定：source==2 为收藏专辑（kugoFlutter/EchoMusic/folia-major/KugouMusic.NET 四方
+        // 开源实现一致），musiclib_id>0 为次级兜底。gid 前缀不可靠——自建歌单的 gid 同样是
+        // collection_ 前缀，不能用来区分专辑（真机实测已证伪）。
+        val isAlbum = obj.intOf("source") == 2 || (obj.longOf("musiclib_id") ?: 0L) > 0L
         Timber.i(
-            "$TAG: cloud list item listid=%s name=%s gid=%s isDefault=%s isAlbum=%s type=%s source=%s",
+            "$TAG: cloud list item listid=%s name=%s gid=%s isDefault=%s isAlbum=%s type=%s source=%s musiclib_id=%s",
             listid, obj.strOf("name") ?: obj.strOf("listname"), gid, isDefault, isAlbum,
-            obj.get("type"), obj.get("source"),
+            obj.get("type"), obj.get("source"), obj.get("musiclib_id"),
         )
         return KugouCloudList(
             listid = listid,

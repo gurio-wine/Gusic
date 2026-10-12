@@ -1533,7 +1533,11 @@ fun LibraryScreen(
                                             detailSongsError = collectionDetailSongsError,
                                             onSelectCollectionsScope = { collectionsStateHolder.selectCollectionsScope(it) },
                                             onSelectCollectionsTab = { collectionsStateHolder.selectCollectionsTab(it) },
-                                            onOpenArtist = { collectionsStateHolder.openArtist(it) },
+                                            onOpenArtist = { artist ->
+                                                // 与搜索结果点歌手同一路径：开歌手详情浮层并跳到在线页
+                                                lxMusicViewModel.openArtistFromSearch(artist, collectionsScope)
+                                                navController.navigateSafely(Screen.LxMusic.route)
+                                            },
                                             onOpenAlbum = { collectionsStateHolder.openAlbum(it) },
                                             onPlayDetailSong = onPlayCollectionSong,
                                             onRefresh = { collectionsStateHolder.refresh() },

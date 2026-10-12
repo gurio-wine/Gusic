@@ -618,4 +618,14 @@
         <item>發現頁移除平台內「我的」頁籤；網易雲「推薦」升級為與「排行榜」並列，資料條保留登出入口</item>
         <item>「我喜歡」「歌單」「收藏」進入平台時立即重新整理</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101208_whats_new">
+        <item>「收藏」裡點擊關注的歌手，直接進入該平台的歌手頁，熱門歌曲與專輯一站查看</item>
+        <item>QQ 音樂搜尋恢復：歌手和專輯可以搜出來了，歌手頁的歌曲與專輯一併修復</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101208_changes">
+        <item>修復酷我「我喜歡」數量不顯示：請求已改用酷我閘道要求的新版 Secret 簽章</item>
+        <item>修復酷狗收藏的專輯混在歌單清單裡：改用清單來源標記區分專輯</item>
+        <item>移除排行榜上方的使用者資訊條與登出按鈕</item>
+        <item>「藝術家」統一改稱「歌手」</item>
+    </string-array>
 </resources>

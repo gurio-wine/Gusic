@@ -618,4 +618,14 @@
         <item>发现页移除平台内“我的”页签；网易云“推荐”升级为与“排行榜”并列，资料条保留登出入口</item>
         <item>“我喜欢”“歌单”“收藏”进入平台时立即刷新</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101208_whats_new">
+        <item>“收藏”里点击关注的歌手，直接进入该平台的歌手页，热门歌曲与专辑一站查看</item>
+        <item>QQ 音乐搜索恢复：歌手和专辑可以搜出来了，歌手页的歌曲与专辑也一并修复</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101208_changes">
+        <item>修复酷我“我喜欢”数量不显示：请求已改用酷我网关要求的新版 Secret 签名</item>
+        <item>修复酷狗收藏的专辑混在歌单列表里：改用列表来源标记区分专辑</item>
+        <item>移除排行榜上方的用户信息条与退出按钮</item>
+        <item>“艺术家”统一改称“歌手”</item>
+    </string-array>
 </resources>

@@ -573,7 +573,13 @@ class LxMusicRepository @Inject constructor(
         emptyList()
     }
 
-    private suspend fun searchQQOnce(keyword: String, page: Int): List<LxSong> =
+    /**
+     * musicu.fcg 桌面搜索通用请求（DoSearchForQQMusicDesktop）：
+     * search_type 0=歌曲 8=专辑 9=歌手，page_num 从 1 起。
+     * 与歌曲搜索同款配方：登录 Cookie + zza 签名，规避匿名软风控；
+     * 返回 req_1.data 块，网络/解析失败或业务码非 0 返回 null。
+     */
+    private suspend fun musicuSearch(searchType: Int, query: String, page: Int): JsonObject? =
         withContext(Dispatchers.IO) {
             val cookie = tencentCookieStore.getCookie().orEmpty()
             val cookies = TencentAccountApi.parseCookieMap(cookie)
@@ -592,8 +598,8 @@ class LxMusicRepository @Inject constructor(
                     addProperty("module", "music.search.SearchCgiService")
                     addProperty("method", "DoSearchForQQMusicDesktop")
                     add("param", JsonObject().apply {
-                        addProperty("search_type", 0)
-                        addProperty("query", keyword)
+                        addProperty("search_type", searchType)
+                        addProperty("query", query)
                         addProperty("page_num", page)
                         addProperty("num_per_page", 30)
                     })
@@ -609,23 +615,28 @@ class LxMusicRepository @Inject constructor(
                 .build()
             runCatching {
                 okHttpClient.newCall(req).execute().use { resp ->
-                    val bodyText = resp.body?.string().orEmpty()
-                    val root = JsonParser.parseString(bodyText).asJsonObject
+                    val root = JsonParser.parseString(resp.body?.string().orEmpty()).asJsonObject
                     val block = root.getAsJsonObject("req_1")
                     val bizCode = block?.get("code")?.takeIf { it.isJsonPrimitive }
                         ?.let { runCatching { it.asInt }.getOrNull() }
                     if (bizCode != null && bizCode != 0) {
-                        Timber.w("searchQQ biz code=$bizCode keyword=$keyword page=$page")
+                        Timber.w("musicuSearch biz code=$bizCode type=$searchType keyword=$query page=$page")
+                        return@use null
                     }
-                    val songs = block?.getAsJsonObject("data")?.getAsJsonObject("body")
-                        ?.getAsJsonObject("song")?.getAsJsonArray("list")
-                        ?: return@use emptyList()
-                    songs.mapNotNull { el -> TencentAccountApi.mapTrack(el) }
+                    block?.getAsJsonObject("data")
                 }
             }.getOrElse {
-                Timber.w(it, "searchQQ failed keyword=$keyword page=$page")
-                emptyList()
+                Timber.w(it, "musicuSearch failed type=$searchType keyword=$query page=$page")
+                null
             }
+        }
+
+    private suspend fun searchQQOnce(keyword: String, page: Int): List<LxSong> =
+        withContext(Dispatchers.IO) {
+            val data = musicuSearch(0, keyword, page) ?: return@withContext emptyList()
+            data.getAsJsonObject("body")?.getAsJsonObject("song")?.getAsJsonArray("list")
+                ?.mapNotNull { el -> TencentAccountApi.mapTrack(el) }
+                ?: emptyList()
         }
 
     private suspend fun searchMigu(keyword: String, page: Int): List<LxSong> = withContext(Dispatchers.IO) {
@@ -2719,35 +2730,61 @@ class LxMusicRepository @Inject constructor(
             }.getOrNull()
         }
 
+    /** musicu 搜索结果的总数：优先 meta.estimate_sum，缺失回退 meta.sum，再回退 fallback。 */
+    private fun JsonObject.musicuMetaTotal(fallback: Int): Int {
+        val meta = getAsJsonObject("meta") ?: return fallback
+        return listOf("estimate_sum", "sum").firstNotNullOfOrNull { key ->
+            meta.get(key)?.takeIf { it.isJsonPrimitive }?.let { runCatching { it.asInt }.getOrNull() }
+        } ?: fallback
+    }
+
+    /** timePublic 形如 "2019-07-19"（可能带时间部分），压成 yyyyMMdd 数字便于比较；解析失败记 0。 */
+    private fun txTimePublicToLong(raw: String?): Long {
+        val parts = raw?.substringBefore(' ')?.split('-').orEmpty()
+        if (parts.isEmpty()) return 0L
+        return runCatching {
+            parts[0].toLong() * 10000L +
+                (parts.getOrNull(1)?.toLongOrNull() ?: 0L) * 100L +
+                (parts.getOrNull(2)?.toLongOrNull() ?: 0L)
+        }.getOrDefault(0L)
+    }
+
+    /** musicu 专辑条目（new-JSON：mid/name/singer[]/timePublic）→ LxAlbum。 */
+    private fun txAlbumFromMusicu(o: com.google.gson.JsonObject): LxAlbum? {
+        val mid = jsonStr(o, "mid") ?: return null
+        val singers = o.getAsJsonArray("singer")
+            ?.mapNotNull { runCatching { it.asJsonObject }.getOrNull() }.orEmpty()
+        val artistName = singers.firstNotNullOfOrNull { jsonStr(it, "name")?.takeIf(String::isNotBlank) }
+        val pic = jsonStr(o, "pic")?.takeIf { it.isNotBlank() }
+            ?: "https://y.gtimg.cn/music/photo_new/T002R300x300M000$mid.jpg"
+        return LxAlbum(
+            id = mid,
+            name = jsonStr(o, "name").orEmpty(),
+            pic = if (pic.startsWith("http://")) pic.replace("http://", "https://") else pic,
+            artistName = artistName,
+            publishTime = txTimePublicToLong(jsonStr(o, "timePublic")),
+        )
+    }
+
+    // 歌手/专辑搜索同样迁移到 musicu.fcg 桌面搜索（client_search_cp 已下线，实测 500 空响应）
     suspend fun searchTxArtists(keyword: String, page: Int = 1): Pair<List<LxArtist>, Int> =
         withContext(Dispatchers.IO) {
-            val encoded = URLEncoder.encode(keyword, "UTF-8")
-            val url = "https://c.y.qq.com/soso/fcgi-bin/client_search_cp?w=$encoded&t=9&p=$page&n=30&format=json"
             runCatching {
-                okHttpClient.newCall(
-                    Request.Builder().url(url)
-                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                        .header("Referer", "https://y.qq.com/")
-                        .get().build()
-                ).execute().use { resp ->
-                    if (!resp.isSuccessful) return@use emptyList<LxArtist>() to 0
-                    val root = JsonParser.parseString(resp.body?.string().orEmpty()).asJsonObject
-                    val singerObj = root.getAsJsonObject("data")?.getAsJsonObject("singer")
-                    val list = singerObj?.getAsJsonArray("list")?.mapNotNull { el ->
+                val data = musicuSearch(9, keyword, page) ?: return@withContext emptyList<LxArtist>() to 0
+                val list = data.getAsJsonObject("body")?.getAsJsonObject("singer")
+                    ?.getAsJsonArray("list")?.mapNotNull { el ->
                         runCatching {
                             val o = el.asJsonObject
-                            val id = jsonStr(o, "singerMID") ?: return@runCatching null
+                            val id = jsonStr(o, "mid") ?: return@runCatching null
                             LxArtist(
                                 id = id,
-                                name = jsonStr(o, "singerName").orEmpty(),
-                                pic = jsonStr(o, "singerPic")?.takeIf { it.isNotBlank() }
+                                name = jsonStr(o, "name").orEmpty(),
+                                pic = jsonStr(o, "pic")?.takeIf { it.isNotBlank() }
                                     ?.let { if (it.startsWith("http://")) it.replace("http://", "https://") else it },
                             )
                         }.getOrNull()
                     } ?: emptyList()
-                    val total = singerObj?.get("totalnum")?.takeIf { it.isJsonPrimitive }?.asInt ?: list.size
-                    list to total
-                }
+                list to data.musicuMetaTotal(list.size)
             }.getOrElse {
                 Timber.w(it, "searchTxArtists failed keyword=$keyword")
                 emptyList<LxArtist>() to 0
@@ -2756,36 +2793,13 @@ class LxMusicRepository @Inject constructor(
 
     suspend fun searchTxAlbums(keyword: String, page: Int = 1): Pair<List<LxAlbum>, Int> =
         withContext(Dispatchers.IO) {
-            val encoded = URLEncoder.encode(keyword, "UTF-8")
-            val url = "https://c.y.qq.com/soso/fcgi-bin/client_search_cp?w=$encoded&t=8&p=$page&n=30&format=json"
             runCatching {
-                okHttpClient.newCall(
-                    Request.Builder().url(url)
-                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                        .header("Referer", "https://y.qq.com/")
-                        .get().build()
-                ).execute().use { resp ->
-                    if (!resp.isSuccessful) return@use emptyList<LxAlbum>() to 0
-                    val root = JsonParser.parseString(resp.body?.string().orEmpty()).asJsonObject
-                    val albumObj = root.getAsJsonObject("data")?.getAsJsonObject("album")
-                    val list = albumObj?.getAsJsonArray("list")?.mapNotNull { el ->
-                        runCatching {
-                            val o = el.asJsonObject
-                            val mid = jsonStr(o, "albumMID") ?: return@runCatching null
-                            val pic = jsonStr(o, "albumPic")?.takeIf { it.isNotBlank() }
-                                ?: "https://y.gtimg.cn/music/photo_new/T002R300x300M000$mid.jpg"
-                            LxAlbum(
-                                id = mid,
-                                name = jsonStr(o, "albumName").orEmpty(),
-                                pic = if (pic.startsWith("http://")) pic.replace("http://", "https://") else pic,
-                                artistName = jsonStr(o, "singerName"),
-                                publishTime = jsonStr(o, "publicTime")?.toLongOrNull() ?: 0L,
-                            )
-                        }.getOrNull()
-                    } ?: emptyList()
-                    val total = albumObj?.get("totalnum")?.takeIf { it.isJsonPrimitive }?.asInt ?: list.size
-                    list to total
-                }
+                val data = musicuSearch(8, keyword, page) ?: return@withContext emptyList<LxAlbum>() to 0
+                val list = data.getAsJsonObject("body")?.getAsJsonObject("album")
+                    ?.getAsJsonArray("list")
+                    ?.mapNotNull { el -> runCatching { txAlbumFromMusicu(el.asJsonObject) }.getOrNull() }
+                    ?: emptyList()
+                list to data.musicuMetaTotal(list.size)
             }.getOrElse {
                 Timber.w(it, "searchTxAlbums failed keyword=$keyword")
                 emptyList<LxAlbum>() to 0
@@ -2798,60 +2812,37 @@ class LxMusicRepository @Inject constructor(
     suspend fun fetchTxArtistSongs(
         artistId: String, artistName: String, offset: Int = 0, limit: Int = 30,
     ): Pair<List<LxSong>, Int> = withContext(Dispatchers.IO) {
-        val encoded = URLEncoder.encode(artistName, "UTF-8")
-        val page = offset / limit + 1
-        val url = "https://c.y.qq.com/soso/fcgi-bin/client_search_cp?w=$encoded&t=0&p=$page&n=$limit&format=json"
         runCatching {
-            okHttpClient.newCall(
-                Request.Builder().url(url)
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                    .header("Referer", "https://y.qq.com/")
-                    .get().build()
-            ).execute().use { resp ->
-                if (!resp.isSuccessful) return@use emptyList<LxSong>() to 0
-                val root = JsonParser.parseString(resp.body?.string().orEmpty()).asJsonObject
-                val songObj = root.getAsJsonObject("data")?.getAsJsonObject("song")
-                val songs = songObj?.getAsJsonArray("list")?.mapNotNull { el ->
+            // musicu 桌面搜索按歌手名检索后按 singer mid 过滤。offset/limit 是过滤后口径，
+            // 与原始分页（每页 30 条未过滤）错位，不能直接换算页码——否则加载更多会反复
+            // 重拉同一原始页而列表不增长。改为每次从原始第 1 页顺序扫描，直到过滤累计
+            // 凑满 offset+limit 或原始页耗尽（封顶 6 页防同名歌手场景长串行请求）。
+            val maxRawPages = 6
+            val target = offset + limit
+            val acc = mutableListOf<LxSong>()
+            var rawPage = 1
+            var exhausted = false
+            while (acc.size < target && !exhausted && rawPage <= maxRawPages) {
+                val data = musicuSearch(0, artistName, rawPage) ?: break
+                val list = data.getAsJsonObject("body")?.getAsJsonObject("song")?.getAsJsonArray("list")
+                if (list == null || list.size() == 0) break
+                list.mapNotNull { el ->
                     runCatching {
                         val o = el.asJsonObject
-                        val songmid = jsonStr(o, "songmid") ?: return@runCatching null
-                        val singerArr = o.getAsJsonArray("singer")
-                        val belongs = singerArr?.any {
+                        val belongs = o.getAsJsonArray("singer")?.any {
                             runCatching { it.asJsonObject.get("mid")?.asString == artistId }.getOrDefault(false)
                         } ?: false
                         if (!belongs) return@runCatching null
-                        val singerPairs = singerArr
-                            ?.mapNotNull { runCatching { it.asJsonObject }.getOrNull() }
-                            ?.map { (jsonStr(it, "name") ?: "") to (jsonStr(it, "mid") ?: "") }
-                            ?.filter { it.first.isNotBlank() }
-                            .orEmpty()
-                        val singerName = singerPairs.takeIf { it.isNotEmpty() }
-                            ?.joinToString("、") { it.first } ?: artistName
-                        val artistIds = singerPairs.joinToString(",") { it.second }
-                            .takeIf { singerPairs.any { p -> p.second.isNotBlank() } }
-                        val albumObj = o.getAsJsonObject("album")
-                        val albumName = jsonStr(albumObj, "name") ?: jsonStr(o, "albumname") ?: ""
-                        val albumMidForPic = jsonStr(o, "albummid") ?: jsonStr(albumObj, "mid")
-                        val pic = albumMidForPic?.takeIf { it.isNotBlank() }
-                            ?.let { "https://y.gtimg.cn/music/photo_new/T002R300x300M000$it.jpg" }
-                        LxSong(
-                            source = "tx",
-                            songmid = songmid,
-                            name = jsonStr(o, "songname") ?: "",
-                            singer = singerName,
-                            albumName = albumName,
-                            interval = o.get("interval")?.takeIf { it.isJsonPrimitive }?.asLong ?: 0L,
-                            pic = pic,
-                            extraFields = buildMap {
-                                put("strMediaMid", jsonStr(o, "strMediaMid") ?: jsonStr(o, "songmid") ?: "")
-                                artistIds?.let { put("artistIds", it) }
-                            },
-                        )
+                        // 与歌曲搜索同一响应结构，复用统一映射
+                        TencentAccountApi.mapTrack(el)
                     }.getOrNull()
-                } ?: emptyList()
-                val total = songObj?.get("totalnum")?.takeIf { it.isJsonPrimitive }?.asInt ?: songs.size
-                songs to total
+                }.let { acc += it }
+                if (list.size() < 30) exhausted = true
+                rawPage++
             }
+            // 未耗尽时 total 报“至少还多 1 首”让调用方继续加载（下轮扫描更深必有新内容或空批终止）；
+            // 耗尽/封顶后返回累计数，merged.size >= total 会让 hasMore 归零
+            acc.drop(offset).take(limit) to (acc.size + if (exhausted || rawPage > maxRawPages) 0 else 1)
         }.getOrElse {
             Timber.w(it, "fetchTxArtistSongs failed artistId=$artistId")
             emptyList<LxSong>() to 0
@@ -2860,35 +2851,24 @@ class LxMusicRepository @Inject constructor(
 
     suspend fun fetchTxArtistAlbums(artistId: String, artistName: String): List<LxAlbum> =
         withContext(Dispatchers.IO) {
-            val encoded = URLEncoder.encode(artistName, "UTF-8")
-            val url = "https://c.y.qq.com/soso/fcgi-bin/client_search_cp?w=$encoded&t=8&p=1&n=30&format=json"
             runCatching {
-                okHttpClient.newCall(
-                    Request.Builder().url(url)
-                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                        .header("Referer", "https://y.qq.com/")
-                        .get().build()
-                ).execute().use { resp ->
-                    if (!resp.isSuccessful) return@use emptyList()
-                    val root = JsonParser.parseString(resp.body?.string().orEmpty()).asJsonObject
-                    val albumObj = root.getAsJsonObject("data")?.getAsJsonObject("album")
-                    albumObj?.getAsJsonArray("list")?.mapNotNull { el ->
+                val data = musicuSearch(8, artistName, 1) ?: return@withContext emptyList()
+                data.getAsJsonObject("body")?.getAsJsonObject("album")?.getAsJsonArray("list")
+                    ?.mapNotNull { el ->
                         runCatching {
                             val o = el.asJsonObject
-                            val mid = jsonStr(o, "albumMID") ?: return@runCatching null
-                            if (jsonStr(o, "singerMID") != artistId) return@runCatching null
-                            val pic = jsonStr(o, "albumPic")?.takeIf { it.isNotBlank() }
-                                ?: "https://y.gtimg.cn/music/photo_new/T002R300x300M000$mid.jpg"
-                            LxAlbum(
-                                id = mid,
-                                name = jsonStr(o, "albumName").orEmpty(),
-                                pic = if (pic.startsWith("http://")) pic.replace("http://", "https://") else pic,
-                                artistName = jsonStr(o, "singerName"),
-                                publishTime = jsonStr(o, "publicTime")?.toLongOrNull() ?: 0L,
-                            )
+                            val singers = o.getAsJsonArray("singer")
+                                ?.mapNotNull { runCatching { it.asJsonObject }.getOrNull() }.orEmpty()
+                            val mids = singers.mapNotNull { jsonStr(it, "mid")?.takeIf(String::isNotBlank) }
+                            // 优先 singer mid 匹配；响应缺 mid 时按歌手名兜底
+                            val belongs = when {
+                                mids.isNotEmpty() -> artistId in mids
+                                else -> singers.any { jsonStr(it, "name") == artistName }
+                            }
+                            if (!belongs) return@runCatching null
+                            txAlbumFromMusicu(o)
                         }.getOrNull()
                     } ?: emptyList()
-                }
             }.getOrElse {
                 Timber.w(it, "fetchTxArtistAlbums failed artistId=$artistId")
                 emptyList()

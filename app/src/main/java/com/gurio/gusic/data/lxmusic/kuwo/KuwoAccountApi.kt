@@ -14,9 +14,12 @@ import java.net.URLDecoder
 /**
  * 酷我账号资料读取：基于 WebView 登录后保存在 [KuwoCookieStore] 的 Cookie。
  *
- * 主接口 www.kuwo.cn/api/www/user/userInfo（需要 csrf=kw_token 头 + Referer + 桌面 UA）；
- * 接口失败或无登录态字段时，退回直接解析 Cookie：昵称 uname3/username/nickName、
- * 头像 pic3/pic——这些值可能是多重 URL 编码，且含老式 escape() 的 %uXXXX UTF-16 码元，
+ * www.kuwo.cn 的 api/www/ 下接口族现在要求 `Secret` 头（由 cookie
+ * `Hm_Iuvt_cdb524f42f23cer9b268564v7y735ewrq2324` 的值经 LCG 流 XOR 算出，
+ * 服务端只校验 Secret 能解密回请求 Cookie 中的同名值，故 cookie 缺失时可自造一对）；
+ * 旧的 csrf=kw_token 头已被官网弃用，保留仅为兼容。接口失败或无登录态字段时，
+ * 退回直接解析 Cookie：昵称 uname3/username/nickName、头像 pic3/pic——这些值可能是
+ * 多重 URL 编码，且含老式 escape() 的 %uXXXX UTF-16 码元，
  * 需先还原码元再 URLDecoder.decode，循环最多 3 次直至稳定。
  */
 internal class KuwoAccountApi(
@@ -30,6 +33,33 @@ internal class KuwoAccountApi(
         private const val FAVORITE_MAX_PAGES = 20
         private const val USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+
+        /** Secret 头对应的 cookie 名（由 www.kuwo.cn 首页 Set-Cookie 下发，domain=.kuwo.cn）。 */
+        internal const val SECRET_COOKIE_NAME = "Hm_Iuvt_cdb524f42f23cer9b268564v7y735ewrq2324"
+
+        // Secret 流密码常量：官网 bundle 按 cookie 名折叠出的固定值（seed 即折叠终值），
+        // 与 walkman-tv KuwoSecret、MusicBot-Go session.go 的整数移植一致
+        private const val SECRET_LCG_SEED = 59910100L
+        private const val SECRET_LCG_MULTIPLIER = 9253L
+        private const val SECRET_LCG_INCREMENT = 23L
+        private const val SECRET_LCG_MODULUS = 2147483647L
+
+        /**
+         * 酷我网关 Secret 头：LCG 流 XOR cookie 值逐字符输出小写 hex，末尾追加 8 位
+         * 十进制随机数的 8 位 hex。nonce 取 8 位十进制是为了与官网折叠语义一致
+         * （过短的 nonce 会折叠出不同种子）。
+         */
+        internal fun buildKuwoSecret(cookieValue: String, nonce: Long = (10000000L..99999999L).random()): String {
+            var state = SECRET_LCG_SEED
+            val hex = StringBuilder(cookieValue.length * 2 + 8)
+            for (ch in cookieValue) {
+                state = (SECRET_LCG_MULTIPLIER * state + SECRET_LCG_INCREMENT) % SECRET_LCG_MODULUS
+                val key = (state * 255L / SECRET_LCG_MODULUS).toInt()
+                hex.append((ch.code xor key).toString(16).padStart(2, '0'))
+            }
+            return hex.append(nonce.toString(16).padStart(8, '0')).toString()
+        }
+
 
         /** Cookie 串解析为 name→value；同名后出现者覆盖前者。 */
         internal fun parseCookieMap(cookie: String?): Map<String, String> {
@@ -94,13 +124,45 @@ internal class KuwoAccountApi(
         fetchUserInfoApi(cookie, cookies) ?: fetchFromCookie(cookies)
     }
 
+    /**
+     * 为 api/www 族请求补齐 Secret 鉴权：返回完整 Cookie 串与对应 Secret 头。
+     * cookie 里没有 [SECRET_COOKIE_NAME]（或值为空）时自造 32 位随机值并追加进 Cookie
+     * （服务端只校验两者可互解，接受自造对）；已有空值同名条目时先剔除再追加，
+     * 避免出现同名 Cookie 两条导致服务端取值歧义。
+     */
+    private fun secretPair(cookie: String, cookies: Map<String, String>): Pair<String, String> {
+        val existing = cookies[SECRET_COOKIE_NAME]?.takeIf(String::isNotBlank)
+        val value = existing ?: buildString {
+            val chars = ('A'..'Z') + ('a'..'z') + ('0'..'9')
+            repeat(32) { append(chars.random()) }
+        }
+        val fullCookie = if (existing != null) {
+            cookie
+        } else {
+            buildString {
+                cookie.split(';')
+                    .filter { part -> part.trim().substringBefore('=').trim() != SECRET_COOKIE_NAME }
+                    .forEach { part ->
+                        if (part.isNotBlank()) append("$part;")
+                    }
+                if (isNotEmpty()) append(" ")
+                append("$SECRET_COOKIE_NAME=$value")
+            }
+        }
+        return fullCookie to buildKuwoSecret(value)
+    }
+
     private fun fetchUserInfoApi(cookie: String, cookies: Map<String, String>): Pair<String?, String?>? {
+        val (fullCookie, secret) = secretPair(cookie, cookies)
         val request = Request.Builder()
             .url(USER_INFO_URL.toHttpUrl().newBuilder()
                 .addQueryParameter("httpsStatus", "1")
+                .addQueryParameter("plat", "web_www")
+                .addQueryParameter("reqId", java.util.UUID.randomUUID().toString())
                 .build())
             .header("User-Agent", USER_AGENT)
-            .header("Cookie", cookie)
+            .header("Cookie", fullCookie)
+            .header("Secret", secret)
             .header("csrf", cookies["kw_token"].orEmpty())
             .header("Referer", "https://www.kuwo.cn/")
             .get()
@@ -111,7 +173,9 @@ internal class KuwoAccountApi(
                 val root = runCatching { JsonParser.parseString(response.body?.string().orEmpty()) }
                     .getOrNull() as? JsonObject ?: return@use null
                 if (root.strOf("code") != "200") {
-                    Timber.w("$TAG: userInfo code=%s", root.strOf("code"))
+                    // 无 Secret/被反爬拒绝时网关回 {"success":false,"message":"The request is illegal!"}（无 code 字段）
+                    Timber.w("$TAG: userInfo code=%s success=%s msg=%s",
+                        root.strOf("code"), root.strOf("success"), root.strOf("message"))
                     return@use null
                 }
                 val data = root.get("data") as? JsonObject ?: return@use null
@@ -136,13 +200,14 @@ internal class KuwoAccountApi(
     }
 
     /**
-     * 拉取“我喜欢”歌曲列表（web 端 favorite/musicList，与 userInfo 同族：csrf+Cookie+Referer+桌面 UA）。
+     * 拉取“我喜欢”歌曲列表（web 端 favorite/musicList，与 userInfo 同族：Secret+Cookie+Referer+桌面 UA）。
      * 分页 pn/rn 直到拉满 total（封顶 20 页防 total 异常偏大时长串行请求）；
      * 失败（未登录/被拒/网络）返回 null，与“成功但为空”区分。
      */
     suspend fun fetchLikedSongs(): List<LxSong>? = withContext(Dispatchers.IO) {
         val cookie = cookieStore.getCookie()?.takeIf(String::isNotBlank) ?: return@withContext null
-        val csrf = parseCookieMap(cookie)["kw_token"].orEmpty()
+        val cookies = parseCookieMap(cookie)
+        val (fullCookie, secret) = secretPair(cookie, cookies)
         val songs = mutableListOf<LxSong>()
         var total = -1
         var pn = 1
@@ -153,10 +218,13 @@ internal class KuwoAccountApi(
                     .addQueryParameter("pn", pn.toString())
                     .addQueryParameter("rn", FAVORITE_PAGE_SIZE.toString())
                     .addQueryParameter("httpsStatus", "1")
+                    .addQueryParameter("plat", "web_www")
+                    .addQueryParameter("reqId", java.util.UUID.randomUUID().toString())
                     .build())
                 .header("User-Agent", USER_AGENT)
-                .header("Cookie", cookie)
-                .header("csrf", csrf)
+                .header("Cookie", fullCookie)
+                .header("Secret", secret)
+                .header("csrf", cookies["kw_token"].orEmpty())
                 .header("Referer", "https://www.kuwo.cn/")
                 .get()
                 .build()
@@ -174,12 +242,15 @@ internal class KuwoAccountApi(
                 null
             } ?: return@withContext null
             if (root.strOf("code") != "200") {
-                Timber.w("$TAG: favorite/musicList code=%s msg=%s", root.strOf("code"), root.strOf("message"))
+                Timber.w("$TAG: favorite/musicList code=%s success=%s msg=%s",
+                    root.strOf("code"), root.strOf("success"), root.strOf("message"))
                 return@withContext null
             }
             val data = root.get("data") as? JsonObject ?: return@withContext null
             if (total < 0) total = data.intOf("total") ?: 0
-            val arr = data.get("data") as? com.google.gson.JsonArray ?: com.google.gson.JsonArray()
+            // 现行接口歌曲数组在 data.musicList（旧文档形态 data.data，做双兼容）
+            val arr = (data.get("musicList") ?: data.get("data")) as? com.google.gson.JsonArray
+                ?: com.google.gson.JsonArray()
             val mapped = arr.mapNotNull { el -> kwLikedSongOf(el as? JsonObject) }
             if (mapped.isEmpty()) break
             songs += mapped

@@ -227,7 +227,6 @@ fun LxMusicScreen(
     var showKwLoginDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    val neteaseVipType by viewModel.neteaseVipType.collectAsStateWithLifecycle()
     val neteaseLoggedIn by viewModel.neteaseLoggedIn.collectAsStateWithLifecycle()
     val neteaseNickname by viewModel.neteaseNickname.collectAsStateWithLifecycle()
     val neteaseAvatar by viewModel.neteaseAvatar.collectAsStateWithLifecycle()
@@ -240,9 +239,6 @@ fun LxMusicScreen(
     val kuwoNickname by viewModel.kuwoNickname.collectAsStateWithLifecycle()
     val kuwoAvatar by viewModel.kuwoAvatar.collectAsStateWithLifecycle()
     val kuwoLoggedIn by viewModel.kuwoLoggedIn.collectAsStateWithLifecycle()
-    val tencentVipType by viewModel.tencentVipType.collectAsStateWithLifecycle()
-    val kugouVipType by viewModel.kugouVipType.collectAsStateWithLifecycle()
-    val kuwoVipType by viewModel.kuwoVipType.collectAsStateWithLifecycle()
     val currentSourceLoggedIn by viewModel.currentSourceLoggedIn.collectAsStateWithLifecycle()
 
     val platformOrder by viewModel.platformOrder.collectAsStateWithLifecycle()
@@ -494,7 +490,7 @@ fun LxMusicScreen(
         },
     ) { innerPadding ->
         // 浏览态页签：网易音源 = 推荐 + 排行榜 两页；其他音源仅排行榜一页
-        // （原“我的”模块已下线，收藏内容由“我的”页收藏分类承载）
+        // （原“我的”模块已下线，收藏内容由库页“收藏”分类承载）
         val recommendTabAvailable = selectedSource == LxSources.NETEASE
         fun modulePageIndex(module: String): Int = when {
             module == "recommend" -> 0
@@ -648,49 +644,6 @@ fun LxMusicScreen(
                             }
                         }
                     } else {
-                    // 平台资料条（头像/昵称/退出）：原“我的”页头部的最小保留——应用内唯一登出入口。
-                    // 登录后常驻显示在模块行上方；未登录时不渲染。
-                    val profileNickname: String?
-                    val profileAvatar: String?
-                    val profileVipType: Int
-                    val onProfileLogout: () -> Unit
-                    when (selectedSource) {
-                        LxSources.TENCENT -> {
-                            profileNickname = tencentNickname
-                            profileAvatar = tencentAvatar
-                            profileVipType = tencentVipType
-                            onProfileLogout = { viewModel.logoutTencent() }
-                        }
-                        LxSources.KUGOU -> {
-                            profileNickname = kugouNickname
-                            profileAvatar = kugouAvatar
-                            profileVipType = kugouVipType
-                            onProfileLogout = { viewModel.logoutKugou() }
-                        }
-                        LxSources.KUWO -> {
-                            profileNickname = kuwoNickname
-                            profileAvatar = kuwoAvatar
-                            profileVipType = kuwoVipType
-                            onProfileLogout = { viewModel.logoutKuwo() }
-                        }
-                        else -> {
-                            profileNickname = neteaseNickname
-                            profileAvatar = neteaseAvatar
-                            profileVipType = neteaseVipType
-                            onProfileLogout = {
-                                clearNeteaseWebViewSession()
-                                viewModel.logoutNetease()
-                            }
-                        }
-                    }
-                    if (mineAvailable) {
-                        LxProfileStrip(
-                            nickname = profileNickname,
-                            avatarUrl = profileAvatar,
-                            vipType = profileVipType,
-                            onLogout = onProfileLogout,
-                        )
-                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
