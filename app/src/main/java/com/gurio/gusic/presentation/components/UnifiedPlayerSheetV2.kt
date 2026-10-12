@@ -157,7 +157,8 @@ fun UnifiedPlayerSheetV2(
         { currentPositionState.value }
     }
 
-    val isFavorite by playerViewModel.isCurrentSongFavorite.collectAsStateWithLifecycle()
+    // 播放页下方大爱心：仅本软件收藏状态（平台喜欢由顶栏心形按钮承担）
+    val isFavorite by playerViewModel.isCurrentSongLocalFavorite.collectAsStateWithLifecycle()
 
     val playerUiSheetSlice by remember {
         playerViewModel.playerUiState

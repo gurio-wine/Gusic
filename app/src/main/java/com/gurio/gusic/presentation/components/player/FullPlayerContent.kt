@@ -834,6 +834,46 @@ fun FullPlayerContent(
                                             modifier = Modifier.padding(start = 8.dp).size(16.dp)
                                         )
                                     }
+
+                                    // 顶栏平台喜欢心形：与平台标签同条件（仅在线歌），始终用平台品牌色，
+                                    // 已喜欢=实心不透明，未喜欢=弱化，不可用/busy=再弱一档
+                                    if (currentSong != null && lxSource != null) {
+                                        // 冷启动补拉平台喜欢集合（发现页未打开过时集合可能为空）
+                                        LaunchedEffect(lxSource) {
+                                            lxMusicViewModel.ensurePlatformLikedIds(lxSource)
+                                        }
+                                        val likeSnapshot by playerViewModel
+                                            .platformLikeSnapshot.collectAsStateWithLifecycle()
+                                        val likeBusyIds by playerViewModel
+                                            .neteaseLikeBusyIds.collectAsStateWithLifecycle()
+                                        val (platformLiked, platformLikeEnabled) = likeSnapshot.let {
+                                            playerViewModel.platformLikeStateOf(currentSong)
+                                        }
+                                        val likeBusy =
+                                            currentSong.lxMusicSongMid?.let { it in likeBusyIds } == true
+                                        Icon(
+                                            painter = painterResource(
+                                                if (platformLiked) R.drawable.round_favorite_24
+                                                else R.drawable.rounded_favorite_24
+                                            ),
+                                            contentDescription = stringResource(R.string.presentation_batch_h_cd_favorite),
+                                            tint = LxSources.brandColor(lxSource).copy(
+                                                alpha = when {
+                                                    likeBusy || !platformLikeEnabled -> 0.3f
+                                                    platformLiked -> 1f
+                                                    else -> 0.45f
+                                                }
+                                            ),
+                                            modifier = Modifier
+                                                .padding(start = 8.dp)
+                                                .size(18.dp)
+                                                .clickable {
+                                                    if (!likeBusy) {
+                                                        playerViewModel.togglePlatformFavorite(currentSong)
+                                                    }
+                                                }
+                                        )
+                                    }
                                 }
                             }
                         }

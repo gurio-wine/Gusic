@@ -322,7 +322,12 @@ class LxMusicViewModel @Inject constructor(
                 val loggedIn = loggedMap[source] == true
                 val wasLoggedIn = prevLoggedIn[source] == true
                 prevLoggedIn = loggedMap
-                if (loggedIn && !wasLoggedIn) ensurePlatformLikedIds(source)
+                if (loggedIn && !wasLoggedIn) {
+                    ensurePlatformLikedIds(source)
+                } else if (!loggedIn && wasLoggedIn) {
+                    // 登出后清会话去重标记，换账号登录时能重新拉取喜欢集合
+                    ensuredLikedSources.remove(source)
+                }
             }
         }
         viewModelScope.launch {
@@ -1530,6 +1535,13 @@ class LxMusicViewModel @Inject constructor(
         }
         viewModelScope.launch {
             val ok = runCatching { repository.kgSendSmsCode(mobile) }.getOrDefault(false)
+            if (!ok) {
+                // 内置兜底扩展恒返回 false（不发网络请求）；私有扩展存在时此日志用于诊断真实失败原因
+                Timber.w(
+                    "sendKugouSmsCode failed for %s (accountWritesEnabled=%s)",
+                    mobile.take(3) + "****" + mobile.takeLast(2), accountWritesEnabled
+                )
+            }
             onResult(ok, if (ok) null else context.getString(R.string.lx_msg_sms_send_failed))
         }
     }
@@ -1610,7 +1622,12 @@ class LxMusicViewModel @Inject constructor(
         }
     }
 
-    private fun ensurePlatformLikedIds(source: String) {
+    // 会话级去重：播放页主层与预热层各自触发冷启动补拉，tx/kg/kw 仅本会话首次拉取，
+    // 避免喜欢集合确实为空的用户每次展开播放页都重复发请求（wy 内部自带 loaded 守卫）
+    private val ensuredLikedSources = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
+    internal fun ensurePlatformLikedIds(source: String) {
+        if (source != LxSources.NETEASE && !ensuredLikedSources.add(source)) return
         viewModelScope.launch {
             runCatching {
                 when (source) {

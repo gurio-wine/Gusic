@@ -175,7 +175,8 @@ fun LibraryPlaylistsTab(
                             onSelect = onSelectPlaylistsScope
                         )
                     }
-                }
+                },
+                hasPlatformEntries = loggedInPlatforms.isNotEmpty()
             )
         }
     }

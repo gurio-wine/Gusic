@@ -367,6 +367,7 @@
 <string name="lx_btn_file_import">文件导入</string>
 <string name="lx_msg_not_logged_in">未登录，点击网页登录</string>
 <string name="lx_msg_not_logged_in_platform">未登录，点击网页登录</string>
+<string name="lx_msg_kugou_login_unavailable">酷狗登录需要账号扩展支持，当前构建不可用</string>
 <string name="lx_msg_login_expired_status">登录已失效，点击重新登录</string>
 <string name="lx_status_logged_in_svip">已登录 · SVIP</string>
 <string name="lx_status_logged_in_vip">已登录 · 黑胶VIP</string>

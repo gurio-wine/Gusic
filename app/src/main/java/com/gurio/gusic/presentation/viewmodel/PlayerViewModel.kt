@@ -1330,6 +1330,11 @@ class PlayerViewModel @Inject constructor(
     }.distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    // 播放页下方大爱心专用：只反映当前歌（本地/在线）在本软件收藏集合中的状态，与平台喜欢解耦
+    val isCurrentSongLocalFavorite: StateFlow<Boolean> = isCurrentSongFavoriteLocal
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val neteaseLikedSongIds: StateFlow<Set<String>> = lxMusicRepository.neteaseLikedSongIds
 
     val neteaseLikeValid: StateFlow<Boolean> = neteaseCookieStore.cookieValidFlow
@@ -3641,6 +3646,16 @@ class PlayerViewModel @Inject constructor(
         toggleFavoriteByOrigin(currentSong)
     }
 
+    /** 播放页下方大爱心专用：只切换当前歌在本软件的收藏（在线歌的 id 为统一负数 id，同样写本软件收藏库） */
+    fun toggleLocalFavorite() {
+        val currentSong = playbackStateHolder.stablePlayerState.value.currentSong ?: return
+        viewModelScope.launch {
+            val favoriteSongId = resolveFavoriteSongId(currentSong) ?: return@launch
+            val currentlyFavorite = favoriteSongIds.value.contains(favoriteSongId)
+            setFavoriteStatusEverywhere(favoriteSongId, !currentlyFavorite)
+        }
+    }
+
     fun toggleFavoriteForQueue(song: Song, removing: Boolean = false) {
         toggleFavoriteByOrigin(song, removing)
     }
@@ -3724,7 +3739,16 @@ class PlayerViewModel @Inject constructor(
                     val set = lxMusicRepository.kgLikedSongIds.value
                     val liked = (song.lxMusicHash?.let { set.contains(it) } ?: false) ||
                         (song.lxMusicSongMid?.let { set.contains(it) } ?: false)
-                    setPlatformSongLike(song, if (removing) false else !liked)
+                    val target = if (removing) false else !liked
+                    if (setPlatformSongLike(song, target)) {
+                        // 仓库不会自动维护 kg 喜欢集合，成功后手动同步（对齐 applyTxSongLike 先例）；
+                        // 匹配同时支持 hash 与 songmid，两者一并增删
+                        val current = lxMusicRepository.kgLikedSongIds.value.toMutableSet()
+                        listOfNotNull(song.lxMusicHash, song.lxMusicSongMid).forEach { key ->
+                            if (target) current += key else current -= key
+                        }
+                        lxMusicRepository.setKgLikedSongIds(current)
+                    }
                 }
             }
             song.lxMusicSource == "kw" -> {
@@ -3735,7 +3759,14 @@ class PlayerViewModel @Inject constructor(
                 val trackId = song.lxMusicSongMid ?: return
                 viewModelScope.launch {
                     val liked = lxMusicRepository.kwLikedSongIds.value.contains(trackId)
-                    setPlatformSongLike(song, if (removing) false else !liked)
+                    val target = if (removing) false else !liked
+                    if (setPlatformSongLike(song, target)) {
+                        // 仓库不会自动维护 kw 喜欢集合，成功后手动同步（按 songmid）
+                        val current = lxMusicRepository.kwLikedSongIds.value
+                        lxMusicRepository.setKwLikedSongIds(
+                            if (target) current + trackId else current - trackId
+                        )
+                    }
                 }
             }
             else -> showFavoriteToast("该平台暂不支持喜欢，敬请期待")

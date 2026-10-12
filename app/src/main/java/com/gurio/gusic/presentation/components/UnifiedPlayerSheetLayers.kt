@@ -33,7 +33,6 @@ import com.gurio.gusic.data.preferences.FullPlayerLoadingTweaks
 import com.gurio.gusic.presentation.components.player.FullPlayerContent
 import com.gurio.gusic.presentation.components.scoped.FullPlayerVisualState
 import com.gurio.gusic.presentation.components.scoped.rememberFullPlayerRuntimePolicy
-import com.gurio.gusic.presentation.viewmodel.PlayerFavoriteKind
 import com.gurio.gusic.presentation.viewmodel.PlayerSheetState
 import com.gurio.gusic.presentation.viewmodel.PlayerViewModel
 import com.gurio.gusic.presentation.viewmodel.StablePlayerState
@@ -160,9 +159,9 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                 ) {
                     val latestInfrequentPlayerState = rememberUpdatedState(infrequentPlayerState)
                     val latestIsFavorite = rememberUpdatedState(isFavorite)
-                    val latestFavoriteKind by playerViewModel.playerFavoriteKind.collectAsStateWithLifecycle()
+                    // 大爱心已专用于本软件收藏（本地+在线均可写），不再随平台登录态弱化
                     val favoriteEnabledProvider = remember {
-                        { latestFavoriteKind != PlayerFavoriteKind.DISABLED }
+                        { true }
                     }
                     val expansionFractionProvider = remember(playerContentExpansionFraction) {
                         { playerContentExpansionFraction.value }
@@ -198,7 +197,7 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                     val onShuffleToggle = remember(playerViewModel) {
                         { playerViewModel.toggleShuffle() }
                     }
-                    val onFavoriteToggle = remember(playerViewModel) { playerViewModel::toggleFavorite }
+                    val onFavoriteToggle = remember(playerViewModel) { playerViewModel::toggleLocalFavorite }
 
                     FullPlayerContent(
                         currentSong = currentSongNonNull,
@@ -288,7 +287,7 @@ internal fun UnifiedPlayerPrewarmLayer(
                 val onNext = remember(playerViewModel) { playerViewModel::nextSong }
                 val onPrevious = remember(playerViewModel) { playerViewModel::previousSong }
                 val onShuffleToggle = remember(playerViewModel) { { playerViewModel.toggleShuffle() } }
-                val onFavoriteToggle = remember(playerViewModel) { playerViewModel::toggleFavorite }
+                val onFavoriteToggle = remember(playerViewModel) { playerViewModel::toggleLocalFavorite }
 
                 FullPlayerContent(
                     currentSong = currentSong,

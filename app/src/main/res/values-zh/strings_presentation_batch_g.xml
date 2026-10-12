@@ -585,4 +585,12 @@
         <item>音源腳本按鈕移到「我的」頁頂欄、設定按鈕左側</item>
         <item>發現頁頂欄顯示當前平台帳號：使用者名稱加右側頭像，未登入按未登入顯示，點擊進入對應平台登入</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101204_whats_new">
+        <item>播放頁頂欄：平台標籤右側新增平台色小愛心，顯示並切換這首歌在該平台的喜歡狀態；下方大愛心改為僅用於本軟體收藏</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101204_changes">
+        <item>歌單分類：任一平台已登入時不再顯示「尚未建立任何歌單」空態</item>
+        <item>酷狗登入改為明確提示需要帳號擴充支援，不再靜默發送失敗</item>
+        <item>歌詞頁播放暫停按鈕配色與播放頁一致</item>
+    </string-array>
 </resources>

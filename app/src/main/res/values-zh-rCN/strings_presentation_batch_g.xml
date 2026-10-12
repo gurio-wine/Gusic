@@ -585,4 +585,12 @@
         <item>音源脚本按钮移到“我的”页顶栏、设置按钮左侧</item>
         <item>发现页顶栏显示当前平台账号：用户名加右侧头像，未登录按未登录显示，点击进入对应平台登录</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101204_whats_new">
+        <item>播放页顶栏：平台标签右侧新增平台色小爱心，显示并切换这首歌在该平台的喜欢状态；下方大爱心改为仅用于本软件收藏</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101204_changes">
+        <item>歌单分类：任一平台已登录时不再显示“尚未创建任何歌单”空态</item>
+        <item>酷狗登录改为明确提示需要账号扩展支持，不再静默发送失败</item>
+        <item>歌词页播放暂停按钮配色与播放页一致</item>
+    </string-array>
 </resources>

@@ -107,7 +107,9 @@ fun PlaylistContainer(
     onPlaylistLongPress: (Playlist) -> Unit = {},
     onPlaylistSelectionToggle: (Playlist) -> Unit = {},
     playlistSelectionStateHolder: PlaylistSelectionStateHolder? = null,
-    footerContent: (@Composable () -> Unit)? = null
+    footerContent: (@Composable () -> Unit)? = null,
+    // 一级已带平台歌单入口时（任何平台已登录），空歌单不再显示“尚未创建任何歌单”空态图文
+    hasPlatformEntries: Boolean = false
 ) {
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -129,40 +131,42 @@ fun PlaylistContainer(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
-                        modifier = Modifier.padding(top = 28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        SineWaveLine(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(32.dp)
-                                .padding(horizontal = 8.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
-                            alpha = 0.95f,
-                            strokeWidth = 3.dp,
-                            amplitude = 4.dp,
-                            waves = 7.6f,
-                            phase = 0f
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Icon(
-                            Icons.AutoMirrored.Rounded.PlaylistPlay,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            stringResource(R.string.presentation_batch_e_no_playlist_created),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            stringResource(R.string.presentation_batch_e_new_playlist_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    if (!hasPlatformEntries) {
+                        Column(
+                            modifier = Modifier.padding(top = 28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            SineWaveLine(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(32.dp)
+                                    .padding(horizontal = 8.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
+                                alpha = 0.95f,
+                                strokeWidth = 3.dp,
+                                amplitude = 4.dp,
+                                waves = 7.6f,
+                                phase = 0f
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Icon(
+                                Icons.AutoMirrored.Rounded.PlaylistPlay,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                stringResource(R.string.presentation_batch_e_no_playlist_created),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                stringResource(R.string.presentation_batch_e_new_playlist_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     // 空态下方仍追加平台歌单入口，保持与有歌单时一致的一级结构
                     footerContent?.invoke()

@@ -151,8 +151,8 @@ internal fun lyricsSheetColors(colorScheme: ColorScheme): LyricsSheetColors {
             preferred = accent,
             fallback = content
         ),
-        playPauseContainer = colorScheme.tertiaryFixedDim,
-        playPauseContent = colorScheme.onTertiaryFixed,
+        playPauseContainer = colorScheme.onPrimary.copy(alpha = 0.8f),
+        playPauseContent = colorScheme.primary,
         syncButtonContainer = colorScheme.secondaryFixedDim,
         syncButtonContent = colorScheme.onSecondaryFixed
     )
