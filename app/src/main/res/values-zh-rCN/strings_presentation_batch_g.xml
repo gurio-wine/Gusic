@@ -593,4 +593,12 @@
         <item>酷狗登录改为明确提示需要账号扩展支持，不再静默发送失败</item>
         <item>歌词页播放暂停按钮配色与播放页一致</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101205_whats_new">
+        <item>播放页与歌词页合并为一层叠层：歌词预览区成为歌词页的“窗口”，点击后播放页组件上下移出渐隐、歌词放大归位；歌词按钮已移除，播放页在上时歌词不可互动</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101205_changes">
+        <item>酷狗短信登录完整原生实现：发送验证码、登录并同步昵称头像</item>
+        <item>酷我网页登录后获取昵称与头像</item>
+        <item>仅有静态歌词的歌也可从预览区进入歌词页；无歌词的歌在那里提供搜索/导入入口</item>
+    </string-array>
 </resources>

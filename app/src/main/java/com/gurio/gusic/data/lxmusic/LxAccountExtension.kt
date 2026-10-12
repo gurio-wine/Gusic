@@ -1,5 +1,7 @@
 package com.gurio.gusic.data.lxmusic
 
+import com.gurio.gusic.data.lxmusic.kugou.KugouAccountApi
+import com.gurio.gusic.data.lxmusic.kuwo.KuwoAccountApi
 import com.gurio.gusic.data.lxmusic.platform.PlatformResult
 import com.gurio.gusic.data.lxmusic.tencent.TencentAccountApi
 import timber.log.Timber
@@ -169,18 +171,22 @@ data class LxTxQrPoll(
 }
 
 /**
- * 内置账号扩展：QQ音乐（tx）的账号读取走 [TencentAccountApi]，其余平台沿用不可用实现。
- * isAvailable 保持 false（账号写操作仍不可用），读取类功能照常工作。
+ * 内置账号扩展：QQ音乐（tx）账号读取走 [TencentAccountApi]；酷狗（kg）短信验证码登录与
+ * 昵称头像走 [KugouAccountApi]（真实协议）；酷我（kw）昵称头像走 [KuwoAccountApi]；
+ * 其余平台写操作沿用不可用实现。
+ * isAvailable 保持 false（kg/kw 喜欢等账号写操作仍不可用），登录与资料读取照常工作。
  */
 internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExtension {
     private val unavailable = LxUnavailableAccountExtension
     private val tencentApi = TencentAccountApi(host.okHttpClient, host.tencentCookieStore)
+    private val kugouApi = KugouAccountApi(host.okHttpClient, host.kugouCookieStore)
+    private val kuwoApi = KuwoAccountApi(host.okHttpClient, host.kuwoCookieStore)
 
     override val isAvailable: Boolean = false
 
-    override suspend fun kgSendSmsCode(mobile: String): Boolean = unavailable.kgSendSmsCode(mobile)
+    override suspend fun kgSendSmsCode(mobile: String): Boolean = kugouApi.sendSmsCode(mobile).ok
     override suspend fun kgLoginBySmsCode(mobile: String, code: String): Boolean =
-        unavailable.kgLoginBySmsCode(mobile, code)
+        kugouApi.loginBySmsCode(mobile, code)
     override suspend fun kgApplySongLike(
         songmid: String,
         hash: String?,
@@ -227,7 +233,7 @@ internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExt
     override suspend fun txResolveSongLikeInfo(songmid: String): Pair<Long, Int>? =
         tencentApi.resolveSongLikeInfoByMid(songmid)
 
-    override suspend fun kwFetchProfile(): Pair<String?, String?>? = unavailable.kwFetchProfile()
+    override suspend fun kwFetchProfile(): Pair<String?, String?>? = kuwoApi.fetchProfile()
     override suspend fun kwFetchUserPlaylists(): List<LxPlaylist>? = unavailable.kwFetchUserPlaylists()
     override suspend fun kwFetchFollowedArtists(): List<LxArtist>? = unavailable.kwFetchFollowedArtists()
     override suspend fun kwFetchLikedAlbums(): List<LxAlbum>? = unavailable.kwFetchLikedAlbums()
@@ -240,7 +246,7 @@ internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExt
         unavailable.kgFetchCloudPlaylistSongs(listid)
     override suspend fun kgFetchLikedSongIds(): Set<String>? = unavailable.kgFetchLikedSongIds()
     override suspend fun kgFetchLikedSongs(): List<LxSong>? = unavailable.kgFetchLikedSongs()
-    override suspend fun kgFetchProfile(): Pair<String?, String?>? = unavailable.kgFetchProfile()
+    override suspend fun kgFetchProfile(): Pair<String?, String?>? = kugouApi.fetchProfile()
 
     override suspend fun txFetchProfile(): Pair<String?, String?>? = tencentApi.fetchProfile()
     override suspend fun txFetchLikedSongs(): List<LxSong>? = tencentApi.fetchLikedSongs()

@@ -471,6 +471,11 @@ class PlayerViewModel @Inject constructor(
 
     val playerContentExpansionFraction = Animatable(0f)
 
+    // 播放页 <-> 歌词页 遮挡/展开转场进度：0=播放页覆盖（仅露出窗口歌词），1=歌词页完全展开。
+    // 动画由 UI 层的 LyricsRevealController 启动（animateTo 需要 MonotonicFrameClock），
+    // 这里只作为两页共享的单一状态源。
+    val lyricsRevealFraction = Animatable(0f)
+
     private val _isMiniPlayerDismissing = MutableStateFlow(false)
     val isMiniPlayerDismissing: StateFlow<Boolean> = _isMiniPlayerDismissing.asStateFlow()
 

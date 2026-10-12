@@ -1127,7 +1127,6 @@ fun LxMusicScreen(
         onDismissTencent = { showTxWebLoginDialog = false },
         onDismissKugou = { showKgLoginDialog = false },
         onDismissKuwo = { showKwLoginDialog = false },
-        kugouLoginEnabled = viewModel.accountWritesEnabled,
     )
 }
 

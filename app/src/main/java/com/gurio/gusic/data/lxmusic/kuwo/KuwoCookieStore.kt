@@ -84,12 +84,15 @@ class KuwoCookieStore @Inject constructor(
     }
 
     fun setProfile(nickname: String?, avatarUrl: String?) {
+        // 接口可能只回传单边（如只回头像）：仅覆盖非空侧，避免偶发空值清掉已有昵称/头像
+        val newNickname = nickname ?: _nicknameFlow.value
+        val newAvatar = avatarUrl ?: _avatarUrlFlow.value
         prefs.edit()
-            .putString(KEY_NICKNAME, nickname)
-            .putString(KEY_AVATAR_URL, avatarUrl)
+            .putString(KEY_NICKNAME, newNickname)
+            .putString(KEY_AVATAR_URL, newAvatar)
             .apply()
-        _nicknameFlow.value = nickname
-        _avatarUrlFlow.value = avatarUrl
+        _nicknameFlow.value = newNickname
+        _avatarUrlFlow.value = newAvatar
     }
 
     fun markCookieInvalid() {

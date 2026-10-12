@@ -8,6 +8,8 @@ import com.gurio.gusic.presentation.components.scoped.LyricsPredictiveBackHandle
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.TransformOrigin
@@ -225,6 +227,16 @@ fun LyricsSheet(
     isImmersiveTemporarilyDisabled: Boolean,
     onSetImmersiveTemporarilyDisabled: (Boolean) -> Unit,
     onSaveLyricsToFile: (Song, Lyrics, Boolean) -> Unit,
+    // ---- 播放页遮挡/展开转场 ----
+    // 0f = 被播放页覆盖（只作为底层存在，仅歌词本体可见性参与转场），1f = 完全展开。
+    // 根 alpha、列表字号/位置形变、手势门控都从该 fraction 派生，draw-phase 读取不触发重组。
+    revealFractionProvider: () -> Float = { 1f },
+    // fraction > 0.995 的派生状态（宿主用 derivedStateOf 计算），用于离散门控（滚动/手势/返回键）。
+    isRevealed: Boolean = true,
+    // 播放页"窗口"歌词字号（inPlayerLyricsFontSize）；<=0 表示无窗口，列表不做窗口形变。
+    windowFontSp: Float = 0f,
+    // 窗口当前行锚点 Y（窗口 top + 高度×0.25，与 InPlayerLyrics 的滚动偏移一致），相对歌词页根布局的像素值。
+    windowAnchorYInSheetProvider: () -> Float = { Float.NaN },
     modifier: Modifier = Modifier,
     swipeThreshold: Dp = 100.dp,
     highlightZoneFraction: Float = 0.08f,
@@ -232,6 +244,8 @@ fun LyricsSheet(
     autoscrollAnimationSpec: AnimationSpec<Float>? = null
 ) {
     var backProgress by remember { mutableFloatStateOf(1f) }
+    // 歌词页根布局在窗口坐标系中的 top，用于把播放页窗口锚点换算到列表视口坐标（转场形变用）。
+    var sheetTopInRoot by remember { mutableFloatStateOf(0f) }
 
     val backProgressProvider = rememberUpdatedState(backProgress)
 
@@ -246,8 +260,9 @@ fun LyricsSheet(
         ) { backProgress = value }
     }
 
+    // 歌词页现在常驻底层，只有完全展开时才允许预测返回拦截（否则播放页在前台时返回键永远被吃掉）。
     LyricsPredictiveBackHandler(
-        enabled = true,
+        enabled = isRevealed,
         onProgressChanged = { backProgress = it },
         onBack = onBackClick
     )
@@ -358,29 +373,6 @@ fun LyricsSheet(
         }
     }
 
-    DisposableEffect(keepScreenOn, lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && keepScreenOn) {
-                keepScreenOn = false
-                coroutineScope.launch {
-                    context.dataStore.edit { prefs ->
-                        prefs[booleanPreferencesKey("keep_screen_on_lyrics")] = false
-                    }
-                }
-            }
-        }
-        
-        if (keepScreenOn) {
-            view.keepScreenOn = true
-        }
-
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            view.keepScreenOn = false
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
     val resolvedAutoscrollSpec = autoscrollAnimationSpec ?: if (useAnimatedLyrics) {
         spring(
             stiffness = Spring.StiffnessMediumLow,
@@ -439,8 +431,10 @@ fun LyricsSheet(
         onDispose { context.unregisterReceiver(receiver) }
     }
 
-    LaunchedEffect(immersiveLyricsEnabled, lastInteractionTime, showSyncedLyrics, isImmersiveTemporarilyDisabled) {
-        if (immersiveLyricsEnabled && showSyncedLyrics == true && !isImmersiveTemporarilyDisabled) {
+    // 沉浸模式只在歌词页完全展开时生效；被播放页覆盖或转场中一律退出，
+    // 保证收起时字号回到展开态基准，与窗口字号缩放衔接一致。
+    LaunchedEffect(immersiveLyricsEnabled, lastInteractionTime, showSyncedLyrics, isImmersiveTemporarilyDisabled, isRevealed) {
+        if (isRevealed && immersiveLyricsEnabled && showSyncedLyrics == true && !isImmersiveTemporarilyDisabled) {
             delay(immersiveLyricsTimeout)
             immersiveMode = true
         } else {
@@ -453,12 +447,19 @@ fun LyricsSheet(
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "fontScale"
     )
-    
+
     val scaledTextStyle = lyricsTextStyle.copy(
         // 整体偏大：百分比 100% 对应旧版 70% 的视觉大小
         fontSize = lyricsTextStyle.fontSize * fontScale * lyricsFontScale * 0.7f,
         lineHeight = lyricsTextStyle.lineHeight * fontScale * lyricsFontScale * 0.7f
     )
+
+    // 被播放页覆盖时列表的初始缩放：让展开态字号视觉上正好缩到播放页窗口字号，
+    // 转场时连续放大回 1f（graphicsLayer 缩放，draw-phase 生效，终点等于静态展开布局）。
+    val expandedFontSp = lyricsTextStyle.fontSize.value * lyricsFontScale * 0.7f
+    val collapsedListScale = if (windowFontSp > 0f && expandedFontSp > 0f) {
+        (windowFontSp / expandedFontSp).coerceIn(0.3f, 1f)
+    } else 1f
 
     fun resetImmersiveTimer() {
         lastInteractionTime = System.currentTimeMillis()
@@ -558,61 +559,71 @@ fun LyricsSheet(
     Scaffold(
         modifier = modifier
             .fillMaxSize()
+            .onGloballyPositioned { sheetTopInRoot = it.positionInRoot().y }
             .graphicsLayer {
                 val p = backProgressProvider.value
                 val scale = lerp(1f, 0.92f, p)
                 scaleX = scale
                 scaleY = scale
                 translationY = lerp(0f, size.height * 0.08f, p)
+                // 被播放页覆盖时整页隐藏（含背景），转场随 fraction 渐显；终点 1f 等于静态布局
+                alpha = revealFractionProvider().coerceIn(0f, 1f)
             }
             .clip(RoundedCornerShape(32.dp))
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = {
-                        isSwipeActive = true
-                        hasTriggeredAction = false
-                        dragOffset = 0f
-                        resetImmersiveTimer()
-                        coroutineScope.launch {
-                            swipeProgress.snapTo(0f)
-                        }
-                    },
-                    onDragEnd = {
-                        isSwipeActive = false
-                        val committed = abs(dragOffset) > swipeThresholdPx && !hasTriggeredAction 
-                        
-                        if (committed) {
-                            if (dragOffset > 0) onPrev() else onNext()
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        }
+            .then(
+                // 水平滑动切歌仅在展开态启用；遮挡态由上层播放页接管所有触摸
+                if (isRevealed) {
+                    Modifier.pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = {
+                                isSwipeActive = true
+                                hasTriggeredAction = false
+                                dragOffset = 0f
+                                resetImmersiveTimer()
+                                coroutineScope.launch {
+                                    swipeProgress.snapTo(0f)
+                                }
+                            },
+                            onDragEnd = {
+                                isSwipeActive = false
+                                val committed = abs(dragOffset) > swipeThresholdPx && !hasTriggeredAction
 
-                        coroutineScope.launch {
-                             swipeProgress.animateTo(0f, tween(200))
-                             dragOffset = 0f
-                        }
-                    },
-                    onDragCancel = {
-                        isSwipeActive = false
-                        dragOffset = 0f
-                        coroutineScope.launch {
-                            swipeProgress.animateTo(0f, tween(200))
-                        }
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        resetImmersiveTimer()
-                        
-                        if (!hasTriggeredAction) {
-                            dragOffset += dragAmount.x
-                            val progress = (abs(dragOffset) / swipeThresholdPx).coerceIn(0f, 1f)
-                            
-                            coroutineScope.launch {
-                                swipeProgress.snapTo(progress)
+                                if (committed) {
+                                    if (dragOffset > 0) onPrev() else onNext()
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+
+                                coroutineScope.launch {
+                                    swipeProgress.animateTo(0f, tween(200))
+                                    dragOffset = 0f
+                                }
+                            },
+                            onDragCancel = {
+                                isSwipeActive = false
+                                dragOffset = 0f
+                                coroutineScope.launch {
+                                    swipeProgress.animateTo(0f, tween(200))
+                                }
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                resetImmersiveTimer()
+
+                                if (!hasTriggeredAction) {
+                                    dragOffset += dragAmount.x
+                                    val progress = (abs(dragOffset) / swipeThresholdPx).coerceIn(0f, 1f)
+
+                                    coroutineScope.launch {
+                                        swipeProgress.snapTo(progress)
+                                    }
+                                }
                             }
-                        }
+                        )
                     }
-                )
-            },
+                } else {
+                    Modifier
+                }
+            ),
         containerColor = containerColor,
         contentColor = contentColor,
     ) { paddingValues ->
@@ -729,7 +740,14 @@ fun LyricsSheet(
                                 positionOverrideMs = previewSeekPositionMs,
                                 accentColor = lyricHighlightColor,
                                 textStyle = scaledTextStyle,
-                                onLineClick = { syncedLine -> 
+                                revealFractionProvider = revealFractionProvider,
+                                collapsedScaleProvider = { collapsedListScale },
+                                windowAnchorYInSheetProvider = windowAnchorYInSheetProvider,
+                                sheetTopInRootProvider = { sheetTopInRoot },
+                                userScrollEnabled = isRevealed,
+                                positionInterpolationEnabled = isRevealed,
+                                onLineClick = { syncedLine ->
+                                    if (!isRevealed) return@SyncedLyricsList
                                     onSeekTo(
                                         resolveSeekPositionMs(
                                             lineTimeMs = syncedLine.time.toLong(),
@@ -1139,6 +1157,15 @@ fun SyncedLyricsList(
     showRomanization: Boolean = true,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
+    // ---- 播放页遮挡/展开转场：列表整体形变（字号等比 + 高亮行锚点位移），draw-phase 生效 ----
+    revealFractionProvider: () -> Float = { 1f },
+    collapsedScaleProvider: () -> Float = { 1f },
+    windowAnchorYInSheetProvider: () -> Float = { Float.NaN },
+    sheetTopInRootProvider: () -> Float = { 0f },
+    userScrollEnabled: Boolean = true,
+    // 逐词时间轴的逐帧插值开关：歌词页被播放页覆盖时常驻组合但不可见，
+    // 关掉插值可避免后台每帧重组（遮挡态用采样位置即可，行级跟随不受影响）。
+    positionInterpolationEnabled: Boolean = true,
     footer: LazyListScope.() -> Unit = {}
 ) {
     val density = LocalDensity.current
@@ -1146,7 +1173,7 @@ fun SyncedLyricsList(
     val hasWordTimings = remember(lines) { lines.any { !it.words.isNullOrEmpty() } }
     val playbackPosition = rememberInterpolatedPlaybackPosition(
         sampledPositionMs = sampledPlaybackPosition,
-        isPlaying = isPlaying && hasWordTimings,
+        isPlaying = isPlaying && hasWordTimings && positionInterpolationEnabled,
         playbackSpeed = playbackSpeed,
         positionOverrideMs = positionOverrideMs
     )
@@ -1167,6 +1194,9 @@ fun SyncedLyricsList(
             calculateHighlightMetrics(maxHeight, highlightZoneFraction, highlightOffsetDp)
         }
         val highlightOffsetPx = remember(highlightOffsetDp, density) { with(density) { highlightOffsetDp.toPx() } }
+        // 高亮行目标中心到本列表视口顶部的像素距离（展开态锚点）
+        val highlightCenterYInListPx = with(density) { metrics.centerFromTop.toPx() }
+        var listTopInRoot by remember { mutableFloatStateOf(0f) }
 
         val snapperLayoutInfo = rememberLazyListSnapperLayoutInfo(
             lazyListState = listState,
@@ -1244,12 +1274,35 @@ fun SyncedLyricsList(
             lastAutoScrolledLineIndex = currentLineIndex
         }
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .onGloballyPositioned { listTopInRoot = it.positionInRoot().y }
+                .graphicsLayer {
+                    // 转场形变：以展开态高亮中心为轴，从"窗口字号 + 窗口锚点位置"连续插值回静态展开布局。
+                    // reveal=1 时等于恒等变换（动画终点=静态布局）；窗口锚点缺失时同样恒等。
+                    val r = revealFractionProvider().coerceIn(0f, 1f)
+                    val anchorInSheet = windowAnchorYInSheetProvider()
+                    if (r < 0.999f && !anchorInSheet.isNaN()) {
+                        val anchorInList = anchorInSheet + sheetTopInRootProvider() - listTopInRoot
+                        val s = lerp(collapsedScaleProvider(), 1f, r)
+                        scaleX = s
+                        scaleY = s
+                        translationY = (anchorInList - highlightCenterYInListPx) * (1f - r)
+                        transformOrigin = TransformOrigin(
+                            pivotFractionX = 0.5f,
+                            pivotFractionY = (highlightCenterYInListPx / size.height.coerceAtLeast(1f))
+                                .coerceIn(0f, 1f)
+                        )
+                    }
+                }
+        ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
                 flingBehavior = flingBehavior,
-                contentPadding = contentPadding
+                contentPadding = contentPadding,
+                userScrollEnabled = userScrollEnabled
             ) {
                 itemsIndexed(
                     items = lines,

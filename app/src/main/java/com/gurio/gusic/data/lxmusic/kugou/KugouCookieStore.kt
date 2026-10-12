@@ -35,6 +35,7 @@ class KugouCookieStore @Inject constructor(
         private const val KEY_APP_TOKEN = "kg_app_token"
         private const val KEY_APP_USERID = "kg_app_userid"
         private const val KEY_APP_VIP_TYPE = "kg_app_vip_type"
+        private const val KEY_MID = "kg_mid"
         const val VIP_UNKNOWN = -1
     }
 
@@ -77,6 +78,28 @@ class KugouCookieStore @Inject constructor(
 
     fun getAppUserid(): String? = _appUseridFlow.value
 
+    /**
+     * 设备 mid：首次生成 MD5(随机32字符) 的 32 位 hex 后持久化复用（协议要求同一设备签名一致）。
+     * 属设备标识而非登录凭据，clear() 不清除，保证登出重登后仍为同一设备。
+     */
+    @Synchronized
+    fun getOrCreateMid(): String {
+        prefs.getString(KEY_MID, null)?.let { return it }
+        val chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+        val random = buildString {
+            val rnd = java.security.SecureRandom()
+            repeat(32) { append(chars[rnd.nextInt(chars.length)]) }
+        }
+        val mid = random.md5Hex()
+        prefs.edit().putString(KEY_MID, mid).apply()
+        return mid
+    }
+
+    private fun String.md5Hex(): String =
+        java.security.MessageDigest.getInstance("MD5")
+            .digest(toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+
     fun getVipType(): Int = _vipTypeFlow.value
 
     fun getAccountId(): Long = prefs.getLong(KEY_ACCOUNT_ID, -1L)
@@ -109,12 +132,15 @@ class KugouCookieStore @Inject constructor(
     }
 
     fun setProfile(nickname: String?, avatarUrl: String?) {
+        // 接口可能只回传单边（如只回头像）：仅覆盖非空侧，避免偶发空值清掉已有昵称/头像
+        val newNickname = nickname ?: _nicknameFlow.value
+        val newAvatar = avatarUrl ?: _avatarUrlFlow.value
         prefs.edit()
-            .putString(KEY_NICKNAME, nickname)
-            .putString(KEY_AVATAR_URL, avatarUrl)
+            .putString(KEY_NICKNAME, newNickname)
+            .putString(KEY_AVATAR_URL, newAvatar)
             .apply()
-        _nicknameFlow.value = nickname
-        _avatarUrlFlow.value = avatarUrl
+        _nicknameFlow.value = newNickname
+        _avatarUrlFlow.value = newAvatar
     }
 
     fun setAppLogin(token: String, userid: String, vipType: Int) {

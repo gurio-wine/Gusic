@@ -402,7 +402,6 @@
     <string name="lx_btn_file_import">Import from file</string>
     <string name="lx_msg_not_logged_in">Not logged in, tap to sign in to Netease on the web</string>
     <string name="lx_msg_not_logged_in_platform">Not logged in, tap to sign in on the web</string>
-    <string name="lx_msg_kugou_login_unavailable">Kugou sign-in requires an account extension and is unavailable in this build</string>
     <string name="lx_msg_login_expired_status">Login expired, tap to sign in again</string>
     <string name="lx_status_logged_in_svip">Signed in · SVIP</string>
     <string name="lx_status_logged_in_vip">Signed in · Vinyl VIP</string>

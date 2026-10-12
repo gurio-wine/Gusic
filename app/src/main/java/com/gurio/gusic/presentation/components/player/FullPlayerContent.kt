@@ -10,8 +10,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -79,17 +77,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -134,6 +126,8 @@ import com.gurio.gusic.presentation.components.LocalMaterialTheme
 import com.gurio.gusic.presentation.components.LxArtistPickerBottomSheet
 import com.gurio.gusic.presentation.components.LyricsSheet
 import com.gurio.gusic.presentation.components.resolveCurrentLineIndex
+import com.gurio.gusic.presentation.components.scoped.LyricsRevealController
+import com.gurio.gusic.presentation.components.scoped.rememberLyricsRevealController
 import com.gurio.gusic.presentation.components.scoped.rememberSmoothProgress
 import com.gurio.gusic.presentation.components.subcomps.FetchLyricsDialog
 import com.gurio.gusic.presentation.screens.lxmusic.LxMusicViewModel
@@ -155,7 +149,6 @@ import kotlinx.coroutines.launch
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import timber.log.Timber
 import java.util.Locale
-import kotlin.math.min
 import kotlin.math.abs
 import kotlin.math.roundToLong
 import com.gurio.gusic.presentation.components.WavySliderExpressive
@@ -167,9 +160,12 @@ import com.gurio.gusic.presentation.components.rememberModalSheetState
 private const val PREVIOUS_TRACK_RESTART_THRESHOLD_MS = 10_000L
 private const val SKIP_COMMAND_GUARD_MS = 96L
 
+// 歌词页转场时播放页组件的位移幅度（内容区高度比例）：窗口上方上移、下方下移
+private const val LYRICS_REVEAL_SHIFT_FRACTION = 0.35f
+
 private enum class SkipDirection { PREVIOUS, NEXT }
 
-private suspend fun validateLyricsImport(
+internal suspend fun validateLyricsImport(
     context: Context,
     uri: Uri
 ): LyricsImportValidationResult = withContext(Dispatchers.IO) {
@@ -204,7 +200,7 @@ private suspend fun validateLyricsImport(
 @SuppressLint("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun FullPlayerContent(
+internal fun FullPlayerContent(
     currentSong: Song?,
     currentPlaybackQueue: ImmutableList<Song>,
     currentQueueSourceName: String,
@@ -237,8 +233,19 @@ fun FullPlayerContent(
     onQueueDrag: (Float) -> Unit,
     onQueueRelease: (Float, Float) -> Unit,
     onShuffleToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit
+    onFavoriteToggle: () -> Unit,
+    // ---- 歌词页遮挡/展开转场 ----
+    // 0=播放页覆盖（默认静态布局），1=歌词页完全展开。sections 的位移/渐隐全部 draw-phase 读取。
+    lyricsRevealFractionProvider: () -> Float = { 0f },
+    // 歌词页完全展开且在挂载：播放页 UI 整体移出组合（不可见不可交互，把触摸让给底层歌词页）
+    hidePlayerUiForLyrics: Boolean = false,
+    // 播放页"窗口"（InPlayerLyrics）bounds 上报，供底层歌词列表做转场形变锚点
+    onLyricsWindowBoundsChange: (Rect) -> Unit = {},
+    // 点击窗口/导入成功/搜索成功时展开歌词页；null 时内部自建（prewarm 等场景）
+    lyricsRevealController: LyricsRevealController? = null
 ) {
+    val revealController = lyricsRevealController
+        ?: rememberLyricsRevealController(playerViewModel)
     var retainedSong by remember { mutableStateOf(currentSong) }
     LaunchedEffect(currentSong?.id) {
         if (currentSong != null) {
@@ -248,9 +255,6 @@ fun FullPlayerContent(
 
     val song = currentSong ?: retainedSong ?: return
     var showSongInfoBottomSheet by remember { mutableStateOf(false) }
-    var showLyricsSheet by remember { mutableStateOf(false) }
-    var lyricsButtonBounds by remember { mutableStateOf<Rect?>(null) }
-    val lyricsButtonBounce = remember { Animatable(1f) }
     var showArtistPicker by rememberSaveable { mutableStateOf(false) }
     val lxMusicViewModel: LxMusicViewModel = hiltViewModel(
         viewModelStoreOwner = LocalContext.current as androidx.activity.ComponentActivity
@@ -293,6 +297,21 @@ fun FullPlayerContent(
     }
 
     var showFetchLyricsDialog by remember { mutableStateOf(false) }
+
+    // 歌词展开统一入口：与 UnifiedPlayerSheetLayers 的 lyricsLayerActive 同源同条件
+    // （synced 或 plain 非空 + 窗口开关）。条件在函数体内实时读取（lyricsProvider /
+    // inPlayerLyricsOn 均为状态），保证导入/搜索等延迟回调拿到的是最新值；
+    // 歌词层未挂载时禁止展开（否则播放页滑出渐隐而底层无歌词层 → 全屏空白）。
+    fun expandLyricsIfAvailable() {
+        val lyricsNow = lyricsProvider()
+        val layerActive = inPlayerLyricsOn &&
+            (!lyricsNow?.synced.isNullOrEmpty() || !lyricsNow?.plain.isNullOrEmpty())
+        if (layerActive) {
+            revealController.expand()
+        } else {
+            showFetchLyricsDialog = true
+        }
+    }
     var totalDrag by remember { mutableStateOf(0f) }
 
     val context = LocalContext.current
@@ -322,7 +341,7 @@ fun FullPlayerContent(
 
                         playerViewModel.importLyricsFromFile(currentSongId, validatedImport)
                         showFetchLyricsDialog = false
-                        showLyricsSheet = true
+                        expandLyricsIfAvailable()
                     } catch (e: Exception) {
                         Timber.e(e, "Error reading imported lyrics file")
                         playerViewModel.sendToast("Error reading file.")
@@ -356,14 +375,8 @@ fun FullPlayerContent(
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
 
-    val onLyricsClick = {
-        val lyrics = lyricsProvider()
-        if (lyrics?.synced.isNullOrEmpty() && lyrics?.plain.isNullOrEmpty()) {
-            showFetchLyricsDialog = true
-        } else {
-            showLyricsSheet = true
-        }
-    }
+    // 窗口/占位点击统一入口：有词（同步或静态）→ 展开；无词 → 取词对话框
+    val onLyricsClick = { expandLyricsIfAvailable() }
 
     if (showFetchLyricsDialog) {
         MaterialTheme(
@@ -399,7 +412,7 @@ fun FullPlayerContent(
             is LyricsSearchUiState.Success -> {
                 if (showFetchLyricsDialog) {
                     showFetchLyricsDialog = false
-                    showLyricsSheet = true
+                    expandLyricsIfAvailable()
                     playerViewModel.resetLyricsSearchState()
                 }
             }
@@ -648,9 +661,6 @@ fun FullPlayerContent(
             placeholderColor = placeholderColor,
             placeholderOnColor = placeholderOnColor,
             isLandscape = false,
-            onLyricsClick = onLyricsClick,
-            onLyricsButtonBoundsChange = { lyricsButtonBounds = it },
-            lyricsButtonScale = { lyricsButtonBounce.value },
             playerOnBaseColor = playerOnBaseColor,
             playerViewModel = playerViewModel,
             gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
@@ -670,16 +680,44 @@ fun FullPlayerContent(
 
     val lyricsSection: @Composable () -> Unit = {
         if (inPlayerLyricsOn) {
-            syncedLines?.let { lines ->
+            val synced = syncedLines
+            // 窗口 bounds 上报：底层歌词列表转场形变的字号/位置锚点以次为准（仅同步歌词场景被消费）
+            val windowModifier = Modifier
+                .padding(top = 2.dp, bottom = 4.dp)
+                .onGloballyPositioned { rect ->
+                    onLyricsWindowBoundsChange(rect.boundsInRoot())
+                }
+            if (!synced.isNullOrEmpty()) {
                 InPlayerLyrics(
-                    lines = lines,
+                    lines = synced,
                     currentIndex = currentLyricLineIndex,
                     textColor = playerOnBaseColor,
                     backgroundColor = LocalMaterialTheme.current.primaryContainer,
                     fontSize = inPlayerLyricsFontSize,
                     isLandscape = isLandscape,
+                    placeholderText = null,
                     onClick = onLyricsClick,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+                    modifier = windowModifier
+                )
+            } else {
+                // 无同步歌词：静态词显示第一行作占位；完全无词显示"未找到歌词"。
+                // 点击都走 onLyricsClick —— 静态词展开歌词页，无词弹取词对话框
+                val plainFirstLine = currentLyrics?.plain
+                    ?.firstOrNull { it.isNotBlank() }
+                    ?.split("\n")
+                    ?.firstOrNull { it.isNotBlank() }
+                    ?.trim()
+                InPlayerLyrics(
+                    lines = emptyList(),
+                    currentIndex = -1,
+                    textColor = playerOnBaseColor,
+                    backgroundColor = LocalMaterialTheme.current.primaryContainer,
+                    fontSize = inPlayerLyricsFontSize,
+                    isLandscape = isLandscape,
+                    placeholderText = plainFirstLine
+                        ?: stringResource(R.string.lyrics_not_found),
+                    onClick = onLyricsClick,
+                    modifier = windowModifier
                 )
             }
         }
@@ -696,9 +734,6 @@ fun FullPlayerContent(
             placeholderColor = placeholderColor,
             placeholderOnColor = placeholderOnColor,
             isLandscape = true,
-            onLyricsClick = onLyricsClick,
-            onLyricsButtonBoundsChange = { lyricsButtonBounds = it },
-            lyricsButtonScale = { lyricsButtonBounce.value },
             playerOnBaseColor = playerOnBaseColor,
             playerViewModel = playerViewModel,
             gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
@@ -716,6 +751,9 @@ fun FullPlayerContent(
         )
     }
 
+    // 歌词页完全展开时播放页 UI 整体移出组合：不可见也不可交互，
+    // 底层歌词页完整接管触摸（行 seek / 滚动 / 水平切歌 / 返回键）
+    if (!hidePlayerUiForLyrics) {
     Scaffold(
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -784,6 +822,16 @@ fun FullPlayerContent(
                            animationSpec = tween(220, easing = FastOutSlowInEasing)
                        )
             ) {
+                // 歌词页展开转场：顶栏（窗口上方组件）向上滑出并渐隐；reveal=0 时等于静态布局
+                Box(
+                    modifier = Modifier.graphicsLayer {
+                        val reveal = lyricsRevealFractionProvider().coerceIn(0f, 1f)
+                        if (reveal > 0f) {
+                            translationY = -reveal * (size.height * 1.5f + 60f)
+                            alpha = 1f - reveal
+                        }
+                    }
+                ) {
                 TopAppBar(
                     modifier = Modifier.graphicsLayer {
                         val fraction = expansionFractionProvider()
@@ -928,6 +976,7 @@ fun FullPlayerContent(
                         }
                     }
                 )
+                }
             }
         }
     ) { paddingValues ->
@@ -938,14 +987,20 @@ fun FullPlayerContent(
             animationSpec = tween(durationMillis = 380, easing = FastOutSlowInEasing),
             label = "orientationAlpha"
         )
+        // 转场位移基准：窗口上/下组件按内容区高度的一定比例推离屏幕
+        var contentHeightPx by remember { mutableFloatStateOf(0f) }
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .onGloballyPositioned { contentHeightPx = it.size.height.toFloat() }
                 .graphicsLayer { alpha = contentAlpha }
         ) {
+            val revealShiftPxProvider = { contentHeightPx * LYRICS_REVEAL_SHIFT_FRACTION }
             if (isLandscape) {
                 FullPlayerLandscapeContent(
                     paddingValues = paddingValues,
+                    revealFractionProvider = lyricsRevealFractionProvider,
+                    revealShiftPxProvider = revealShiftPxProvider,
                     albumCoverSection = albumCoverSection,
                     lyricsSection = lyricsSection,
                     songMetadataSection = landscapeSongMetadataSection,
@@ -955,6 +1010,8 @@ fun FullPlayerContent(
             } else {
                 FullPlayerPortraitContent(
                     paddingValues = paddingValues,
+                    revealFractionProvider = lyricsRevealFractionProvider,
+                    revealShiftPxProvider = revealShiftPxProvider,
                     albumCoverSection = albumCoverSection,
                     lyricsSection = lyricsSection,
                     songMetadataSection = portraitSongMetadataSection,
@@ -964,104 +1021,6 @@ fun FullPlayerContent(
             }
         }
     }
-    var lyricsSheetComposed by remember { mutableStateOf(false) }
-    val lyricsPanelProgress = remember { Animatable(1f) }
-    LaunchedEffect(showLyricsSheet) {
-        suspend fun bounceButton() {
-            lyricsButtonBounce.snapTo(1f)
-            lyricsButtonBounce.animateTo(1.18f, tween(durationMillis = 90, easing = FastOutSlowInEasing))
-            lyricsButtonBounce.animateTo(
-                1f,
-                spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
-            )
-        }
-        if (showLyricsSheet) {
-            lyricsSheetComposed = true
-            launch { bounceButton() }
-            lyricsPanelProgress.animateTo(0f, tween(durationMillis = 340, easing = FastOutSlowInEasing))
-        } else {
-            lyricsPanelProgress.animateTo(1f, tween(durationMillis = 300, easing = FastOutSlowInEasing))
-            lyricsSheetComposed = false
-            launch { bounceButton() }
-        }
-    }
-    if (lyricsSheetComposed) {
-        var panelTopLeftInRoot by remember { mutableStateOf(Offset.Zero) }
-        val revealPath = remember { Path() }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .onGloballyPositioned { panelTopLeftInRoot = it.positionInRoot() }
-                .graphicsLayer {
-                    val t = 1f - lyricsPanelProgress.value
-                    val btn = lyricsButtonBounds
-                    if (t != 1f && btn != null) {
-                        val targetTx = btn.center.x - panelTopLeftInRoot.x - size.width / 2f
-                        val targetTy = btn.center.y - panelTopLeftInRoot.y - size.height / 2f
-                        translationX = targetTx * (1f - t)
-                        translationY = targetTy * (1f - t)
-                        val endScale =
-                            min(btn.width, btn.height).toFloat() / min(size.width, size.height)
-                        val s = 1f + (endScale - 1f) * (1f - t)
-                        scaleX = s
-                        scaleY = s
-                    }
-                    alpha = (t * 1.4f).coerceIn(0f, 1f)
-                }
-                .drawWithContent {
-                    val t = 1f - lyricsPanelProgress.value
-                    val btn = lyricsButtonBounds
-                    if (t != 1f && btn != null) {
-                        val q = (1f - t).coerceAtLeast(0f)
-                        val endScale =
-                            min(btn.width, btn.height).toFloat() / min(size.width, size.height)
-                        val s = 1f + (endScale - 1f) * (1f - t)
-                        val rScreen = min(btn.width, btn.height) / 2f * q * q
-                        val rPanel = rScreen / s
-                        revealPath.rewind()
-                        revealPath.addRoundRect(
-                            RoundRect(
-                                rect = Rect(0f, 0f, size.width, size.height),
-                                cornerRadius = CornerRadius(rPanel, rPanel),
-                            )
-                        )
-                        clipPath(revealPath) { this@drawWithContent.drawContent() }
-                    } else {
-                        drawContent()
-                    }
-                },
-        ) {
-            LyricsSheet(
-                stablePlayerStateFlow = playerViewModel.stablePlayerState,
-                playbackPositionFlow = playerViewModel.currentPlaybackPosition,
-                lyricsSearchUiState = lyricsSearchUiState,
-                resetLyricsForCurrentSong = {
-                    showLyricsSheet = false
-                    playerViewModel.resetLyricsForCurrentSong()
-                },
-                onSearchLyrics = { forcePick -> playerViewModel.fetchLyricsForCurrentSong(forcePick) },
-                onPickResult = { playerViewModel.acceptLyricsSearchResultForCurrentSong(it) },
-                onManualSearch = { title, artist -> playerViewModel.searchLyricsManually(title, artist) },
-                onImportLyrics = { filePickerLauncher.launch(com.gurio.gusic.utils.LyricsImportSecurity.pickerMimeTypes()) },
-                onDismissLyricsSearch = { playerViewModel.resetLyricsSearchState() },
-                lyricsSyncOffset = lyricsSyncOffset,
-                onLyricsSyncOffsetChange = { currentSong?.id?.let { songId -> playerViewModel.setLyricsSyncOffset(songId, it) } },
-                lyricsTextStyle = MaterialTheme.typography.titleLarge,
-                colorScheme = LocalMaterialTheme.current,
-                onBackClick = { showLyricsSheet = false },
-                onSaveLyricsToFile = playerViewModel::saveLyricsToFile,
-                onSeekTo = { playerViewModel.seekTo(it) },
-                onPlayPause = {
-                    playerViewModel.playPause()
-                },
-                onNext = onNext,
-                onPrev = onPrevious,
-                immersiveLyricsEnabled = immersiveLyricsEnabled,
-                immersiveLyricsTimeout = immersiveLyricsTimeout,
-                isImmersiveTemporarilyDisabled = isImmersiveTemporarilyDisabled,
-                onSetImmersiveTemporarilyDisabled = { playerViewModel.setImmersiveTemporarilyDisabled(it) }
-            )
-        }
     }
 
     val artistPickerSheetState = rememberModalSheetState(skipPartiallyExpanded = true)
@@ -1392,9 +1351,6 @@ private fun FullPlayerSongMetadataSection(
     placeholderColor: Color,
     placeholderOnColor: Color,
     isLandscape: Boolean,
-    onLyricsClick: () -> Unit,
-    onLyricsButtonBoundsChange: (Rect) -> Unit = {},
-    lyricsButtonScale: () -> Float = { 1f },
     playerOnBaseColor: Color,
     playerViewModel: PlayerViewModel,
     gradientEdgeColor: Color,
@@ -1440,9 +1396,6 @@ private fun FullPlayerSongMetadataSection(
         SongMetadataDisplaySection(
             modifier = Modifier
                 .padding(start = 0.dp),
-            onClickLyrics = onLyricsClick,
-            onLyricsButtonBoundsChange = onLyricsButtonBoundsChange,
-            lyricsButtonScale = lyricsButtonScale,
             song = song,
             currentSongArtists = currentSongArtists,
             expansionFractionProvider = expansionFractionProvider,
@@ -1469,12 +1422,16 @@ private fun FullPlayerSongMetadataSection(
 @Composable
 private fun FullPlayerPortraitContent(
     paddingValues: PaddingValues,
+    revealFractionProvider: () -> Float,
+    revealShiftPxProvider: () -> Float,
     albumCoverSection: @Composable (Modifier) -> Unit,
     lyricsSection: @Composable () -> Unit,
     songMetadataSection: @Composable () -> Unit,
     playerProgressSection: @Composable () -> Unit,
     controlsSection: @Composable () -> Unit
 ) {
+    // 窗口上/下组件的转场位移+渐隐都在 draw-phase 读取 reveal（不触发重组）；
+    // reveal=0 时不写任何属性，保证与静态布局逐帧一致
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1487,19 +1444,46 @@ private fun FullPlayerPortraitContent(
         verticalArrangement = Arrangement.SpaceAround
     ) {
         // 封面占据全部剩余高度，1:1 正方形贴底；多余空间留在封面之上，下方组件整体下沉
+        // 封面在窗口上方：转场时向上滑出并渐隐
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .weight(1f)
+                .graphicsLayer {
+                    val reveal = revealFractionProvider().coerceIn(0f, 1f)
+                    if (reveal > 0f) {
+                        translationY = -reveal * revealShiftPxProvider()
+                        alpha = 1f - reveal
+                    }
+                },
             contentAlignment = Alignment.BottomCenter
         ) {
             albumCoverSection(Modifier.padding(vertical = 4.dp).aspectRatio(1f))
         }
 
-        lyricsSection()
+        // "窗口"（漏出的歌词）：原位渐隐，与底层歌词页放大中的列表做视觉接力
+        Box(
+            modifier = Modifier.graphicsLayer {
+                val reveal = revealFractionProvider().coerceIn(0f, 1f)
+                if (reveal > 0f) {
+                    alpha = 1f - reveal
+                }
+            }
+        ) {
+            lyricsSection()
+        }
 
+        // 元数据+进度在窗口下方：转场时向下滑出并渐隐
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    val reveal = revealFractionProvider().coerceIn(0f, 1f)
+                    if (reveal > 0f) {
+                        translationY = reveal * revealShiftPxProvider()
+                        alpha = 1f - reveal
+                    }
+                },
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Box(Modifier.align(Alignment.Start)) {
@@ -1508,7 +1492,18 @@ private fun FullPlayerPortraitContent(
             playerProgressSection()
         }
 
-        controlsSection()
+        // 控制区在窗口下方：转场时向下滑出并渐隐
+        Box(
+            modifier = Modifier.graphicsLayer {
+                val reveal = revealFractionProvider().coerceIn(0f, 1f)
+                if (reveal > 0f) {
+                    translationY = reveal * revealShiftPxProvider()
+                    alpha = 1f - reveal
+                }
+            }
+        ) {
+            controlsSection()
+        }
 
         val portraitNavBarBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         Spacer(Modifier.height((portraitNavBarBottomInset + 12.dp).coerceAtLeast(28.dp)))
@@ -1518,12 +1513,16 @@ private fun FullPlayerPortraitContent(
 @Composable
 private fun FullPlayerLandscapeContent(
     paddingValues: PaddingValues,
+    revealFractionProvider: () -> Float,
+    revealShiftPxProvider: () -> Float,
     albumCoverSection: @Composable (Modifier) -> Unit,
     lyricsSection: @Composable () -> Unit,
     songMetadataSection: @Composable () -> Unit,
     playerProgressSection: @Composable () -> Unit,
     controlsSection: @Composable () -> Unit
 ) {
+    // 横屏语义：以右列中的窗口为界——元数据（窗口上方）上移渐隐，进度+控制（窗口下方）下移渐隐；
+    // 左侧封面按竖屏逻辑类比归入"上方"组，向上滑出并渐隐
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -1534,11 +1533,20 @@ private fun FullPlayerLandscapeContent(
             ),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        albumCoverSection(
-            Modifier
+        Box(
+            modifier = Modifier
                 .fillMaxHeight()
                 .weight(1f)
-        )
+                .graphicsLayer {
+                    val reveal = revealFractionProvider().coerceIn(0f, 1f)
+                    if (reveal > 0f) {
+                        translationY = -reveal * revealShiftPxProvider()
+                        alpha = 1f - reveal
+                    }
+                }
+        ) {
+            albumCoverSection(Modifier.fillMaxHeight())
+        }
         Spacer(Modifier.width(9.dp))
         Column(
             modifier = Modifier
@@ -1551,10 +1559,49 @@ private fun FullPlayerLandscapeContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceEvenly
         ) {
-            songMetadataSection()
-            lyricsSection()
-            playerProgressSection()
-            controlsSection()
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    val reveal = revealFractionProvider().coerceIn(0f, 1f)
+                    if (reveal > 0f) {
+                        translationY = -reveal * revealShiftPxProvider()
+                        alpha = 1f - reveal
+                    }
+                }
+            ) {
+                songMetadataSection()
+            }
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    val reveal = revealFractionProvider().coerceIn(0f, 1f)
+                    if (reveal > 0f) {
+                        alpha = 1f - reveal
+                    }
+                }
+            ) {
+                lyricsSection()
+            }
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    val reveal = revealFractionProvider().coerceIn(0f, 1f)
+                    if (reveal > 0f) {
+                        translationY = reveal * revealShiftPxProvider()
+                        alpha = 1f - reveal
+                    }
+                }
+            ) {
+                playerProgressSection()
+            }
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    val reveal = revealFractionProvider().coerceIn(0f, 1f)
+                    if (reveal > 0f) {
+                        translationY = reveal * revealShiftPxProvider()
+                        alpha = 1f - reveal
+                    }
+                }
+            ) {
+                controlsSection()
+            }
         }
     }
 }
@@ -1572,9 +1619,6 @@ private fun SongMetadataDisplaySection(
     playerViewModel: PlayerViewModel,
     chipColor: Color,
     chipContentColor: Color,
-    onClickLyrics: () -> Unit,
-    onLyricsButtonBoundsChange: (Rect) -> Unit = {},
-    lyricsButtonScale: () -> Float = { 1f },
     showQueueButton: Boolean,
     onClickQueue: () -> Unit,
     onClickArtist: () -> Unit,
@@ -1705,33 +1749,6 @@ private fun SongMetadataDisplaySection(
                 }
                 Box(
                     modifier = Modifier
-                        .graphicsLayer {
-                            val s = lyricsButtonScale()
-                            scaleX = s
-                            scaleY = s
-                        }
-                        .size(height = 42.dp, width = 50.dp)
-                        .clip(
-                            RoundedCornerShape(
-                                topStart = 50.dp,
-                                topEnd = 6.dp,
-                                bottomStart = 50.dp,
-                                bottomEnd = 6.dp
-                            )
-                        )
-                        .background(chipColor)
-                        .onGloballyPositioned { onLyricsButtonBoundsChange(it.boundsInRoot()) }
-                        .clickable { onClickLyrics() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.rounded_lyrics_24),
-                        contentDescription = stringResource(R.string.presentation_batch_g_player_cd_lyrics),
-                        tint = chipContentColor
-                    )
-                }
-                Box(
-                    modifier = Modifier
                         .size(height = 42.dp, width = 50.dp)
                         .clip(
                             RoundedCornerShape(
@@ -1791,26 +1808,6 @@ private fun SongMetadataDisplaySection(
                             else R.drawable.rounded_favorite_24
                         ),
                         contentDescription = stringResource(R.string.presentation_batch_h_cd_favorite)
-                    )
-                }
-                FilledIconButton(
-                    modifier = Modifier
-                        .graphicsLayer {
-                            val s = lyricsButtonScale()
-                            scaleX = s
-                            scaleY = s
-                        }
-                        .size(width = 48.dp, height = 48.dp)
-                        .onGloballyPositioned { onLyricsButtonBoundsChange(it.boundsInRoot()) },
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = chipColor,
-                        contentColor = chipContentColor
-                    ),
-                    onClick = onClickLyrics,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.rounded_lyrics_24),
-                        contentDescription = stringResource(R.string.presentation_batch_g_player_cd_lyrics)
                     )
                 }
             }
@@ -2390,10 +2387,39 @@ private fun InPlayerLyrics(
     backgroundColor: Color,
     fontSize: Int,
     isLandscape: Boolean,
+    placeholderText: String? = null,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    if (lines.isEmpty()) return
+    val textSizeSp = fontSize.sp
+
+    if (lines.isEmpty()) {
+        // 无同步歌词时的窗口占位：静态词首行或"未找到歌词"，点击 = onLyricsClick
+        // （静态词 → 展开歌词页；无词 → 弹取词对话框）。placeholderText 为 null 时维持旧的"不渲染"。
+        if (placeholderText == null) return
+        Box(
+            modifier = modifier.clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = placeholderText,
+                fontSize = textSizeSp,
+                fontWeight = FontWeight.Normal,
+                color = textColor.copy(alpha = 0.45f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 12.dp)
+            )
+        }
+        return
+    }
 
     var lastValidIndex by remember { mutableIntStateOf(0) }
     if (currentIndex in lines.indices) {
@@ -2401,7 +2427,6 @@ private fun InPlayerLyrics(
     }
     val displayIndex = lastValidIndex
 
-    val textSizeSp = fontSize.sp
     val lineVerticalPadding = (fontSize * 0.1f).dp
     val maxHeight = if (isLandscape) 200.dp else (fontSize * 6f).dp
 

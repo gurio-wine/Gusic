@@ -1536,7 +1536,7 @@ class LxMusicViewModel @Inject constructor(
         viewModelScope.launch {
             val ok = runCatching { repository.kgSendSmsCode(mobile) }.getOrDefault(false)
             if (!ok) {
-                // 内置兜底扩展恒返回 false（不发网络请求）；私有扩展存在时此日志用于诊断真实失败原因
+                // 服务端拒绝的具体文案已在 KugouAccountApi 内记录；此处仅输出掩码号码用于关联诊断
                 Timber.w(
                     "sendKugouSmsCode failed for %s (accountWritesEnabled=%s)",
                     mobile.take(3) + "****" + mobile.takeLast(2), accountWritesEnabled

@@ -593,4 +593,12 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>Kugou sign-in now states clearly that it needs an account extension instead of failing silently</item>
         <item>Lyrics page play/pause button now matches the player page colors</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101205_whats_new">
+        <item>Player and lyrics page redesigned as one stack: the lyrics preview becomes a window onto the lyrics page; tap it and the player parts slide away while the lyrics grow into place — the lyrics button is gone, and lyrics are read-only while the player is up</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101205_changes">
+        <item>Kugou SMS sign-in is now fully implemented natively: send code, sign in, and sync nickname and avatar</item>
+        <item>Kuwo now fetches nickname and avatar after web sign-in</item>
+        <item>Songs with only plain lyrics open the lyrics page from the preview; songs with no lyrics offer a search-and-import entry there</item>
+    </string-array>
 </resources>

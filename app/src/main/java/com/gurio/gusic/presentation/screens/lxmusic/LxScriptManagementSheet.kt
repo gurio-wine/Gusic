@@ -849,7 +849,6 @@ fun LxLoginDialogsHost(
     onDismissTencent: () -> Unit,
     onDismissKugou: () -> Unit,
     onDismissKuwo: () -> Unit,
-    kugouLoginEnabled: Boolean = true,
 ) {
     if (showNetease) {
         NeteaseLoginDialog(
@@ -875,8 +874,6 @@ fun LxLoginDialogsHost(
     }
     if (showKugou) {
         KugouSmsLoginDialog(
-            // 叠加 ViewModel 的能力开关：未传参的宿主（如 LibraryScreen）也始终被门控
-            enabled = kugouLoginEnabled && lxMusicViewModel.accountWritesEnabled,
             onDismiss = onDismissKugou,
             onSendCode = { mobile, callback ->
                 lxMusicViewModel.sendKugouSmsCode(mobile) { ok, error -> callback(ok, error) }

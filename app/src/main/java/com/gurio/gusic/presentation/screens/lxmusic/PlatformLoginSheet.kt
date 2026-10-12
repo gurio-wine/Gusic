@@ -251,7 +251,6 @@ fun KugouSmsLoginDialog(
     onDismiss: () -> Unit,
     onSendCode: (mobile: String, callback: (ok: Boolean, error: String?) -> Unit) -> Unit,
     onLogin: (mobile: String, code: String, callback: (ok: Boolean, error: String?) -> Unit) -> Unit,
-    enabled: Boolean = true,
 ) {
     val context = LocalContext.current
     val loginSuccessMsg = stringResource(R.string.lx_msg_login_success)
@@ -311,13 +310,6 @@ fun KugouSmsLoginDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Spacer(Modifier.size(24.dp))
-                if (!enabled) {
-                    Text(
-                        text = stringResource(R.string.lx_msg_kugou_login_unavailable),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
                 Text(
                     text = stringResource(R.string.lx_msg_sms_tip),
                     style = MaterialTheme.typography.bodySmall,
@@ -362,7 +354,7 @@ fun KugouSmsLoginDialog(
                                 if (ok) countdown = 60 else error = e
                             }
                         },
-                        enabled = enabled && !busy && countdown == 0 && mobile.length == 11,
+                        enabled = !busy && countdown == 0 && mobile.length == 11,
                     ) {
                         Text(if (countdown > 0) "${countdown}s" else stringResource(R.string.lx_action_get_code))
                     }
@@ -387,7 +379,7 @@ fun KugouSmsLoginDialog(
                             }
                         }
                     },
-                    enabled = enabled && !busy && mobile.length == 11 && code.isNotBlank(),
+                    enabled = !busy && mobile.length == 11 && code.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (logging) {

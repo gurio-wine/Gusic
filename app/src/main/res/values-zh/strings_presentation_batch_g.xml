@@ -593,4 +593,12 @@
         <item>酷狗登入改為明確提示需要帳號擴充支援，不再靜默發送失敗</item>
         <item>歌詞頁播放暫停按鈕配色與播放頁一致</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101205_whats_new">
+        <item>播放頁與歌詞頁合併為一層疊層：歌詞預覽區成為歌詞頁的「視窗」，點擊後播放頁組件上下移出漸隱、歌詞放大歸位；歌詞按鈕已移除，播放頁在上時歌詞不可互動</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101205_changes">
+        <item>酷狗簡訊登入完整原生實作：發送驗證碼、登入並同步暱稱頭像</item>
+        <item>酷我網頁登入後取得暱稱與頭像</item>
+        <item>僅有靜態歌詞的歌也可從預覽區進入歌詞頁；無歌詞的歌在那裡提供搜尋/匯入口</item>
+    </string-array>
 </resources>

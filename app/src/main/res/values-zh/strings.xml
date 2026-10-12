@@ -360,7 +360,6 @@
 <string name="lx_btn_file_import">文件導入</string>
 <string name="lx_msg_not_logged_in">未登入，點擊網頁登入網易雲</string>
 <string name="lx_msg_not_logged_in_platform">未登入，點擊網頁登入</string>
-<string name="lx_msg_kugou_login_unavailable">酷狗登入需要帳號擴展支援，當前構建不可用</string>
 <string name="lx_msg_login_expired_status">登入已失效，點擊重新登入</string>
 <string name="lx_status_logged_in_svip">已登入 · SVIP</string>
 <string name="lx_status_logged_in_vip">已登入 · 黑膠VIP</string>
