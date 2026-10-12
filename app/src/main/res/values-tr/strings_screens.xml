@@ -86,13 +86,9 @@
     <string name="dash_libraries_sync_needed">Değişikliklerin uygulanması için kitaplığı senkronize edin</string>
     <string name="dash_libraries_title">Kitaplıklar</string>
     <string name="dash_library_playlist_title">Kitaplık</string>
-    <string name="dash_playlists_empty_hint_jellyfin">Jellyfin çalma listelerinizi getirmek için senkronizasyona dokunun</string>
-    <string name="dash_playlists_empty_hint_subsonic">Çalma listelerinizi getirmek için senkronizasyona dokunun</string>
     <string name="dash_playlists_empty_title">Henüz senkronize edilmiş çalma listesi yok</string>
     <string name="dash_playlists_synced_count">%1$d çalma listesi senkronize edildi</string>
     <string name="dash_quick_actions">Hızlı eylemler</string>
-    <string name="dash_quick_actions_jellyfin_subtitle">Jellyfin sunucu bağlantınızı yönetin.</string>
-    <string name="dash_quick_actions_subsonic_subtitle">Navidrome, Airsonic ve diğer Subsonic uyumlu sunucuları yönetin.</string>
     <string name="dash_song_count">%1$d şarkı</string>
     <string name="dash_status_fetching_albums">Albüm listesi getiriliyor…</string>
     <string name="dash_status_fetching_playlists">Çalma listeleri getiriliyor…</string>
@@ -133,7 +129,6 @@
     <string name="restore_selected">Seçilenleri geri yükle</string>
     <string name="restoring">Geri yükleniyor</string>
     <string name="screen_about">Hakkında</string>
-    <string name="screen_subsonic_dashboard_title">Subsonic</string>
     <string name="search_no_results_for_query">\"%1$s\" için sonuç bulunamadı</string>
     <string name="search_no_results_found">Sonuç bulunamadı.</string>
     <string name="search_nothing_found">Hiçbir şey bulunamadı</string>

@@ -363,8 +363,6 @@
     <string name="presentation_batch_g_stats_tracks_in_range_subtitle">선택한 시간 범위 내에서 가장 많이 재생한 트랙입니다.</string>
     <string name="presentation_batch_g_stats_tracks_in_range_title">이 기간의 트랙</string>
     <string name="presentation_batch_g_stats_unique_tracks">고유 트랙 수</string>
-    <string name="presentation_batch_g_streaming_subtitle">클라우드 계정에서 음악 스트리밍</string>
-    <string name="presentation_batch_g_streaming_title">클라우드 스트리밍</string>
     <string name="presentation_batch_g_sync_percent">%1$d%%</string>
     <string name="presentation_batch_g_topbar_build_debug">디버그</string>
     <string name="presentation_batch_g_topbar_build_stable">정식</string>

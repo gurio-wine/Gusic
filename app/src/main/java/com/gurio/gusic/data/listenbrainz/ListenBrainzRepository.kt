@@ -25,8 +25,8 @@ import javax.inject.Singleton
 class InvalidServerUrlException : IllegalArgumentException("Invalid ListenBrainz server URL")
 
 /**
- * Owns the ListenBrainz account (user token in EncryptedSharedPreferences, mirroring the
- * Navidrome credential pattern) and all API submission paths.
+ * Owns the ListenBrainz account (user token in EncryptedSharedPreferences) and all
+ * API submission paths.
  *
  * Scrobbling is opt-in: with no stored token, every path here is a no-op.
  */

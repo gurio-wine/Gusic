@@ -214,7 +214,7 @@
     <string name="setcat_theme_light">밝은 테마</string>
     <string name="setcat_trigger_crash_subtitle">크래시 보고 시스템을 테스트하기 위해 크래시를 시뮬레이션합니다.</string>
     <string name="setcat_trigger_crash_title">테스트 크래시 발생</string>
-    <string name="settings_accounts_row_subtitle">Navidrome 및 Jellyfin 서비스를 관리합니다</string>
+    <string name="settings_accounts_row_subtitle">ListenBrainz 스코블링 서비스를 관리합니다</string>
     <string name="settings_accounts_row_title">계정</string>
     <string name="settings_category_about_subtitle">앱 정보, 버전 및 제작진</string>
     <string name="settings_category_about_title">정보</string>

@@ -364,8 +364,6 @@
     <string name="presentation_batch_g_stats_tracks_in_range_subtitle">Mest spilte spor i det valgte tidsrommet.</string>
     <string name="presentation_batch_g_stats_tracks_in_range_title">Spor i dette tidsrommet</string>
     <string name="presentation_batch_g_stats_unique_tracks">Unike spor</string>
-    <string name="presentation_batch_g_streaming_subtitle">Strøm musikk fra dine skykontoer</string>
-    <string name="presentation_batch_g_streaming_title">Skystrømming</string>
     <string name="presentation_batch_g_sync_percent">%1$d%%</string>
     <string name="presentation_batch_g_topbar_build_debug">Debug</string>
     <string name="presentation_batch_g_topbar_build_stable">Stabil</string>

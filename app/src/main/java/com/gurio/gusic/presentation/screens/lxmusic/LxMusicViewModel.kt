@@ -20,6 +20,7 @@ import com.gurio.gusic.data.lxmusic.LxQualities
 import com.gurio.gusic.data.lxmusic.LxSong
 import com.gurio.gusic.data.lxmusic.LxSongMapper
 import com.gurio.gusic.data.lxmusic.LxSources
+import com.gurio.gusic.data.lxmusic.LxWriteOp
 import com.gurio.gusic.data.lxmusic.netease.NeteaseCookieStore
 import com.gurio.gusic.data.lxmusic.netease.NeteaseOfficialApi
 import com.gurio.gusic.data.offline.CloudOfflineRepository
@@ -73,6 +74,9 @@ class LxMusicViewModel @Inject constructor(
     val loaded: StateFlow<Map<String, LxScriptCapabilities>> = repository.loaded
 
     val accountWritesEnabled: Boolean = repository.accountWritesEnabled
+
+    /** 按平台 × 操作查询账号写能力（网易不走扩展，由调用方沿用全局开关/cookie 判断）。 */
+    fun writeEnabledFor(source: String, op: LxWriteOp): Boolean = repository.writeEnabledFor(source, op)
 
     val runtimePaths: StateFlow<Set<String>> = repository.runtimePaths
 
@@ -1995,16 +1999,18 @@ class LxMusicViewModel @Inject constructor(
             }
             when (source) {
                 LxSources.KUGOU -> {
-                    val kgFollowed = if (kugouCookieStore.hasAppLogin() && accountWritesEnabled)
-                        runCatching { repository.kgGetSingerFollowInfo(artistId) }.getOrNull()
+                    val kgFollowed = if (kugouCookieStore.hasAppLogin() &&
+                        repository.writeEnabledFor(LxSources.KUGOU, LxWriteOp.ARTIST_FOLLOW)
+                    ) runCatching { repository.kgGetSingerFollowInfo(artistId) }.getOrNull()
                     else null
                     _searchArtistPageState.value = cur2.copy(
                         artist = artistForFill, followed = kgFollowed)
                 }
                 else -> {
                     if (source == LxSources.KUWO) {
-                        val kwFollowed = if (kuwoCookieStore.hasCookie() && accountWritesEnabled)
-                            repository.kwFollowedArtists.value.any { it.id == artistId } else null
+                        val kwFollowed = if (kuwoCookieStore.hasCookie() &&
+                            repository.writeEnabledFor(LxSources.KUWO, LxWriteOp.ARTIST_FOLLOW)
+                        ) repository.kwFollowedArtists.value.any { it.id == artistId } else null
                         _searchArtistPageState.value = cur2.copy(
                             artist = artistForFill, followed = kwFollowed)
                         return@launch
@@ -2113,7 +2119,9 @@ class LxMusicViewModel @Inject constructor(
     fun toggleSearchArtistFollow() {
         val cur = _searchArtistPageState.value
         if (cur.source != LxSources.NETEASE && cur.source != LxSources.KUGOU && cur.source != LxSources.KUWO) return
-        if ((cur.source == LxSources.KUGOU || cur.source == LxSources.KUWO) && !accountWritesEnabled) return
+        if ((cur.source == LxSources.KUGOU || cur.source == LxSources.KUWO) &&
+            !repository.writeEnabledFor(cur.source, LxWriteOp.ARTIST_FOLLOW)
+        ) return
         val artist = cur.artist ?: return
         val followed = cur.followed ?: return
         if (cur.followBusy) return
@@ -2150,7 +2158,7 @@ class LxMusicViewModel @Inject constructor(
 
     fun toggleArtistFollow() {
         if ((_selectedSource.value == LxSources.KUGOU || _selectedSource.value == LxSources.KUWO) &&
-            !accountWritesEnabled
+            !repository.writeEnabledFor(_selectedSource.value, LxWriteOp.ARTIST_FOLLOW)
         ) return
         val cur = _mineState.value
         val page = cur.page as? MinePage.Artist ?: return
@@ -2237,9 +2245,11 @@ class LxMusicViewModel @Inject constructor(
     fun collectStateOf(kind: CollectKind, id: String?, gid: String? = null, name: String? = null): CollectState? {
         if (id.isNullOrBlank()) return null
         val st = _mineState.value
-        if (_selectedSource.value == LxSources.TENCENT) return null
-        if (_selectedSource.value == LxSources.KUGOU) {
-            if (!accountWritesEnabled) return null
+        val source = _selectedSource.value
+        // 写能力按“平台 × 操作”判定：网易不走扩展（cookie 门控），kw 写本轮不开放，kg/tx 歌单收藏开放
+        val op = if (kind == CollectKind.PLAYLIST) LxWriteOp.PLAYLIST_COLLECT else LxWriteOp.ALBUM_COLLECT
+        if (source != LxSources.NETEASE && !repository.writeEnabledFor(source, op)) return null
+        if (source == LxSources.KUGOU) {
             val own = st.myPlaylists.filter { it.specialType != 5 && it.subscribed != true }
             return when (kind) {
                 CollectKind.PLAYLIST -> {
@@ -2252,12 +2262,25 @@ class LxMusicViewModel @Inject constructor(
                         !gid.isNullOrBlank() && st.myPlaylists.any { it.originGid == gid } ->
                             CollectState.COLLECTED
                         !name.isNullOrBlank() && own.any { it.name == name } -> CollectState.COLLECTED
-                        else -> CollectState.UNCOLLECTED
+                        // kg 收藏依赖 gid 定位来源歌单，无 gid 的未收藏歌单只能走未实现的
+                        // “复制建单”路径（必失败），此时不显示收藏入口
+                        !gid.isNullOrBlank() -> CollectState.UNCOLLECTED
+                        else -> null
                     }
                 }
                 CollectKind.ALBUM ->
                     if (!name.isNullOrBlank() && own.any { it.name == name }) CollectState.COLLECTED
                     else CollectState.UNCOLLECTED
+            }
+        }
+        if (source == LxSources.TENCENT) {
+            // tx 专辑收藏本轮未实现；歌单收藏态由“我的歌单”（自建 subscribed=false / 收藏 subscribed=true）判定
+            if (kind != CollectKind.PLAYLIST) return null
+            val mineEntry = st.myPlaylists.firstOrNull { it.id == "tx_pl_$id" }
+            return when {
+                mineEntry != null && mineEntry.subscribed != true -> CollectState.COLLECTED_LOCKED
+                mineEntry != null -> CollectState.COLLECTED
+                else -> CollectState.UNCOLLECTED
             }
         }
         return when (kind) {
@@ -2282,11 +2305,11 @@ class LxMusicViewModel @Inject constructor(
     }
 
     fun onCollectButtonClick(kind: CollectKind, id: String, gid: String? = null, name: String? = null) {
-        if (!accountWritesEnabled &&
-            (_selectedSource.value == LxSources.KUGOU || _selectedSource.value == LxSources.KUWO)
-        ) return
-        if (_selectedSource.value == LxSources.TENCENT) return
-        val loggedIn = when (_selectedSource.value) {
+        val source = _selectedSource.value
+        val op = if (kind == CollectKind.PLAYLIST) LxWriteOp.PLAYLIST_COLLECT else LxWriteOp.ALBUM_COLLECT
+        if (source != LxSources.NETEASE && !repository.writeEnabledFor(source, op)) return
+        val loggedIn = when (source) {
+            LxSources.TENCENT -> tencentCookieStore.hasCookie()
             LxSources.KUGOU -> kugouCookieStore.hasAppLogin()
             LxSources.KUWO -> kuwoCookieStore.hasCookie()
             else -> neteaseCookieStore.hasCookie()
@@ -2327,8 +2350,10 @@ class LxMusicViewModel @Inject constructor(
     fun openOnlineAddToPlaylist(lxSong: LxSong) {
         val allowed = when (lxSong.source) {
             LxSources.NETEASE -> neteaseCookieStore.hasCookie()
-            LxSources.KUGOU -> accountWritesEnabled && kugouCookieStore.hasAppLogin()
-            LxSources.KUWO -> accountWritesEnabled && kuwoCookieStore.hasCookie()
+            LxSources.KUGOU -> repository.writeEnabledFor(LxSources.KUGOU, LxWriteOp.PLAYLIST_ADD_SONGS) &&
+                kugouCookieStore.hasAppLogin()
+            LxSources.KUWO -> repository.writeEnabledFor(LxSources.KUWO, LxWriteOp.PLAYLIST_ADD_SONGS) &&
+                kuwoCookieStore.hasCookie()
             else -> false
         }
         if (!allowed) {
@@ -2350,8 +2375,10 @@ class LxMusicViewModel @Inject constructor(
         val source = sources.first()
         val allowed = when (source) {
             LxSources.NETEASE -> neteaseCookieStore.hasCookie()
-            LxSources.KUGOU -> accountWritesEnabled && kugouCookieStore.hasAppLogin()
-            LxSources.KUWO -> accountWritesEnabled && kuwoCookieStore.hasCookie()
+            LxSources.KUGOU -> repository.writeEnabledFor(LxSources.KUGOU, LxWriteOp.PLAYLIST_ADD_SONGS) &&
+                kugouCookieStore.hasAppLogin()
+            LxSources.KUWO -> repository.writeEnabledFor(LxSources.KUWO, LxWriteOp.PLAYLIST_ADD_SONGS) &&
+                kuwoCookieStore.hasCookie()
             else -> false
         }
         if (!allowed) {
@@ -2532,9 +2559,12 @@ class LxMusicViewModel @Inject constructor(
 
     fun requestRemoveSongFromOwnPlaylist(lxSong: LxSong) {
         val allowed = when (lxSong.source) {
+            // 网易不走扩展能力矩阵，沿用全局开关
             LxSources.NETEASE -> accountWritesEnabled && neteaseCookieStore.hasCookie()
-            LxSources.KUGOU -> accountWritesEnabled && kugouCookieStore.hasAppLogin()
-            LxSources.KUWO -> accountWritesEnabled && kuwoCookieStore.hasCookie()
+            LxSources.KUGOU -> repository.writeEnabledFor(lxSong.source, LxWriteOp.PLAYLIST_REMOVE_SONGS) &&
+                kugouCookieStore.hasAppLogin()
+            LxSources.KUWO -> repository.writeEnabledFor(lxSong.source, LxWriteOp.PLAYLIST_REMOVE_SONGS) &&
+                kuwoCookieStore.hasCookie()
             else -> false
         }
         if (!allowed) {
@@ -2615,9 +2645,12 @@ class LxMusicViewModel @Inject constructor(
         if (sources.size > 1) return
         val source = sources.first()
         val allowed = when (source) {
+            // 网易不走扩展能力矩阵，沿用全局开关
             LxSources.NETEASE -> accountWritesEnabled && neteaseCookieStore.hasCookie()
-            LxSources.KUGOU -> accountWritesEnabled && kugouCookieStore.hasAppLogin()
-            LxSources.KUWO -> accountWritesEnabled && kuwoCookieStore.hasCookie()
+            LxSources.KUGOU -> repository.writeEnabledFor(source, LxWriteOp.PLAYLIST_REMOVE_SONGS) &&
+                kugouCookieStore.hasAppLogin()
+            LxSources.KUWO -> repository.writeEnabledFor(source, LxWriteOp.PLAYLIST_REMOVE_SONGS) &&
+                kuwoCookieStore.hasCookie()
             else -> false
         }
         if (!allowed) {
@@ -2727,6 +2760,13 @@ class LxMusicViewModel @Inject constructor(
                         }
                     }.getOrDefault(false)
                 }
+            } else if (_selectedSource.value == LxSources.TENCENT) {
+                when (kind) {
+                    CollectKind.PLAYLIST -> runCatching {
+                        repository.txSetPlaylistFav(id, subscribe)
+                    }.getOrDefault(false)
+                    CollectKind.ALBUM -> false
+                }
             } else if (_selectedSource.value == LxSources.KUWO) {
                 when (kind) {
                     CollectKind.PLAYLIST -> runCatching {
@@ -2796,6 +2836,25 @@ class LxMusicViewModel @Inject constructor(
                         subscribed = true,
                         originGid = gid,
                     )
+                }
+                _mineState.update { st ->
+                    val liked = st.myPlaylists.firstOrNull { it.specialType == 5 }
+                    st.copy(myPlaylists = listOfNotNull(liked) + playlists)
+                }
+                _collectDataVersion.update { it + 1 }
+                return@launch
+            }
+            if (_selectedSource.value == LxSources.TENCENT) {
+                // tx 收藏列表为服务端真读（created+collected 合并），成功后直接重拉校正
+                val serverLists = runCatching { repository.fetchTxUserPlaylists() }
+                    .getOrDefault(emptyList())
+                    .map { it.copy(id = "tx_pl_${it.id}") }
+                val playlists = if (!subscribe) {
+                    serverLists.filterNot { it.id == "tx_pl_$id" }
+                } else {
+                    val hit = serverLists.any { it.id == "tx_pl_$id" }
+                    if (hit) serverLists
+                    else serverLists + LxPlaylist(id = "tx_pl_$id", name = name?.takeIf { it.isNotBlank() } ?: id, subscribed = true)
                 }
                 _mineState.update { st ->
                     val liked = st.myPlaylists.firstOrNull { it.specialType == 5 }

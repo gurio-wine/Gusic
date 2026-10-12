@@ -364,8 +364,6 @@
     <string name="presentation_batch_g_stats_tracks_in_range_subtitle">Pistas más reproducidas para el rango de tiempo seleccionado.</string>
     <string name="presentation_batch_g_stats_tracks_in_range_title">Pistas en este rango</string>
     <string name="presentation_batch_g_stats_unique_tracks">Pistas únicas</string>
-    <string name="presentation_batch_g_streaming_subtitle">Transmite música desde tus cuentas en la nube</string>
-    <string name="presentation_batch_g_streaming_title">Transmisión en la nube</string>
     <string name="presentation_batch_g_sync_percent">%1$d%%</string>
     <string name="presentation_batch_g_topbar_build_debug">Depuración</string>
     <string name="presentation_batch_g_topbar_build_stable">Estable</string>

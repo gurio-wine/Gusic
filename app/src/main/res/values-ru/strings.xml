@@ -13,9 +13,7 @@
     <string name="accounts_listenbrainz_now_playing_idle">Сейчас ничего не воспроизводится</string>
     <string name="accounts_listenbrainz_now_playing_label">Скробблинг сейчас</string>
     <string name="accounts_listenbrainz_reconnect">Подключить заново</string>
-    <string name="accounts_listenbrainz_scrobble_jellyfin">Скробблить стриминг Jellyfin</string>
     <string name="accounts_listenbrainz_scrobble_local">Скробблить локальные файлы</string>
-    <string name="accounts_listenbrainz_scrobble_navidrome">Скробблить стриминг Subsonic</string>
     <string name="accounts_listenbrainz_server_hint">URL сервера (необязательно)</string>
     <string name="accounts_listenbrainz_server_supporting">Оставьте пустым для listenbrainz.org. Работает с собственными серверами, поддерживающими API ListenBrainz, например Maloja.</string>
     <string name="accounts_listenbrainz_stat_listens">Всего прослушиваний</string>

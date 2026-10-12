@@ -157,29 +157,15 @@ class LibraryLikedStateHolder @Inject constructor(
 
     /**
      * 拉取单个平台的“我喜欢”歌曲数量（每个平台一次，失败静默忽略、不重试重放）。
-     * 酷狗返回的 id 集合含杂质（如歌单 id），只统计 32 位十六进制的歌曲 id；
-     * 其余平台直接取集合大小。
+     * 拉取成功即写入（包括 0，与本软件“我喜欢”入口一样始终显示数量）；失败不写入。
      */
     private fun fetchPlatformLikedCount(source: String) {
         val job = holderScope.launch {
             val count = runCatching {
-                when (source) {
-                    LxSources.NETEASE -> {
-                        // 先确保 uid/登录档案已解析，冷启动时 refresh 才不会静默 no-op
-                        lxMusicRepository.ensureNeteaseLikedListLoaded()
-                        lxMusicRepository.neteaseLikedSongIds.value.size
-                    }
-                    LxSources.TENCENT -> lxMusicRepository.fetchTxLikedSongIds().size
-                    LxSources.KUGOU -> lxMusicRepository.fetchKgLikedSongIds().count { id ->
-                        id.length == 32 && id.all { c -> c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F' }
-                    }
-                    LxSources.KUWO -> lxMusicRepository.fetchKwLikedSongIds().size
-                    else -> null
-                }
+                lxMusicRepository.fetchPlatformLikedCountOrNull(source)
             }.getOrNull()
-            // 底层失败多以空集返回而非异常，0 与失败不可区分：宁缺勿错，0 不写入；
-            // 登出竞态防护：仅当该平台仍处于登录态才允许写入计数
-            if (count != null && count > 0 && source in _loggedInPlatforms.value) {
+            // count == null 表示拉取失败：不写入，入口保持无数字；登录状态守卫防止登出竞态写入
+            if (count != null && source in _loggedInPlatforms.value) {
                 _platformLikedCounts.update { it + (source to count) }
             }
         }

@@ -49,13 +49,13 @@ abstract class CloudStreamProxy<K : Any>(
     protected abstract val cacheExpirationMs: Long
     protected abstract val proxyTag: String
 
-    /** Route path registered with Ktor, e.g. "/navidrome/{songId}" */
+    /** Route path registered with Ktor, e.g. "/lxmusic/{songId}" */
     protected abstract val routePath: String
     /** The parameter name inside the route path, e.g. "songId" */
     protected abstract val routeParamName: String
-    /** URI scheme this proxy handles, e.g. "navidrome" or "jellyfin" */
+    /** URI scheme this proxy handles, e.g. "lxmusic" */
     protected abstract val uriScheme: String
-    /** URL path prefix for proxy URLs, e.g. "/navidrome" or "/jellyfin" */
+    /** URL path prefix for proxy URLs, e.g. "/lxmusic" */
     protected abstract val routePrefix: String
 
     /** Parse the raw route parameter string into the typed ID, or null if invalid */
@@ -211,8 +211,8 @@ abstract class CloudStreamProxy<K : Any>(
     }
 
     /**
-     * Parse a cloud URI (e.g. "navidrome://song-id" or "jellyfin://item-id") and return
-     * the local proxy URL. Returns null if the URI doesn't match this proxy's scheme.
+     * Parse a cloud URI (e.g. "lxmusic://song-id") and return the local proxy URL.
+     * Returns null if the URI doesn't match this proxy's scheme.
      * Subclasses can override to handle custom URI formats.
      */
     open fun resolveUri(uriString: String): String? {

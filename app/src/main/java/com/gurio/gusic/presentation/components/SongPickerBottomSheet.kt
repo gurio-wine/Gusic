@@ -297,11 +297,11 @@ fun SongPickerSelectionPane(
             .map { songs ->
                 when (storageFilter) {
                     StorageFilter.OFFLINE -> songs.filter { s ->
-                        s.navidromeId == null && s.jellyfinId == null
+                        s.lxMusicSource == null
                     }
 
                     StorageFilter.ONLINE -> songs.filter { s ->
-                        s.navidromeId != null || s.jellyfinId != null
+                        s.lxMusicSource != null
                     }
 
                     else -> songs

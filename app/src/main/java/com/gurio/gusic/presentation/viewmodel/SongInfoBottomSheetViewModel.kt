@@ -356,14 +356,7 @@ class SongInfoBottomSheetViewModel @Inject constructor(
         return uri.startsWith("content://") || uri.startsWith("file://")
     }
 
-    private fun getCloudProviderLabel(contentUriString: String): String? {
-        val normalized = contentUriString.lowercase().trim()
-        return when {
-            normalized.startsWith("navidrome://") || normalized.startsWith("navidrome:") -> "Navidrome"
-            normalized.startsWith("jellyfin://") || normalized.startsWith("jellyfin:") -> "Jellyfin"
-            else -> null
-        }
-    }
+    private fun getCloudProviderLabel(contentUriString: String): String? = null
 
     private suspend fun setSongAsToneInternal(song: Song, target: ToneTarget): ToneActionResult {
         if (getCloudProviderLabel(song.contentUriString) != null) {

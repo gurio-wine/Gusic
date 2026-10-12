@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 /**
  * Persistent state for an app-private copy of a cloud track.
  *
- * [sourceUri] remains the canonical identity (for example `navidrome://abc`). The player can
+ * [sourceUri] remains the canonical identity (for example `lxmusic://abc`). The player can
  * therefore resolve an existing queue item to [localPath] without rewriting the library row.
  */
 @Entity(

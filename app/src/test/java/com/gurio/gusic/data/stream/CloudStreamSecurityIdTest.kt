@@ -5,31 +5,10 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
- * Covers the injection-resistant ID validators and the private-IP / SSRF guard that
- * gate cloud streaming. These back-stop the loopback proxy: a crafted song/item ID or
- * an upstream URL pointing at a private host must be rejected before any request fires.
+ * Covers the private-IP / SSRF guard that backs the loopback proxy: an upstream URL
+ * pointing at a private host must be rejected before any request fires.
  */
 class CloudStreamSecurityIdTest {
-
-    @Test
-    fun `navidrome song ids allow url-safe characters within length`() {
-        assertTrue(CloudStreamSecurity.validateNavidromeSongId("abc123_-XYZ"))
-        assertTrue(CloudStreamSecurity.validateNavidromeSongId("a"))
-        assertFalse(CloudStreamSecurity.validateNavidromeSongId(""))
-        assertFalse(CloudStreamSecurity.validateNavidromeSongId("a".repeat(101)))
-        assertFalse(CloudStreamSecurity.validateNavidromeSongId("has space"))
-        assertFalse(CloudStreamSecurity.validateNavidromeSongId("path/traversal"))
-        assertFalse(CloudStreamSecurity.validateNavidromeSongId("inject';--"))
-    }
-
-    @Test
-    fun `jellyfin item ids are strictly alphanumeric`() {
-        assertTrue(CloudStreamSecurity.validateJellyfinItemId("a1b2c3d4e5f6A7B8"))
-        assertFalse(CloudStreamSecurity.validateJellyfinItemId(""))
-        assertFalse(CloudStreamSecurity.validateJellyfinItemId("with-hyphen"))
-        assertFalse(CloudStreamSecurity.validateJellyfinItemId("with_underscore"))
-        assertFalse(CloudStreamSecurity.validateJellyfinItemId("a".repeat(101)))
-    }
 
     @Test
     fun `private and loopback ipv4 literals are detected`() {

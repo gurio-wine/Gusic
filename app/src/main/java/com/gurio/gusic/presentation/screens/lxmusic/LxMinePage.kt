@@ -87,6 +87,7 @@ import com.gurio.gusic.data.lxmusic.LxPlaylist
 import com.gurio.gusic.data.lxmusic.LxSong
 import com.gurio.gusic.data.lxmusic.LxSongMapper
 import com.gurio.gusic.data.lxmusic.LxSources
+import com.gurio.gusic.data.lxmusic.LxWriteOp
 import com.gurio.gusic.R
 import com.gurio.gusic.presentation.components.ExpressiveScrollBar
 import com.gurio.gusic.presentation.components.MiniPlayerHeight
@@ -968,12 +969,13 @@ private fun LazyListScope.mineFavoriteSection(
     viewModel: LxMusicViewModel,
     currentSource: String,
 ) {
+    // 歌手/专辑写本轮仅按能力矩阵放行：kg 歌手入口平台写死隐藏；kw/tx 专辑与 kw 歌手写未实现，入口保持隐藏
     val showArtistEntry = currentSource != LxSources.KUGOU
-        && (currentSource != LxSources.KUWO || viewModel.accountWritesEnabled)
+        && (currentSource != LxSources.KUWO || viewModel.writeEnabledFor(LxSources.KUWO, LxWriteOp.ARTIST_FOLLOW))
         && currentSource != LxSources.TENCENT
     val showAlbumEntry = currentSource != LxSources.KUGOU
-        && (currentSource != LxSources.KUWO || viewModel.accountWritesEnabled)
-        && (currentSource != LxSources.TENCENT || viewModel.accountWritesEnabled)
+        && (currentSource != LxSources.KUWO || viewModel.writeEnabledFor(LxSources.KUWO, LxWriteOp.ALBUM_COLLECT))
+        && (currentSource != LxSources.TENCENT || viewModel.writeEnabledFor(LxSources.TENCENT, LxWriteOp.ALBUM_COLLECT))
     val liked = state.myPlaylists.firstOrNull { it.specialType == 5 }
     if (liked != null) {
         item(key = "mine_entry_liked") {

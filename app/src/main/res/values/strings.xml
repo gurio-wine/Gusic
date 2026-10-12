@@ -24,8 +24,6 @@
     <string name="accounts_listenbrainz_needs_reauth">Your token is no longer valid — reconnect to resume scrobbling. Queued listens are kept.</string>
     <string name="accounts_listenbrainz_reconnect">Reconnect</string>
     <string name="accounts_listenbrainz_scrobble_local">Scrobble local files</string>
-    <string name="accounts_listenbrainz_scrobble_navidrome">Scrobble Subsonic streaming</string>
-    <string name="accounts_listenbrainz_scrobble_jellyfin">Scrobble Jellyfin streaming</string>
     <string name="accounts_listenbrainz_toggle_hint">If your server already scrobbles to ListenBrainz, turn that source off here to avoid duplicate listens.</string>
     <string name="accounts_listenbrainz_stat_listens">Total listens</string>
     <string name="accounts_listenbrainz_stat_queued">Queued</string>

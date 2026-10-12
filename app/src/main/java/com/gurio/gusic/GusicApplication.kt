@@ -45,12 +45,6 @@ class GusicApplication : Application(), ImageLoaderFactory, Configuration.Provid
     lateinit var imageLoader: dagger.Lazy<ImageLoader>
 
     @Inject
-    lateinit var navidromeCoilFetcherFactory: dagger.Lazy<com.gurio.gusic.data.image.NavidromeCoilFetcher.Factory>
-
-    @Inject
-    lateinit var jellyfinCoilFetcherFactory: dagger.Lazy<com.gurio.gusic.data.image.JellyfinCoilFetcher.Factory>
-
-    @Inject
     lateinit var localArtworkCoilFetcherFactory: dagger.Lazy<com.gurio.gusic.data.image.LocalArtworkCoilFetcher.Factory>
 
     @Inject
@@ -129,6 +123,16 @@ class GusicApplication : Application(), ImageLoaderFactory, Configuration.Provid
         // Retire queued automatic folder sync before any other startup work can schedule tasks.
         legacyM3uSyncRetirer.get().cancelQueuedWork()
 
+        // Cloud streaming (Navidrome/Jellyfin) was removed; drop its leftover credential stores.
+        listOf(
+            "navidrome_prefs",
+            "jellyfin_prefs",
+            "navidrome_prefs_plain",
+            "jellyfin_prefs_plain",
+        ).forEach { name ->
+            runCatching { deleteSharedPreferences(name) }
+        }
+
         if (BuildConfig.DEBUG) {
             MainThreadWatchdog(File(filesDir, "logs/watchdog")).start()
         }
@@ -189,8 +193,6 @@ class GusicApplication : Application(), ImageLoaderFactory, Configuration.Provid
         return imageLoader.get().newBuilder()
             .components {
                 add(localArtworkCoilFetcherFactory.get())
-                add(navidromeCoilFetcherFactory.get())
-                add(jellyfinCoilFetcherFactory.get())
             }
             .build()
     }

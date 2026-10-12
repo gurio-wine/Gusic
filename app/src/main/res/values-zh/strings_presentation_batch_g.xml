@@ -210,8 +210,6 @@
     <string name="presentation_batch_g_lyrics_mode_synced">同步歌詞</string>
     <string name="presentation_batch_g_lyrics_mode_static">靜態歌詞</string>
     <string name="presentation_batch_g_lyrics_cd_options">歌詞選項</string>
-    <string name="presentation_batch_g_streaming_title">雲端串流</string>
-    <string name="presentation_batch_g_streaming_subtitle">從你的雲端帳號播放音樂</string>
     <string name="presentation_batch_g_sort_source">來源</string>
     <string name="presentation_batch_g_sort_order">排序</string>
     <string name="presentation_batch_g_sort_descending">降序</string>
@@ -600,5 +598,14 @@
         <item>酷狗簡訊登入完整原生實作：發送驗證碼、登入並同步暱稱頭像</item>
         <item>酷我網頁登入後取得暱稱與頭像</item>
         <item>僅有靜態歌詞的歌也可從預覽區進入歌詞頁；無歌詞的歌在那裡提供搜尋/匯入口</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101206_whats_new">
+        <item>酷狗「喜歡」真實可用：播放頁平台紅心可收藏/取消酷狗歌曲，「我喜歡」裡可查看酷狗喜歡清單（QQ音樂紅心也一併恢復可用）</item>
+        <item>收藏歌單擴展到酷狗和QQ音樂：在歌單詳情頁即可收藏/取消收藏，與網易雲一致</item>
+        <item>移除雲端串流功能（Navidrome 與 Jellyfin）及其帳號入口；ListenBrainz 聽歌記錄保留</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101206_changes">
+        <item>播放頁的佇列按鈕從頂欄移到下方按鈕行，位於喜歡按鈕右側</item>
+        <item>「我喜歡」裡已登入平台即使 0 首也顯示數量，與本軟體「我喜歡」一致</item>
     </string-array>
 </resources>

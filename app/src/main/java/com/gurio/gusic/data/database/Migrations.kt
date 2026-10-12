@@ -285,3 +285,68 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
         db.execSQL("DROP TABLE IF EXISTS `audio_bookmarks`")
     }
 }
+
+/**
+ * v12 -> v13: 云端串流（Navidrome/Subsonic + Jellyfin）功能整体移除。
+ *
+ * - 删除四张云端缓存表。
+ * - 清理 `songs` 中 source_type IN (5, 6) 的历史云端歌曲，并按
+ *   [MusicDao.deleteSongsAndRelatedData] 的级联顺序清理关联表
+ *   （cross-ref / favorites / lyrics / playlist_songs / 离线下载记录），
+ *   最后回收孤儿专辑与艺人并刷新计数。
+ */
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS `navidrome_songs`")
+        db.execSQL("DROP TABLE IF EXISTS `navidrome_playlists`")
+        db.execSQL("DROP TABLE IF EXISTS `jellyfin_songs`")
+        db.execSQL("DROP TABLE IF EXISTS `jellyfin_playlists`")
+
+        db.execSQL(
+            "DELETE FROM `song_artist_cross_ref` " +
+                "WHERE `song_id` IN (SELECT `id` FROM `songs` WHERE `source_type` IN (5, 6))"
+        )
+        db.execSQL(
+            "DELETE FROM `favorites` " +
+                "WHERE `songId` IN (SELECT `id` FROM `songs` WHERE `source_type` IN (5, 6))"
+        )
+        db.execSQL(
+            "DELETE FROM `lyrics` " +
+                "WHERE `songId` IN (SELECT `id` FROM `songs` WHERE `source_type` IN (5, 6))"
+        )
+        db.execSQL(
+            "DELETE FROM `playlist_songs` " +
+                "WHERE `song_id` IN (SELECT CAST(`id` AS TEXT) FROM `songs` WHERE `source_type` IN (5, 6))"
+        )
+        db.execSQL(
+            "DELETE FROM `offline_tracks` " +
+                "WHERE `provider` IN ('navidrome', 'jellyfin') " +
+                "OR `source_uri` LIKE 'navidrome://%' OR `source_uri` LIKE 'jellyfin://%'"
+        )
+        db.execSQL("DELETE FROM `songs` WHERE `source_type` IN (5, 6)")
+
+        db.execSQL(
+            "DELETE FROM `albums` WHERE NOT EXISTS (SELECT 1 FROM `songs` WHERE `songs`.`album_id` = `albums`.`id`)"
+        )
+        db.execSQL(
+            "DELETE FROM `artists` WHERE " +
+                "NOT EXISTS (SELECT 1 FROM `song_artist_cross_ref` WHERE `song_artist_cross_ref`.`artist_id` = `artists`.`id`) " +
+                "AND NOT EXISTS (SELECT 1 FROM `songs` WHERE `songs`.`artist_id` = `artists`.`id`) " +
+                "AND NOT EXISTS (SELECT 1 FROM `songs` WHERE `songs`.`album_artist_id` = `artists`.`id`)"
+        )
+        db.execSQL(
+            "UPDATE `albums` SET `song_count` = " +
+                "(SELECT COUNT(*) FROM `songs` WHERE `songs`.`album_id` = `albums`.`id`)"
+        )
+        db.execSQL(
+            "UPDATE `artists` SET `track_count` = " +
+                "(SELECT COUNT(DISTINCT `song_artist_cross_ref`.`song_id`) FROM `song_artist_cross_ref` " +
+                "WHERE `song_artist_cross_ref`.`artist_id` = `artists`.`id`)"
+        )
+        // 云端串流已删：清掉 ListenBrainz 待上报队列里由旧云源开关产生的行
+        // （历史 source 值为大写 NAVIDROME/JELLYFIN，LOCAL 行不受影响）
+        db.execSQL(
+            "DELETE FROM `listenbrainz_pending_listens` WHERE `source` IN ('NAVIDROME', 'JELLYFIN')"
+        )
+    }
+}

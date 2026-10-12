@@ -1312,7 +1312,7 @@ fun LibraryScreen(
                                             modifier = Modifier.padding(start = 2.dp, bottom = 8.dp)
                                         )
                                         com.gurio.gusic.presentation.components.LibrarySheetToggleCard(
-                                            label = stringResource(R.string.presentation_batch_d_cloud_only),
+                                            label = stringResource(R.string.library_storage_filter_online),
                                             checked = playerUiState.hideLocalMedia,
                                             boxBackgroundColor = if (playerUiState.hideLocalMedia)
                                                 MaterialTheme.colorScheme.tertiary

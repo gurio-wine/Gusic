@@ -24,8 +24,6 @@
 <string name="accounts_listenbrainz_needs_reauth">令牌已失效，請重新連接以恢復播放記錄提交，排隊記錄將會保留。</string>
 <string name="accounts_listenbrainz_reconnect">重新連接</string>
 <string name="accounts_listenbrainz_scrobble_local">提交本地文件播放記錄</string>
-<string name="accounts_listenbrainz_scrobble_navidrome">提交Subsonic流媒體播放記錄</string>
-<string name="accounts_listenbrainz_scrobble_jellyfin">提交Jellyfin流媒體播放記錄</string>
 <string name="accounts_listenbrainz_toggle_hint">如果你的服務端已經向ListenBrainz上報記錄，請在此關閉，避免重複上報。</string>
 <string name="accounts_listenbrainz_stat_listens">總播放記錄</string>
 <string name="accounts_listenbrainz_stat_queued">排隊中</string>

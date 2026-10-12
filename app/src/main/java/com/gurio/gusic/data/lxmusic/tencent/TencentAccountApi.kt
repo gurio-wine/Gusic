@@ -16,7 +16,9 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import timber.log.Timber
 import java.net.URLDecoder
+import java.net.URLEncoder
 import java.security.MessageDigest
+import java.util.Base64
 
 /**
  * QQ 音乐账号读取接口：基于登录 Cookie（网页登录/扫码登录后保存在 [TencentCookieStore]）。
@@ -32,14 +34,18 @@ internal class TencentAccountApi(
     companion object {
         private const val TAG = "TencentAccountApi"
         private const val MUSICU_URL = "https://u.y.qq.com/cgi-bin/musicu.fcg"
+        private const val APP_MUSICU_URL = "https://u6.y.qq.com/cgi-bin/musics.fcg"
+        private const val LEGACY_ORDER_DISS_URL = "https://c.y.qq.com/folder/fcgi-bin/fcg_qm_order_diss.fcg"
         private const val PROFILE_URL = "https://c.y.qq.com/rsc/fcgi-bin/fcg_get_profile_homepage.fcg"
         private const val CREATED_DISS_URL = "https://c.y.qq.com/rsc/fcgi-bin/fcg_user_created_diss"
         private const val ORDER_ASSET_URL = "https://c.y.qq.com/fav/fcgi-bin/fcg_get_profile_order_asset.fcg"
+        private const val FAV_WRITE_MODULE = "music.musicasset.PlaylistFavWrite"
         private const val USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         private const val PAGE_SIZE = 100
         private const val MAX_PAGES = 30
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
+        private val FORM_MEDIA_TYPE = "application/x-www-form-urlencoded".toMediaType()
         private val QZONE_PLAYLIST = Regex("qzone|空间|背景音乐", RegexOption.IGNORE_CASE)
 
         /** Cookie 串解析为 name→value；同名后出现者覆盖前者。 */
@@ -200,6 +206,51 @@ internal class TencentAccountApi(
 
         private fun JsonObject.intField(name: String): Int? =
             get(name)?.takeIf { it.isJsonPrimitive }?.let { runCatching { it.asInt }.getOrNull() }
+
+        /** g_tk：hash33(token)（h += (h<<5)+charCode，取正 31 位；空串得 5381 即匿名 g_tk）。 */
+        internal fun hash33(text: String): Long {
+            var hash = 5381L
+            text.forEach { ch -> hash += (hash shl 5) + ch.code }
+            return hash and 0x7fffffffL
+        }
+
+        /**
+         * 老接口 fcg_qm_order_diss.fcg 的 g_tk：按 skey 实算；
+         * 微信登录（musickey W_ 前缀）改用 p_skey（jsososo/QQMusicApi 同款约定）。
+         */
+        internal fun legacyGtk(cookies: Map<String, String>): Long {
+            val key = musicKey(cookies)
+            val source = if (key.startsWith("W_")) cookies["p_skey"].orEmpty() else cookies["skey"].orEmpty()
+            return hash33(source)
+        }
+
+        /**
+         * musicu.fcg app 通道 zzc 签名（paperclip zzcSign）：
+         * sha1(body) 大写 hex → 两位切片异或固定 scramble → base64 去掉 / + = →
+         * "zzc" + hex[按 part1 索引拼接] + middle + hex[按 part2 索引拼接]，整体小写。
+         */
+        internal fun zzcSign(payload: String): String {
+            val hash = sha1Hex(payload).uppercase()
+            val part1Indexes = intArrayOf(23, 14, 6, 36, 16, 7, 19)
+            val part2Indexes = intArrayOf(16, 1, 32, 12, 19, 27, 8, 5)
+            val scramble = intArrayOf(
+                89, 39, 179, 150, 218, 82, 58, 252, 177, 52,
+                186, 123, 120, 64, 242, 133, 143, 161, 121, 179,
+            )
+            val part1 = part1Indexes.joinToString("") { hash[it].toString() }
+            val part2 = part2Indexes.joinToString("") { hash[it].toString() }
+            val bytes = ByteArray(scramble.size)
+            scramble.forEachIndexed { i, value ->
+                bytes[i] = (value xor hash.substring(i * 2, i * 2 + 2).toInt(16)).toByte()
+            }
+            val middle = Base64.getEncoder().encodeToString(bytes)
+                .replace("/", "").replace("+", "").replace("=", "")
+            return "zzc$part1$middle$part2".lowercase()
+        }
+
+        private fun sha1Hex(text: String): String =
+            MessageDigest.getInstance("SHA-1").digest(text.toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
     }
 
     private fun loginCookie(): Pair<String, Map<String, String>>? {
@@ -328,6 +379,180 @@ internal class TencentAccountApi(
             id to (track.extraFields["songType"]?.toIntOrNull() ?: 0)
         }
 
+    /**
+     * 收藏/取消收藏歌单。三段式尝试：
+     * ① 老接口 fcg_qm_order_diss.fcg（jsososo/QQMusicApi、CoCoMusic 等多项目长期使用，
+     *    form-urlencoded + g_tk 按 skey 实算；code==0 成功、code==1000 未登录）；
+     * ② musicu.fcg PlaylistFavWrite web 通道（lx-music-desktop-enhanced 配方：
+     *    hybridComm ct=11 + authst + tmeAppID，免 sign）；
+     * ③ musicu.fcg app 通道兜底（paperclip 配方 ct=1/cv=200605 + zzc 签名 + _webcgikey）。
+     *
+     * ⚠️ 三条通道均未真机验证；①②③失败原因会打日志便于排查。
+     */
+    suspend fun applyPlaylistFav(disstid: String, fav: Boolean): Boolean = withContext(Dispatchers.IO) {
+        val id = disstid.toLongOrNull()?.takeIf { it > 0 } ?: return@withContext false
+        val (cookie, cookies) = loginCookie() ?: return@withContext false
+        val method = if (fav) "FavPlaylist" else "CancelFavPlaylist"
+        val param = JsonObject().apply {
+            add("v_playlistId", JsonArray().apply { add(id) })
+        }
+
+        // ① 老接口：false（被拒）与 null（网络/解析失败）都继续尝试 musicu 通道
+        when (val legacy = runCatching { legacyOrderDiss(cookie, cookies, id, fav) }.getOrNull()) {
+            true -> return@withContext true
+            else -> Timber.w("$TAG: legacy order_diss not conclusive (%s), trying musicu %s", legacy, method)
+        }
+
+        val webBlock = runCatching {
+            musicuCall(cookie, "req_0", FAV_WRITE_MODULE, method, param, comm = hybridComm(cookie), withSign = false)
+        }.getOrNull()
+        if (webBlock != null && favBlockOk(webBlock)) return@withContext true
+        if (webBlock != null) {
+            Timber.w("$TAG: %s web rejected block=%s, trying app channel", method, webBlock)
+        }
+
+        val appRoot = appChannelCall(cookies, method, param) ?: return@withContext false
+        val ok = favBlockOk(appRoot)
+        if (!ok) Timber.w("$TAG: %s app rejected root=%s", method, appRoot)
+        ok
+    }
+
+    /**
+     * 老接口收藏/取消收藏（fcg_qm_order_diss.fcg，optype 1=收藏 2=取消）。
+     * 返回 true=code 0 成功；false=服务端明确拒绝；null=网络失败/响应不可解析。
+     */
+    private suspend fun legacyOrderDiss(
+        cookie: String,
+        cookies: Map<String, String>,
+        disstid: Long,
+        fav: Boolean,
+    ): Boolean? = withContext(Dispatchers.IO) {
+        val uin = cookieUin(cookies)
+        if (uin.isEmpty()) return@withContext null
+        val gtk = legacyGtk(cookies)
+        val referer = "https://y.qq.com/n/yqq/playlist/$disstid.html"
+        val form = linkedMapOf(
+            "loginUin" to uin,
+            "hostUin" to "0",
+            "format" to "json",
+            "inCharset" to "GB2312",
+            "outCharset" to "utf8",
+            "notice" to "0",
+            "platform" to "yqq",
+            "needNewCode" to "0",
+            "g_tk" to gtk.toString(),
+            "uin" to uin,
+            "dissid" to disstid.toString(),
+            "from" to "1",
+            "optype" to if (fav) "1" else "2",
+            "utf8" to "1",
+            "qzreferrer" to referer,
+        ).entries.joinToString("&") { (k, v) ->
+            URLEncoder.encode(k, "UTF-8") + "=" + URLEncoder.encode(v, "UTF-8")
+        }
+        val request = Request.Builder()
+            .url("$LEGACY_ORDER_DISS_URL?g_tk=$gtk")
+            .header("User-Agent", USER_AGENT)
+            .header("Referer", referer)
+            .header("Cookie", cookie)
+            .post(form.toRequestBody(FORM_MEDIA_TYPE))
+            .build()
+        runCatching {
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Timber.w("$TAG: legacy order_diss http %s", response.code)
+                    return@use null
+                }
+                val root = runCatching {
+                    JsonParser.parseString(response.body?.string().orEmpty()).asJsonObject
+                }.getOrNull() ?: return@use null
+                val code = root.intField("code")
+                when (code) {
+                    0 -> true
+                    else -> {
+                        Timber.w("$TAG: legacy order_diss rejected code=%s (1000=未登录)", code)
+                        false
+                    }
+                }
+            }
+        }.getOrElse { e ->
+            Timber.w(e, "$TAG: legacy order_diss call failed")
+            null
+        }
+    }
+
+    /** FavPlaylist 家族成功判定：block code==0，且存在 retCode/ret_code 时要求为 0。 */
+    private fun favBlockOk(block: JsonObject): Boolean {
+        val code = block.intField("code") ?: -1
+        if (code != 0) return false
+        val data = block.get("data") as? JsonObject
+        val retCode = block.intField("retCode")
+            ?: block.intField("ret_code")
+            ?: data?.intField("retCode")
+            ?: (data?.get("result") as? JsonObject)?.intField("retCode")
+        return retCode == null || retCode == 0
+    }
+
+    /**
+     * app 通道（paperclip appPost 同款）：
+     * POST https://u6.y.qq.com/cgi-bin/musics.fcg?_webcgikey=<method>&_=<ms>&sign=zzc<...>
+     * comm: ct=1/cv=200605 + g_tk=hash33(musickey) + mesh_devops；
+     * Cookie: uin=o<uin>; qm_keyst=<musickey>；content-type x-www-form-urlencoded。
+     */
+    private fun appChannelCall(cookies: Map<String, String>, method: String, param: JsonObject): JsonObject? {
+        val key = musicKey(cookies)
+        val uin = cookieUin(cookies)
+        if (key.isEmpty() || uin.isEmpty()) return null
+        val body = JsonObject().apply {
+            add("comm", JsonObject().apply {
+                addProperty("g_tk", hash33(key))
+                addProperty("uin", uin.toLongOrNull() ?: 0L)
+                addProperty("format", "json")
+                addProperty("inCharset", "utf-8")
+                addProperty("outCharset", "utf-8")
+                addProperty("notice", 0)
+                addProperty("platform", "h5")
+                addProperty("needNewCode", 1)
+                addProperty("ct", 1)
+                addProperty("cv", 200605)
+                addProperty("mesh_devops", "DevopsBase")
+            })
+            add("req_0", JsonObject().apply {
+                addProperty("module", FAV_WRITE_MODULE)
+                addProperty("method", method)
+                add("param", param)
+            })
+        }.toString()
+        val url = APP_MUSICU_URL.toHttpUrl().newBuilder().apply {
+            addQueryParameter("_webcgikey", method)
+            addQueryParameter("_", System.currentTimeMillis().toString())
+            addQueryParameter("sign", zzcSign(body))
+        }.build().toString()
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", USER_AGENT)
+            .header("Referer", "https://y.qq.com/")
+            .header("Cookie", "uin=o$uin; qm_keyst=$key")
+            // 参考实现（paperclip）以 form content-type 发送 JSON 字符串：
+            // OkHttp 会用请求体 contentType 决定最终 Content-Type 头，故直接用 FORM_MEDIA_TYPE
+            .post(body.toRequestBody(FORM_MEDIA_TYPE))
+            .build()
+        return runCatching {
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Timber.w("$TAG: app channel http %s", response.code)
+                    return@use null
+                }
+                runCatching {
+                    JsonParser.parseString(response.body?.string().orEmpty()).asJsonObject
+                }.getOrNull()?.getAsJsonObject("req_0")
+            }
+        }.getOrElse { e ->
+            Timber.w(e, "$TAG: app channel call failed ($method)")
+            null
+        }
+    }
+
     private suspend fun fetchDissSongs(liked: Boolean, disstid: String?): List<LxSong>? =
         withContext(Dispatchers.IO) {
             val (cookie, _) = loginCookie() ?: return@withContext null
@@ -424,7 +649,7 @@ internal class TencentAccountApi(
                     JsonParser.parseString(response.body?.string().orEmpty()).asJsonObject
                 }.getOrNull() ?: return@use emptyList()
                 ((root.get("data") as? JsonObject)?.get("cdlist") as? JsonArray)
-                    ?.mapNotNull(::mapPlaylist)
+                    ?.mapNotNull { mapPlaylist(it, subscribed = true) }
                     .orEmpty()
             }
         }.getOrElse { e ->
@@ -437,7 +662,7 @@ internal class TencentAccountApi(
             .distinctBy { it.id }
     }
 
-    private fun mapPlaylist(raw: JsonElement): LxPlaylist? {
+    private fun mapPlaylist(raw: JsonElement, subscribed: Boolean = false): LxPlaylist? {
         val obj = raw as? JsonObject ?: return null
         val dirid = obj.str("dirid") ?: obj.str("dirId")
         if (dirid?.trim() == "201") return null
@@ -452,6 +677,8 @@ internal class TencentAccountApi(
             trackCount = (obj.str("song_cnt") ?: obj.str("songnum") ?: obj.str("total_song_num"))
                 ?.let { runCatching { it.toDouble().toInt() }.getOrNull() },
             creator = (obj.str("hostname") ?: obj.str("nick"))?.takeIf(String::isNotBlank),
+            // order_asset（收藏列表）来源标记为 subscribed，供收藏态判定区分自建/收藏
+            subscribed = subscribed,
         )
     }
 

@@ -86,13 +86,9 @@
     <string name="dash_libraries_sync_needed">Sinkronkan pustaka untuk menerapkan perubahan</string>
     <string name="dash_libraries_title">Pustaka</string>
     <string name="dash_library_playlist_title">Pustaka</string>
-    <string name="dash_playlists_empty_hint_jellyfin">Ketuk sinkronisasi untuk mengambil playlist Jellyfin Anda</string>
-    <string name="dash_playlists_empty_hint_subsonic">Ketuk sinkronisasi untuk mengambil playlist Anda</string>
     <string name="dash_playlists_empty_title">Belum ada playlist yang disinkronkan</string>
     <string name="dash_playlists_synced_count">%1$d playlist disinkronkan</string>
     <string name="dash_quick_actions">Tindakan cepat</string>
-    <string name="dash_quick_actions_jellyfin_subtitle">Kelola koneksi server Jellyfin Anda.</string>
-    <string name="dash_quick_actions_subsonic_subtitle">Kelola Navidrome, Airsonic, dan server lain yang kompatibel dengan Subsonic.</string>
     <string name="dash_song_count">%1$d lagu</string>
     <string name="dash_status_fetching_albums">Mengambil daftar album...</string>
     <string name="dash_status_fetching_playlists">Mengambil playlist...</string>
@@ -133,7 +129,6 @@
     <string name="restore_selected">Pulihkan yang terpilih</string>
     <string name="restoring">Memulihkan</string>
     <string name="screen_about">Tentang</string>
-    <string name="screen_subsonic_dashboard_title">Subsonic</string>
     <string name="search_no_results_for_query">Tidak ada hasil untuk \"%1$s\"</string>
     <string name="search_no_results_found">Tidak ditemukan hasil.</string>
     <string name="search_nothing_found">Tidak ditemukan apa pun</string>

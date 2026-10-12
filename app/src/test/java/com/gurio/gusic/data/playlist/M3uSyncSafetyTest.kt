@@ -8,8 +8,8 @@ class M3uSyncSafetyTest {
     @Test
     fun `external marker never reuses an occupied playlist id`() {
         val selectedId = M3uSyncSafety.safeRequestedPlaylistId(
-            markerId = "navidrome_playlist_remote-id",
-            occupiedPlaylistIds = setOf("navidrome_playlist_remote-id"),
+            markerId = "external_playlist_remote-id",
+            occupiedPlaylistIds = setOf("external_playlist_remote-id"),
         )
 
         assertThat(selectedId).isNull()

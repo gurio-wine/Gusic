@@ -364,8 +364,6 @@
     <string name="presentation_batch_g_stats_tracks_in_range_subtitle">Trek yang paling sering diputar untuk rentang waktu yang dipilih.</string>
     <string name="presentation_batch_g_stats_tracks_in_range_title">Trek dalam rentang ini</string>
     <string name="presentation_batch_g_stats_unique_tracks">Trek unik</string>
-    <string name="presentation_batch_g_streaming_subtitle">Alirkan musik dari akun cloud Anda</string>
-    <string name="presentation_batch_g_streaming_title">Cloud Streaming</string>
     <string name="presentation_batch_g_sync_percent">%1$d%%</string>
     <string name="presentation_batch_g_topbar_build_debug">Debug</string>
     <string name="presentation_batch_g_topbar_build_stable">Stabil</string>

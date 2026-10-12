@@ -36,6 +36,7 @@ import com.gurio.gusic.data.lxmusic.LxAlbum
 import com.gurio.gusic.data.lxmusic.LxArtist
 import com.gurio.gusic.data.lxmusic.LxSources
 import com.gurio.gusic.data.lxmusic.LxSongMapper
+import com.gurio.gusic.data.lxmusic.LxWriteOp
 import com.gurio.gusic.data.model.Song
 import kotlinx.collections.immutable.persistentListOf
 import com.gurio.gusic.presentation.screens.lxmusic.LxMusicViewModel
@@ -275,8 +276,10 @@ internal fun UnifiedPlayerSongInfoLayer(
                 addToPlaylistEnabled = if (isOnlineEntryLxSong) {
                     when (liveSong.lxMusicSource) {
                         LxSources.NETEASE -> neteaseLoggedIn
-                        LxSources.KUGOU -> kugouLoggedIn && lxMusicViewModel.accountWritesEnabled
-                        LxSources.KUWO -> kuwoLoggedIn && lxMusicViewModel.accountWritesEnabled
+                        LxSources.KUGOU -> kugouLoggedIn &&
+                            lxMusicViewModel.writeEnabledFor(LxSources.KUGOU, LxWriteOp.PLAYLIST_ADD_SONGS)
+                        LxSources.KUWO -> kuwoLoggedIn &&
+                            lxMusicViewModel.writeEnabledFor(LxSources.KUWO, LxWriteOp.PLAYLIST_ADD_SONGS)
                         else -> false
                     }
                 } else true,

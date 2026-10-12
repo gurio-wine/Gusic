@@ -10,7 +10,7 @@
     <string name="setcat_m3u_sync_result">%1$d 項已變更 · %2$d 項衝突 · %3$d 項未解決</string>
     <string name="settings_top_bar_title">設置</string>
     <string name="settings_accounts_row_title">帳號</string>
-    <string name="settings_accounts_row_subtitle">管理 Navidrome 與 Jellyfin 服務</string>
+    <string name="settings_accounts_row_subtitle">管理 ListenBrainz 聽歌記錄服務</string>
 
     <string name="settings_search_hint">搜索設置</string>
     <string name="settings_search_no_results">未找到與「%1$s」匹配的結果</string>
@@ -243,7 +243,7 @@
     <string name="dialog_cannot_undo">此操作無法撤銷。</string>
     <string name="confirm">確認</string>
     <string name="dialog_rebuild_database_title">重建資料庫？</string>
-    <string name="dialog_rebuild_database_message">將從系統媒體庫重建本地歌曲記錄，會刪除本地導入歌詞、收藏、自定義元數據；Navidrome/Jellyfin雲端歌曲不受影響。該操作不可撤銷。</string>
+    <string name="dialog_rebuild_database_message">將從系統媒體庫重建本地歌曲記錄，會刪除本地導入歌詞、收藏、自定義元數據；該操作不可撤銷。</string>
     <string name="rebuild">重建</string>
     <string name="sync_indicator_rebuilding">正在重建資料庫</string>
     <string name="toast_rebuilding_database">正在重建資料庫…</string>

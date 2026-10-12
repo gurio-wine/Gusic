@@ -86,13 +86,9 @@
     <string name="dash_libraries_sync_needed">Bibliothek synchronisieren, um Änderungen zu übernehmen</string>
     <string name="dash_libraries_title">Bibliotheken</string>
     <string name="dash_library_playlist_title">Bibliothek</string>
-    <string name="dash_playlists_empty_hint_jellyfin">Auf Synchronisieren tippen, um Jellyfin-Playlists abzurufen</string>
-    <string name="dash_playlists_empty_hint_subsonic">Auf Synchronisieren tippen, um Playlists abzurufen</string>
     <string name="dash_playlists_empty_title">Noch keine Playlists synchronisiert</string>
     <string name="dash_playlists_synced_count">%1$d Playlists synchronisiert</string>
     <string name="dash_quick_actions">Schnellaktionen</string>
-    <string name="dash_quick_actions_jellyfin_subtitle">Verbindung zum Jellyfin-Server verwalten.</string>
-    <string name="dash_quick_actions_subsonic_subtitle">Navidrome, Airsonic und andere Subsonic-kompatible Server verwalten.</string>
     <string name="dash_song_count">%1$d Songs</string>
     <string name="dash_status_fetching_albums">Albumliste abrufen…</string>
     <string name="dash_status_fetching_playlists">Playlists abrufen…</string>
@@ -133,7 +129,6 @@
     <string name="restore_selected">Ausgewählte wiederherstellen</string>
     <string name="restoring">Wiederherstellen</string>
     <string name="screen_about">Über</string>
-    <string name="screen_subsonic_dashboard_title">Subsonic</string>
     <string name="search_no_results_for_query">Keine Ergebnisse für \"%1$s\"</string>
     <string name="search_no_results_found">Keine Ergebnisse gefunden.</string>
     <string name="search_nothing_found">Nichts gefunden</string>

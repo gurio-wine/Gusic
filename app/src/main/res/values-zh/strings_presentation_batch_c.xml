@@ -41,7 +41,7 @@
     <string name="lib_empty_songs_offline_title">未找到本地歌曲</string>
     <string name="lib_empty_songs_offline_subtitle">更換篩選條件或重新掃描設備音樂庫。</string>
     <string name="lib_empty_songs_online_title">未找到雲端歌曲</string>
-    <string name="lib_empty_songs_online_subtitle">同步 Navidrome / Jellyfin 歌曲，或切換至本地源。</string>
+    <string name="lib_empty_songs_online_subtitle">同步線上音源歌曲，或切換至本地源。</string>
     <string name="lib_empty_albums_all_title">暫無專輯</string>
     <string name="lib_empty_albums_all_subtitle">音樂庫完成曲目分組後，專輯就會顯示在此。</string>
     <string name="lib_empty_albums_offline_title">未找到本地專輯</string>
@@ -59,7 +59,7 @@
     <string name="lib_empty_liked_offline_title">暫無本地收藏歌曲</string>
     <string name="lib_empty_liked_offline_subtitle">切換數據源，或是收藏設備上的歌曲。</string>
     <string name="lib_empty_liked_online_title">暫無雲端收藏歌曲</string>
-    <string name="lib_empty_liked_online_subtitle">收藏 Navidrome 或 Jellyfin 的曲目就會在此顯示。</string>
+    <string name="lib_empty_liked_online_subtitle">收藏線上音源的曲目就會在此顯示。</string>
     <string name="lib_empty_folders_title">未找到文件夾</string>
     <string name="lib_empty_folders_subtitle">存放音樂的內部存儲文件夾會顯示在這裡。</string>
     <string name="lib_empty_playlists_title">暫無歌單</string>

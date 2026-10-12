@@ -13,7 +13,6 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.gurio.gusic.data.database.MusicDao
 import com.gurio.gusic.data.database.OfflineTrackDao
-import com.gurio.gusic.data.jellyfin.JellyfinRepository
 import com.gurio.gusic.data.lxmusic.LxAudioHeadInspector
 import com.gurio.gusic.data.lxmusic.LxMusicRepository
 import com.gurio.gusic.data.lxmusic.LxMusicUrlEvent
@@ -21,7 +20,6 @@ import com.gurio.gusic.data.lxmusic.LxQualities
 import com.gurio.gusic.data.lxmusic.LxSong
 import com.gurio.gusic.data.lxmusic.LxSongMapper
 import com.gurio.gusic.data.media.LxDownloadTagWriter
-import com.gurio.gusic.data.navidrome.NavidromeRepository
 import com.gurio.gusic.data.offline.CloudOfflineRepository
 import com.gurio.gusic.data.offline.OfflineDownloadStatus
 import com.gurio.gusic.data.stream.CloudStreamSecurity
@@ -37,7 +35,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import timber.log.Timber
 
 @HiltWorker
@@ -46,8 +43,6 @@ class CloudTrackDownloadWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val dao: OfflineTrackDao,
     private val musicDao: MusicDao,
-    private val navidromeRepository: NavidromeRepository,
-    private val jellyfinRepository: JellyfinRepository,
     private val lxMusicRepository: LxMusicRepository,
     private val tagWriter: LxDownloadTagWriter,
     private val downloadConcurrencyLimiter: DownloadConcurrencyLimiter,
@@ -91,155 +86,11 @@ class CloudTrackDownloadWorker @AssistedInject constructor(
             if (sourceUri.startsWith("lxmusic://")) {
                 executeLxDownload(downloadId, attemptId, sourceUri)
             } else {
-                executeStandardDownload(downloadId, attemptId, sourceUri)
+                // Cloud streaming providers other than lx were removed; their rows no longer exist.
+                Result.failure()
             }
         } finally {
             downloadConcurrencyLimiter.release()
-        }
-    }
-
-
-    private suspend fun executeStandardDownload(
-        downloadId: String,
-        attemptId: String,
-        sourceUri: String,
-    ): Result {
-        val tempFile = CloudOfflineRepository.downloadDirectory(applicationContext)
-            .resolve("${CloudOfflineRepository.attemptFileStem(downloadId, attemptId)}.part")
-        tempFile.delete()
-        var finalizedFile: File? = null
-
-        return try {
-            val source = resolveSource(sourceUri)
-            val requestBuilder = Request.Builder().url(source.url)
-            source.headers.forEach { (name, value) -> requestBuilder.header(name, value) }
-
-            client.newCall(requestBuilder.get().build()).execute().use { response ->
-                if (!response.isSuccessful) {
-                    throw DownloadHttpException(response.code)
-                }
-                if (!CloudStreamSecurity.isSupportedAudioContentType(response.header("Content-Type"))) {
-                    throw IOException("Server returned a non-audio response")
-                }
-                if (!CloudStreamSecurity.isAcceptableContentLength(response.header("Content-Length"))) {
-                    throw IOException("Audio file is too large")
-                }
-
-                val body = response.body
-                val total = body.contentLength().takeIf { it >= 0L }
-                val extension = extensionFor(response.header("Content-Type"), dao.getByDownloadId(downloadId)?.mimeType)
-                val finalFile = CloudOfflineRepository.downloadDirectory(applicationContext)
-                    .resolve(
-                        "${CloudOfflineRepository.attemptFileStem(downloadId, attemptId)}.$extension"
-                    )
-                var copied = 0L
-                var lastPublished = 0L
-
-                body.byteStream().use { input ->
-                    tempFile.outputStream().buffered().use { output ->
-                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE * 8)
-                        while (true) {
-                            coroutineContext.ensureActive()
-                            val count = input.read(buffer)
-                            if (count < 0) break
-                            output.write(buffer, 0, count)
-                            copied += count
-                            if (copied > CloudStreamSecurity.MAX_STREAM_CONTENT_LENGTH_BYTES) {
-                                throw IOException("Audio file is too large")
-                            }
-                            if (copied - lastPublished >= PROGRESS_STEP_BYTES) {
-                                publishProgress(downloadId, attemptId, copied, total)
-                                lastPublished = copied
-                            }
-                        }
-                    }
-                }
-
-                if (copied <= 0L) throw IOException("Downloaded file is empty")
-                if (total != null && copied != total) {
-                    throw IOException("Download ended early ($copied/$total bytes)")
-                }
-                coroutineContext.ensureActive()
-                if (!dao.isCurrentAttempt(downloadId, attemptId)) {
-                    throw StaleDownloadAttemptException()
-                }
-                finalFile.delete()
-                if (!tempFile.renameTo(finalFile)) {
-                    tempFile.copyTo(finalFile, overwrite = true)
-                    tempFile.delete()
-                }
-                finalizedFile = finalFile
-                coroutineContext.ensureActive()
-                val completed = dao.updateState(
-                    downloadId = downloadId,
-                    attemptId = attemptId,
-                    state = OfflineDownloadStatus.COMPLETE.storageValue,
-                    bytesDownloaded = copied,
-                    totalBytes = total ?: copied,
-                    localPath = finalFile.absolutePath,
-                    errorMessage = null,
-                    updatedAt = System.currentTimeMillis()
-                )
-                if (completed == 0) {
-                    finalFile.delete()
-                }
-                Result.success()
-            }
-        } catch (cancelled: CancellationException) {
-            tempFile.delete()
-            finalizedFile?.delete()
-            throw cancelled
-        } catch (_: StaleDownloadAttemptException) {
-            tempFile.delete()
-            finalizedFile?.delete()
-            Result.success()
-        } catch (error: Throwable) {
-            tempFile.delete()
-            finalizedFile?.delete()
-            failOrRetry(downloadId, attemptId, error)
-        }
-    }
-
-    private fun resolveSource(sourceUri: String): DownloadSource {
-        val parsed = sourceUri.toUri()
-        val id = parsed.host ?: parsed.path?.removePrefix("/")
-            ?: throw IOException("Cloud track identifier is missing")
-        return when (parsed.scheme?.lowercase()) {
-            "navidrome" -> {
-                if (!CloudStreamSecurity.validateNavidromeSongId(id)) {
-                    throw IOException("Invalid Navidrome track identifier")
-                }
-                DownloadSource(
-                    url = navidromeRepository.getStreamUrl(id),
-                    allowedHost = navidromeRepository.serverUrl
-                )
-            }
-            "jellyfin" -> {
-                if (!CloudStreamSecurity.validateJellyfinItemId(id)) {
-                    throw IOException("Invalid Jellyfin item identifier")
-                }
-                DownloadSource(
-                    url = jellyfinRepository.getStreamUrl(id),
-                    headers = jellyfinRepository.getAuthorizationHeader()
-                        ?.let { mapOf("Authorization" to it) }
-                        .orEmpty(),
-                    allowedHost = jellyfinRepository.serverUrl
-                )
-            }
-            else -> throw IOException("Unsupported cloud provider")
-        }.also { source ->
-            val host = source.allowedHost
-                ?.toHttpUrlOrNull()
-                ?.host
-                ?: throw IOException("Cloud account is not connected")
-            if (!CloudStreamSecurity.isSafeRemoteStreamUrl(
-                    url = source.url,
-                    allowedHostSuffixes = setOf(host),
-                    allowHttpForAllowedHosts = true
-                )
-            ) {
-                throw IOException("Unsafe cloud download URL")
-            }
         }
     }
 
@@ -593,8 +444,7 @@ class CloudTrackDownloadWorker @AssistedInject constructor(
     }
 
     private suspend fun failOrRetry(downloadId: String, attemptId: String, error: Throwable): Result {
-        val shouldRetry = runAttemptCount < MAX_RETRIES &&
-            (error is IOException || (error is DownloadHttpException && error.code >= 500))
+        val shouldRetry = runAttemptCount < MAX_RETRIES && error is IOException
         Timber.tag(TAG).w(error, "Cloud track download failed: %s",
             dao.getByDownloadId(downloadId)?.sourceUri)
         val updated = dao.updateState(
@@ -640,28 +490,6 @@ class CloudTrackDownloadWorker @AssistedInject constructor(
         setProgress(workDataOf(KEY_BYTES to copied, KEY_TOTAL_BYTES to (total ?: -1L)))
     }
 
-    private fun extensionFor(responseType: String?, fallbackType: String?): String {
-        val type = responseType?.substringBefore(';')?.lowercase()
-            ?: fallbackType?.substringBefore(';')?.lowercase()
-        return when (type) {
-            "audio/flac", "audio/x-flac" -> "flac"
-            "audio/ogg", "application/ogg" -> "ogg"
-            "audio/opus" -> "opus"
-            "audio/mp4", "audio/m4a", "audio/x-m4a", "application/mp4", "video/mp4" -> "m4a"
-            "audio/aac", "audio/aacp" -> "aac"
-            "audio/wav", "audio/x-wav" -> "wav"
-            "audio/webm" -> "webm"
-            else -> "mp3"
-        }
-    }
-
-    private data class DownloadSource(
-        val url: String,
-        val headers: Map<String, String> = emptyMap(),
-        val allowedHost: String?
-    )
-
-    private class DownloadHttpException(val code: Int) : IOException("Server returned HTTP $code")
     private class LxFakeQualityException(message: String) : Exception(message)
 
     private class LxScriptRejectedException(message: String) : Exception(message)

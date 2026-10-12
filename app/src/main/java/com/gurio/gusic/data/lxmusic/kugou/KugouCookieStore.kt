@@ -36,6 +36,9 @@ class KugouCookieStore @Inject constructor(
         private const val KEY_APP_USERID = "kg_app_userid"
         private const val KEY_APP_VIP_TYPE = "kg_app_vip_type"
         private const val KEY_MID = "kg_mid"
+
+        /** “我喜欢”云歌单 listid 缓存（get_all_list 里 is_default==1 项），随登出清除。 */
+        private const val KEY_LIKED_LISTID = "kg_liked_listid"
         const val VIP_UNKNOWN = -1
     }
 
@@ -77,6 +80,16 @@ class KugouCookieStore @Inject constructor(
     fun getAppToken(): String? = _appTokenFlow.value
 
     fun getAppUserid(): String? = _appUseridFlow.value
+
+    /** “我喜欢”云歌单 listid 持久缓存；无效值（<=0 / 非数字）视为未缓存。 */
+    @Synchronized
+    fun getLikedListid(): Long =
+        prefs.getString(KEY_LIKED_LISTID, null)?.toLongOrNull()?.takeIf { it > 0 } ?: 0L
+
+    @Synchronized
+    fun setLikedListid(listid: Long) {
+        if (listid > 0) prefs.edit().putString(KEY_LIKED_LISTID, listid.toString()).apply()
+    }
 
     /**
      * 设备 mid：首次生成 MD5(随机32字符) 的 32 位 hex 后持久化复用（协议要求同一设备签名一致）。
@@ -175,6 +188,7 @@ class KugouCookieStore @Inject constructor(
             .remove(KEY_APP_TOKEN)
             .remove(KEY_APP_USERID)
             .remove(KEY_APP_VIP_TYPE)
+            .remove(KEY_LIKED_LISTID)
             .apply()
         _cookieFlow.value = null
         _vipTypeFlow.value = VIP_UNKNOWN

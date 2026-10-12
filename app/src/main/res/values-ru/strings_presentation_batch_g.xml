@@ -364,8 +364,6 @@
     <string name="presentation_batch_g_stats_tracks_in_range_subtitle">Самые популярные треки за выбранный период времени.</string>
     <string name="presentation_batch_g_stats_tracks_in_range_title">Треки за этот период</string>
     <string name="presentation_batch_g_stats_unique_tracks">Уникальные треки</string>
-    <string name="presentation_batch_g_streaming_subtitle">Слушайте музыку из своих облачных аккаунтов</string>
-    <string name="presentation_batch_g_streaming_title">Облачный стриминг</string>
     <string name="presentation_batch_g_sync_percent">%1$d%%</string>
     <string name="presentation_batch_g_topbar_build_debug">Отладочная</string>
     <string name="presentation_batch_g_topbar_build_stable">Стабильная</string>

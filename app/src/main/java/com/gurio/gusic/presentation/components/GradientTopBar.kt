@@ -17,7 +17,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
@@ -100,7 +99,6 @@ fun GenreGradientTopBar(
 fun HomeGradientTopBar(
     onMoreOptionsClick: () -> Unit,
     onBetaClick: () -> Unit,
-    onStreamingClick: () -> Unit,
     onMenuClick: () -> Unit = {},
     isScrolled: Boolean = false,
     updateAvailable: Boolean = false,
@@ -162,18 +160,6 @@ fun HomeGradientTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(end = 14.dp)
             ) {
-                FilledIconButton(
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    onClick = onStreamingClick
-                ) {
-                    Icon(
-                          imageVector = Icons.Rounded.Cloud,
-                          contentDescription = stringResource(R.string.presentation_batch_g_streaming_title)
-                    )
-                }
                 FilledIconButton(
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,

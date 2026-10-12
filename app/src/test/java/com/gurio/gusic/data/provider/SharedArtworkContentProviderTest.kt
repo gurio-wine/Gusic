@@ -79,48 +79,4 @@ class SharedArtworkContentProviderTest {
 
         assertThat(songId).isEqualTo(42L)
     }
-
-    @Test
-    fun cloudArtworkUri_roundTripsNavidromeArtwork() {
-        val rawArtworkUri = "navidrome_cover://album-42"
-        val sharedUri = SharedArtworkContentProvider.buildCloudUriString(
-            packageName = "com.gurio.gusic",
-            rawArtworkUri = rawArtworkUri,
-        )
-
-        assertThat(sharedUri).isNotNull()
-        assertThat(
-            SharedArtworkContentProvider.parseCloudArtworkUri(
-                uriString = sharedUri!!,
-                packageName = "com.gurio.gusic",
-            )
-        ).isEqualTo(rawArtworkUri)
-    }
-
-    @Test
-    fun cloudArtworkUri_roundTripsJellyfinArtwork() {
-        val rawArtworkUri = "jellyfin_cover://item-84"
-        val sharedUri = SharedArtworkContentProvider.buildCloudUriString(
-            packageName = "com.gurio.gusic",
-            rawArtworkUri = rawArtworkUri,
-        )
-
-        assertThat(sharedUri).isNotNull()
-        assertThat(
-            SharedArtworkContentProvider.parseCloudArtworkUri(
-                uriString = sharedUri!!,
-                packageName = "com.gurio.gusic",
-            )
-        ).isEqualTo(rawArtworkUri)
-    }
-
-    @Test
-    fun cloudArtworkUri_rejectsUnsupportedRemoteArtwork() {
-        val sharedUri = SharedArtworkContentProvider.buildCloudUriString(
-            packageName = "com.gurio.gusic",
-            rawArtworkUri = "https://example.com/cover.jpg",
-        )
-
-        assertThat(sharedUri).isNull()
-    }
 }

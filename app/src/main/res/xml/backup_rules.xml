@@ -1,11 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <exclude domain="sharedpref" path="jellyfin_prefs.xml"/>
-    <exclude domain="sharedpref" path="navidrome_prefs.xml"/>
-
-    <exclude domain="sharedpref" path="jellyfin_prefs_plain.xml"/>
-    <exclude domain="sharedpref" path="navidrome_prefs_plain.xml"/>
-
     <exclude domain="sharedpref" path="listenbrainz_prefs.xml"/>
     <exclude domain="sharedpref" path="listenbrainz_prefs_plain.xml"/>
 

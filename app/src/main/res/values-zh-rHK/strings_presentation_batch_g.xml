@@ -210,8 +210,6 @@
     <string name="presentation_batch_g_lyrics_mode_synced">同步歌詞</string>
     <string name="presentation_batch_g_lyrics_mode_static">靜態歌詞</string>
     <string name="presentation_batch_g_lyrics_cd_options">歌詞選項</string>
-    <string name="presentation_batch_g_streaming_title">雲端串流</string>
-    <string name="presentation_batch_g_streaming_subtitle">從你的雲端帳號播放音樂</string>
     <string name="presentation_batch_g_sort_source">來源</string>
     <string name="presentation_batch_g_sort_order">排序</string>
     <string name="presentation_batch_g_sort_descending">降序</string>

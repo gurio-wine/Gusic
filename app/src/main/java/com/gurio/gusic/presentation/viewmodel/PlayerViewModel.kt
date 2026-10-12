@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import androidx.compose.animation.core.Animatable
 import androidx.core.content.ContextCompat
 import com.gurio.gusic.data.model.LibraryTabId
+import com.gurio.gusic.data.lxmusic.LxWriteOp
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -1292,13 +1293,14 @@ class PlayerViewModel @Inject constructor(
         platformCookieValid,
     ) { origin, source, validMap ->
         val valid = validMap[source] == true
-        val writesEnabled = lxMusicRepository.accountWritesEnabled
         when {
             origin == PlaybackOrigin.LOCAL -> PlayerFavoriteKind.LOCAL
             source == "wy" && valid -> PlayerFavoriteKind.NETEASE
             source == "tx" && valid -> PlayerFavoriteKind.TENCENT
-            source == "kg" && valid && writesEnabled -> PlayerFavoriteKind.KUGOU
-            source == "kw" && valid && writesEnabled -> PlayerFavoriteKind.KUWO
+            source == "kg" && valid &&
+                lxMusicRepository.writeEnabledFor("kg", LxWriteOp.SONG_LIKE) -> PlayerFavoriteKind.KUGOU
+            source == "kw" && valid &&
+                lxMusicRepository.writeEnabledFor("kw", LxWriteOp.SONG_LIKE) -> PlayerFavoriteKind.KUWO
             else -> PlayerFavoriteKind.DISABLED
         }
     }.distinctUntilChanged()
@@ -1351,14 +1353,13 @@ class PlayerViewModel @Inject constructor(
         kugouCookieStore.appTokenFlow,
         kuwoCookieStore.cookieFlow,
     ) { idsMap, wyCookie, txCookie, kgToken, kwCookie ->
-        val writesEnabled = lxMusicRepository.accountWritesEnabled
         PlatformLikeSnapshot(
             idsBySource = idsMap,
             enabledBySource = mapOf(
                 "wy" to !wyCookie.isNullOrBlank(),
-                "tx" to !txCookie.isNullOrBlank(),
-                "kg" to (!kgToken.isNullOrBlank() && writesEnabled),
-                "kw" to (!kwCookie.isNullOrBlank() && writesEnabled),
+                "tx" to (!txCookie.isNullOrBlank() && lxMusicRepository.writeEnabledFor("tx", LxWriteOp.SONG_LIKE)),
+                "kg" to (!kgToken.isNullOrBlank() && lxMusicRepository.writeEnabledFor("kg", LxWriteOp.SONG_LIKE)),
+                "kw" to (!kwCookie.isNullOrBlank() && lxMusicRepository.writeEnabledFor("kw", LxWriteOp.SONG_LIKE)),
             ),
         )
     }.stateIn(
@@ -3633,7 +3634,15 @@ class PlayerViewModel @Inject constructor(
                     mixSongId = song.lxMusicExtraFields["mixSongId"],
                     like = like,
                 )
-                "kw" -> lxMusicRepository.kwSetSongLike(trackId, like)
+                // kw 写本轮不开放（能力矩阵未声明）：入口已隐藏，这里兜底防直达调用
+                "kw" -> {
+                    if (!lxMusicRepository.writeEnabledFor("kw", LxWriteOp.SONG_LIKE)) {
+                        showFavoriteToast(if (like) "酷我喜欢暂不可用" else "取消喜欢暂不可用")
+                        false
+                    } else {
+                        lxMusicRepository.kwSetSongLike(trackId, like)
+                    }
+                }
                 else -> false
             }
             if (!ok) {
@@ -3759,6 +3768,11 @@ class PlayerViewModel @Inject constructor(
             song.lxMusicSource == "kw" -> {
                 if (!kuwoCookieStore.hasCookie()) {
                     showFavoriteToast("登录酷我音乐后可同步喜欢")
+                    return
+                }
+                // kw 写本轮不开放（协议受限）：入口已按能力矩阵隐藏，这里兜底防直达调用
+                if (!lxMusicRepository.writeEnabledFor("kw", LxWriteOp.SONG_LIKE)) {
+                    showFavoriteToast(if (removing) "取消喜欢暂不可用" else "喜欢暂不可用")
                     return
                 }
                 val trackId = song.lxMusicSongMid ?: return

@@ -1,13 +1,48 @@
 package com.gurio.gusic.data.lxmusic
 
 import com.gurio.gusic.data.lxmusic.kugou.KugouAccountApi
+import com.gurio.gusic.data.lxmusic.kugou.KugouCloudListApi
+import com.gurio.gusic.data.lxmusic.kugou.KugouCloudSong
 import com.gurio.gusic.data.lxmusic.kuwo.KuwoAccountApi
 import com.gurio.gusic.data.lxmusic.platform.PlatformResult
 import com.gurio.gusic.data.lxmusic.tencent.TencentAccountApi
 import timber.log.Timber
 
+/**
+ * 平台账号写操作粒度：UI 门控按“具体操作 × 平台”查询能力，而非全局开关，
+ * 以便只放行当前实现真实支持的写操作（其余入口保持现状不亮起）。
+ */
+enum class LxWriteOp {
+    /** 红心/喜欢歌曲（播放页爱心、歌曲信息页爱心）。 */
+    SONG_LIKE,
+
+    /** 收藏/取消收藏歌单（歌单详情、榜单、搜索页收藏胶囊）。 */
+    PLAYLIST_COLLECT,
+
+    /** 添加歌曲到自建歌单（“加入歌单”弹层）。 */
+    PLAYLIST_ADD_SONGS,
+
+    /** 从自建歌单移除歌曲。 */
+    PLAYLIST_REMOVE_SONGS,
+
+    /** 删除自建歌单。 */
+    PLAYLIST_DELETE,
+
+    /** 关注/取关歌手。 */
+    ARTIST_FOLLOW,
+
+    /** 收藏/取消收藏专辑。 */
+    ALBUM_COLLECT,
+}
+
 internal interface LxAccountExtension {
     val isAvailable: Boolean
+
+    /**
+     * 平台账号写能力矩阵：source（LxSources.*）→ 支持的写操作集合。
+     * 未声明的组合一律视为不可用；网易（wy）不走本扩展，由 cookie 门控。
+     */
+    fun writeCapabilities(): Map<String, Set<LxWriteOp>>
 
     suspend fun kgSendSmsCode(mobile: String): Boolean
 
@@ -55,6 +90,9 @@ internal interface LxAccountExtension {
 
     /** 按 songmid 反查红心需要的数字 songId/songType；无票据或查不到返回 null。 */
     suspend fun txResolveSongLikeInfo(songmid: String): Pair<Long, Int>?
+
+    /** tx 收藏/取消收藏歌单（PlaylistFavWrite.FavPlaylist/CancelFavPlaylist）。 */
+    suspend fun txSetPlaylistFav(disstid: String, fav: Boolean): Boolean
 
 
     suspend fun kwFetchProfile(): Pair<String?, String?>?
@@ -108,6 +146,7 @@ internal interface LxAccountExtension {
 
 internal object LxUnavailableAccountExtension : LxAccountExtension {
     override val isAvailable: Boolean = false
+    override fun writeCapabilities(): Map<String, Set<LxWriteOp>> = emptyMap()
     override suspend fun kgSendSmsCode(mobile: String): Boolean = false
     override suspend fun kgLoginBySmsCode(mobile: String, code: String): Boolean = false
     override suspend fun kgApplySongLike(
@@ -136,6 +175,7 @@ internal object LxUnavailableAccountExtension : LxAccountExtension {
     override suspend fun txApplySongLike(songId: String, songType: Int, like: Boolean): TxSongLikeResult =
         TxSongLikeResult(false, -1, "account unavailable")
     override suspend fun txResolveSongLikeInfo(songmid: String): Pair<Long, Int>? = null
+    override suspend fun txSetPlaylistFav(disstid: String, fav: Boolean): Boolean = false
     override suspend fun kwFetchProfile(): Pair<String?, String?>? = null
     override suspend fun kwFetchUserPlaylists(): List<LxPlaylist>? = null
     override suspend fun kwFetchFollowedArtists(): List<LxArtist>? = null
@@ -171,22 +211,40 @@ data class LxTxQrPoll(
 }
 
 /**
- * 内置账号扩展：QQ音乐（tx）账号读取走 [TencentAccountApi]；酷狗（kg）短信验证码登录与
- * 昵称头像走 [KugouAccountApi]（真实协议）；酷我（kw）昵称头像走 [KuwoAccountApi]；
- * 其余平台写操作沿用不可用实现。
- * isAvailable 保持 false（kg/kw 喜欢等账号写操作仍不可用），登录与资料读取照常工作。
+ * 内置账号扩展（公开发布形态）：
+ * - tx：账号读取、红心写（web PlaylistDetailWrite）、收藏/取消收藏歌单（PlaylistFavWrite，需真机验证）；
+ * - kg：短信登录、资料读取，以及云歌单族读写——“我喜欢”红心读/写（get_list_all_file_v3 + v6/add_song +
+ *   v4/delete_songs）、收藏/取消收藏歌单（v5/add_list + v2/delete_list）、用户云歌单与云歌单曲目读取；
+ * - kw：昵称头像读取；全部写操作不可用（协议受限，另行实现）。
+ *
+ * 能力矩阵（writeCapabilities）只声明真实支持的写操作，UI 门控按操作粒度放行，
+ * 其余写入口保持隐藏，避免出现“入口亮起但必然失败”的死路径。
  */
 internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExtension {
     private val unavailable = LxUnavailableAccountExtension
     private val tencentApi = TencentAccountApi(host.okHttpClient, host.tencentCookieStore)
     private val kugouApi = KugouAccountApi(host.okHttpClient, host.kugouCookieStore)
+    private val kugouCloudApi = KugouCloudListApi(host.okHttpClient, host.kugouCookieStore)
     private val kuwoApi = KuwoAccountApi(host.okHttpClient, host.kuwoCookieStore)
 
-    override val isAvailable: Boolean = false
+    override val isAvailable: Boolean = true
+
+    override fun writeCapabilities(): Map<String, Set<LxWriteOp>> = mapOf(
+        // kg：红心读写（云歌单“我喜欢”）+ 收藏/取消收藏他人歌单；加歌/删歌/自建歌单删除/歌手关注未实现
+        LxSources.KUGOU to setOf(LxWriteOp.SONG_LIKE, LxWriteOp.PLAYLIST_COLLECT),
+        // tx：红心写 + 收藏/取消收藏歌单；专辑/歌手写未实现
+        LxSources.TENCENT to setOf(LxWriteOp.SONG_LIKE, LxWriteOp.PLAYLIST_COLLECT),
+        // kw：写协议受限，本轮全部不开放
+    )
 
     override suspend fun kgSendSmsCode(mobile: String): Boolean = kugouApi.sendSmsCode(mobile).ok
     override suspend fun kgLoginBySmsCode(mobile: String, code: String): Boolean =
         kugouApi.loginBySmsCode(mobile, code)
+
+    /**
+     * kg 红心写：songmid/hash 双轨——本实现拉取的 kg 歌曲 songmid 即 hash，
+     * 脚本源歌曲 songmid 为 audio id，此时用 hash；两者都不是 32 位 hex 时无法定位歌曲。
+     */
     override suspend fun kgApplySongLike(
         songmid: String,
         hash: String?,
@@ -195,17 +253,48 @@ internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExt
         albumId: String?,
         mixSongId: String?,
         like: Boolean,
-    ): Boolean = unavailable.kgApplySongLike(songmid, hash, name, singer, albumId, mixSongId, like)
+    ): Boolean {
+        val songHash = hash?.takeIf { it.length == 32 }
+            ?: songmid.takeIf { it.length == 32 }
+            ?: return false
+        return runCatching {
+            kugouCloudApi.applySongLike(songHash, name, singer, albumId, mixSongId, like)
+        }.onFailure { Timber.w(it, "kgApplySongLike failed hash=%s", songHash) }
+            .getOrDefault(false)
+    }
+
     override suspend fun kgQueryFollowInfo(singerId: String): Boolean? =
         unavailable.kgQueryFollowInfo(singerId)
     override suspend fun kgApplyFollowSinger(singerId: String, follow: Boolean, source: Int): Boolean =
         unavailable.kgApplyFollowSinger(singerId, follow, source)
-    override suspend fun kgSubscribePlaylist(name: String, gid: String): Boolean =
-        unavailable.kgSubscribePlaylist(name, gid)
+
+    /** 收藏他人歌单：listid 从全局 gid（collection_a_b_listid_c）解析；原作者 uid 暂缺省传 0。 */
+    override suspend fun kgSubscribePlaylist(name: String, gid: String): Boolean {
+        val sourceListid = KugouCloudListApi.parseListidFromGid(gid) ?: run {
+            Timber.w("kgSubscribePlaylist: cannot parse listid from gid=%s", gid)
+            return false
+        }
+        return runCatching {
+            kugouCloudApi.applyPlaylistCollect(
+                name = name,
+                sourceListid = sourceListid,
+                sourceUserid = 0L,
+                sourceGid = gid,
+            )
+        }.onFailure { Timber.w(it, "kgSubscribePlaylist failed gid=%s", gid) }
+            .getOrDefault(false)
+    }
+
     override suspend fun kgUnsubscribe(gid: String?, name: String?): Boolean =
-        unavailable.kgUnsubscribe(gid, name)
-    override suspend fun kgDeleteCloudList(listid: String): Boolean =
-        unavailable.kgDeleteCloudList(listid)
+        runCatching { kugouCloudApi.applyPlaylistUnsubscribe(gid, name) }
+            .onFailure { Timber.w(it, "kgUnsubscribe failed gid=%s", gid) }
+            .getOrDefault(false)
+
+    override suspend fun kgDeleteCloudList(listid: String): Boolean {
+        val id = listid.toLongOrNull() ?: return false
+        return runCatching { kugouCloudApi.deleteCloudList(id) }.getOrDefault(false)
+    }
+
     override suspend fun kgCollectByCopy(name: String, songs: List<LxSong>): Boolean =
         unavailable.kgCollectByCopy(name, songs)
     override suspend fun kgAddSongsToPlaylist(listid: String, songs: List<LxSong>): LxAddToPlaylistResult =
@@ -233,6 +322,11 @@ internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExt
     override suspend fun txResolveSongLikeInfo(songmid: String): Pair<Long, Int>? =
         tencentApi.resolveSongLikeInfoByMid(songmid)
 
+    override suspend fun txSetPlaylistFav(disstid: String, fav: Boolean): Boolean =
+        runCatching { tencentApi.applyPlaylistFav(disstid, fav) }
+            .onFailure { Timber.w(it, "txSetPlaylistFav failed disstid=%s fav=%s", disstid, fav) }
+            .getOrDefault(false)
+
     override suspend fun kwFetchProfile(): Pair<String?, String?>? = kuwoApi.fetchProfile()
     override suspend fun kwFetchUserPlaylists(): List<LxPlaylist>? = unavailable.kwFetchUserPlaylists()
     override suspend fun kwFetchFollowedArtists(): List<LxArtist>? = unavailable.kwFetchFollowedArtists()
@@ -241,11 +335,38 @@ internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExt
     override suspend fun kwFetchLikedSongs(): List<LxSong>? = unavailable.kwFetchLikedSongs()
     override suspend fun kwFetchUserPlaylistSongs(playlistId: String): List<LxSong>? =
         unavailable.kwFetchUserPlaylistSongs(playlistId)
-    override suspend fun kgFetchUserPlaylists(): List<LxPlaylist>? = unavailable.kgFetchUserPlaylists()
+
+    /** kg 用户云歌单：跳过“我喜欢”默认歌单（我的页单独构造）；收藏的他人歌单带 subscribed=true。 */
+    override suspend fun kgFetchUserPlaylists(): List<LxPlaylist>? =
+        runCatching {
+            kugouCloudApi.fetchAllCloudLists()
+                ?.filter { !it.isDefault }
+                ?.map { list ->
+                    LxPlaylist(
+                        id = "kg_cloud_${list.listid}",
+                        name = list.name,
+                        pic = list.pic,
+                        trackCount = list.trackCount,
+                        subscribed = list.sourceListid != null,
+                        originGid = list.gid,
+                    )
+                }
+        }.onFailure { Timber.w(it, "kgFetchUserPlaylists failed") }.getOrNull()
+
     override suspend fun kgFetchCloudPlaylistSongs(listid: String): List<LxSong>? =
-        unavailable.kgFetchCloudPlaylistSongs(listid)
-    override suspend fun kgFetchLikedSongIds(): Set<String>? = unavailable.kgFetchLikedSongIds()
-    override suspend fun kgFetchLikedSongs(): List<LxSong>? = unavailable.kgFetchLikedSongs()
+        runCatching {
+            val id = listid.toLongOrNull() ?: return@runCatching null
+            kugouCloudApi.fetchCloudListSongs(id)?.map { it.toLxSong() }
+        }.onFailure { Timber.w(it, "kgFetchCloudPlaylistSongs failed listid=%s", listid) }.getOrNull()
+
+    override suspend fun kgFetchLikedSongIds(): Set<String>? =
+        runCatching { kugouCloudApi.fetchLikedSongIds() }
+            .onFailure { Timber.w(it, "kgFetchLikedSongIds failed") }.getOrNull()
+
+    override suspend fun kgFetchLikedSongs(): List<LxSong>? =
+        runCatching { kugouCloudApi.fetchLikedSongs()?.map { it.toLxSong() } }
+            .onFailure { Timber.w(it, "kgFetchLikedSongs failed") }.getOrNull()
+
     override suspend fun kgFetchProfile(): Pair<String?, String?>? = kugouApi.fetchProfile()
 
     override suspend fun txFetchProfile(): Pair<String?, String?>? = tencentApi.fetchProfile()
@@ -265,7 +386,24 @@ internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExt
     override suspend fun kwResolvePlayUrl(songmid: String): PlatformResult? =
         unavailable.kwResolvePlayUrl(songmid)
 
-    override fun clearReadCaches() {}
+    /** 云歌单歌曲 → LxSong：songmid 直接用 hash（kg 播放与红心匹配都按 hash 定位）。 */
+    private fun KugouCloudSong.toLxSong(): LxSong = LxSong(
+        source = LxSources.KUGOU,
+        songmid = hash,
+        name = name,
+        singer = singer,
+        albumName = albumName,
+        interval = timelenMs / 1000,
+        hash = hash,
+        extraFields = buildMap {
+            albumId?.let { put("albumId", it) }
+            mixSongId?.let { put("mixSongId", it) }
+        },
+    )
+
+    override fun clearReadCaches() {
+        kugouCloudApi.clearCaches()
+    }
 }
 
 internal object LxAccountExtensionLoader {

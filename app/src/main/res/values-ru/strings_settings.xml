@@ -214,7 +214,7 @@
     <string name="setcat_theme_light">Светлая тема</string>
     <string name="setcat_trigger_crash_subtitle">Симулировать сбой для проверки системы отчётов об ошибках.</string>
     <string name="setcat_trigger_crash_title">Вызвать тестовый сбой</string>
-    <string name="settings_accounts_row_subtitle">Управление сервисами Navidrome и Jellyfin</string>
+    <string name="settings_accounts_row_subtitle">Управление сервисом скроббинга ListenBrainz</string>
     <string name="settings_accounts_row_title">Аккаунты</string>
     <string name="settings_category_about_subtitle">Информация, версия и благодарности</string>
     <string name="settings_category_about_title">О приложении</string>

@@ -13,9 +13,7 @@
     <string name="accounts_listenbrainz_now_playing_idle">Tidak ada yang sedang diputar</string>
     <string name="accounts_listenbrainz_now_playing_label">Sedang di-scrobble</string>
     <string name="accounts_listenbrainz_reconnect">Hubungkan kembali</string>
-    <string name="accounts_listenbrainz_scrobble_jellyfin">Scrobble streaming Jellyfin</string>
     <string name="accounts_listenbrainz_scrobble_local">Scrobble file lokal</string>
-    <string name="accounts_listenbrainz_scrobble_navidrome">Scrobble streaming Subsonic</string>
     <string name="accounts_listenbrainz_server_hint">URL server (opsional)</string>
     <string name="accounts_listenbrainz_server_supporting">Biarkan kosong untuk listenbrainz.org. Berfungsi dengan server mandiri yang mendukung API ListenBrainz, seperti Maloja.</string>
     <string name="accounts_listenbrainz_stat_listens">Total riwayat dengar</string>

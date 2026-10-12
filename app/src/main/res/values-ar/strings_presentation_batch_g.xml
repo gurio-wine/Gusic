@@ -364,8 +364,6 @@
     <string name="presentation_batch_g_stats_tracks_in_range_subtitle">المسارات الأكثر تشغيلاً في النطاق الزمني المحدد.</string>
     <string name="presentation_batch_g_stats_tracks_in_range_title">المسارات في هذا النطاق</string>
     <string name="presentation_batch_g_stats_unique_tracks">المسارات الفريدة</string>
-    <string name="presentation_batch_g_streaming_subtitle">بث الموسيقى مباشرة من حساباتك السحابية</string>
-    <string name="presentation_batch_g_streaming_title">البث السحابي</string>
     <string name="presentation_batch_g_sync_percent">%1$d%%</string>
     <string name="presentation_batch_g_topbar_build_debug">تصحيح</string>
     <string name="presentation_batch_g_topbar_build_stable">مستقر</string>

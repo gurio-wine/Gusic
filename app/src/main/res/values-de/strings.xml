@@ -13,9 +13,7 @@
     <string name="accounts_listenbrainz_now_playing_idle">Gerade läuft nichts</string>
     <string name="accounts_listenbrainz_now_playing_label">Wird jetzt gescrobbelt</string>
     <string name="accounts_listenbrainz_reconnect">Neu verbinden</string>
-    <string name="accounts_listenbrainz_scrobble_jellyfin">Jellyfin-Streaming scrobbeln</string>
     <string name="accounts_listenbrainz_scrobble_local">Lokale Dateien scrobbeln</string>
-    <string name="accounts_listenbrainz_scrobble_navidrome">Subsonic-Streaming scrobbeln</string>
     <string name="accounts_listenbrainz_server_hint">Server-URL (optional)</string>
     <string name="accounts_listenbrainz_server_supporting">Leer lassen für listenbrainz.org. Funktioniert mit selbst gehosteten Servern, die die ListenBrainz-API sprechen, etwa Maloja.</string>
     <string name="accounts_listenbrainz_stat_listens">Listens gesamt</string>

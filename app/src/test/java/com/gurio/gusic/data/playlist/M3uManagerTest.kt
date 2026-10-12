@@ -55,14 +55,14 @@ class M3uManagerTest {
         )
         val songs = listOf(
             song("1", "/Music/one.flac"),
-            song("cloud", "", contentUri = "navidrome://song-cloud"),
+            song("cloud", "", contentUri = "lxmusic://song-cloud"),
         )
 
         val content = M3uManager.generateContent(playlist, songs)
 
         assertThat(content).contains("#GUSIC-PLAYLIST-ID:playlist-42")
         assertThat(content).contains("/Music/one.flac")
-        assertThat(content).contains("navidrome://song-cloud")
+        assertThat(content).contains("lxmusic://song-cloud")
     }
 
     @Test

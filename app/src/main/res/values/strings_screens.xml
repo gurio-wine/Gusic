@@ -202,17 +202,12 @@
     <string name="cd_contributor_avatar">Avatar of %1$s</string>
     <string name="cd_contributor_icon">Icon of %1$s</string>
 
-    <string name="screen_subsonic_dashboard_title">Subsonic</string>
     <string name="dash_playlists_synced_count">%1$d playlists synced</string>
     <string name="dash_title_playlists">Playlists</string>
     <string name="dash_library_playlist_title">Library</string>
     <string name="dash_action_sync">Sync</string>
     <string name="dash_playlists_empty_title">No playlists synced yet</string>
-    <string name="dash_playlists_empty_hint_subsonic">Tap sync to fetch your playlists</string>
-    <string name="dash_playlists_empty_hint_jellyfin">Tap sync to fetch your Jellyfin playlists</string>
     <string name="dash_quick_actions">Quick actions</string>
-    <string name="dash_quick_actions_subsonic_subtitle">Manage Navidrome, Airsonic and other Subsonic-compatible servers.</string>
-    <string name="dash_quick_actions_jellyfin_subtitle">Manage your Jellyfin server connection.</string>
     <string name="dash_libraries_title">Libraries</string>
     <string name="dash_libraries_all">All libraries</string>
     <string name="dash_libraries_selected_count">%1$d of %2$d selected</string>

@@ -74,19 +74,23 @@ class CloudDownloadsViewModelTest {
 
     @Test
     fun `batch download keeps supported cloud songs and removes duplicates`() = runTest {
-        val navidrome = song("navidrome", "navidrome://one")
-        val duplicate = song("duplicate", "navidrome://one")
-        val jellyfin = song("jellyfin", "jellyfin://two")
+        val lxmusic = song("lxmusic", "lxmusic://one")
+        val duplicate = song("duplicate", "lxmusic://one")
+        val other = song("other", "lxmusic://two")
         val local = song("local", "content://media/audio/3")
         val repository = mockk<CloudOfflineRepository>(relaxed = true)
         every { repository.observeAll() } returns flowOf(emptyList())
-        val viewModel = createViewModel(repository)
+        val lxMusicRepository = mockk<LxMusicRepository>(relaxed = true)
+        every { lxMusicRepository.activeScriptPath() } returns "/scripts/active.js"
+        every { lxMusicRepository.activeRuntimeScriptPathsOrdered(any()) } returns
+            listOf("/scripts/active.js")
+        val viewModel = createViewModel(repository, lxMusicRepository)
 
-        viewModel.downloadSelected(listOf(navidrome, duplicate, jellyfin, local))
+        viewModel.downloadSelected(listOf(lxmusic, duplicate, other, local))
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { repository.enqueue(navidrome) }
-        coVerify(exactly = 1) { repository.enqueue(jellyfin) }
+        coVerify(exactly = 1) { repository.enqueue(lxmusic, any(), any(), any()) }
+        coVerify(exactly = 1) { repository.enqueue(other, any(), any(), any()) }
         coVerify(exactly = 0) { repository.enqueue(local) }
     }
 
@@ -102,11 +106,13 @@ class CloudDownloadsViewModelTest {
         coVerify(exactly = 0) { repository.enqueue(any<Song>()) }
     }
 
-    private fun createViewModel(repository: CloudOfflineRepository): CloudDownloadsViewModel {
+    private fun createViewModel(
+        repository: CloudOfflineRepository,
+        lxMusicRepository: LxMusicRepository = mockk(relaxed = true)
+    ): CloudDownloadsViewModel {
         val appContext = mockk<Context>(relaxed = true)
         val playbackCacheManager = mockk<PlaybackCacheManager>(relaxed = true)
         every { playbackCacheManager.limitMbFlow } returns flowOf(1024)
-        val lxMusicRepository = mockk<LxMusicRepository>(relaxed = true)
         val userPreferencesRepository = mockk<UserPreferencesRepository>(relaxed = true)
         every { userPreferencesRepository.downloadMaxThreadsFlow } returns
             flowOf(UserPreferencesRepository.DEFAULT_DOWNLOAD_MAX_THREADS)
@@ -125,19 +131,21 @@ class CloudDownloadsViewModelTest {
         bytes: Long = 0L
     ) = OfflineDownload(
         downloadId = id,
-        sourceUri = "navidrome://$id",
+        sourceUri = "lxmusic://$id",
         status = status,
         bytesDownloaded = bytes,
         totalBytes = null,
         localPath = null,
         errorMessage = null,
         title = id,
-        provider = "navidrome"
+        provider = "lxmusic"
     )
 
     private fun song(id: String, uri: String) = Song.emptySong().copy(
         id = id,
         title = id,
-        contentUriString = uri
+        contentUriString = uri,
+        lxMusicSource = if (uri.startsWith("lxmusic://")) "kw" else null,
+        lxMusicSongMid = if (uri.startsWith("lxmusic://")) id else null
     )
 }

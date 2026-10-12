@@ -35,8 +35,6 @@ data class Song(
     val mimeType: String?,
     val bitrate: Int?,
     val sampleRate: Int?,
-    val navidromeId: String? = null,
-    val jellyfinId: String? = null,
     val lxMusicSource: String? = null,
     val lxMusicSongMid: String? = null,
     val lxMusicHash: String? = null,
@@ -90,9 +88,7 @@ data class Song(
                 dateModified = 0,
                 mimeType = "-",
                 bitrate = 0,
-                sampleRate = 0,
-                navidromeId = null,
-                jellyfinId = null
+                sampleRate = 0
             )
         }
     }

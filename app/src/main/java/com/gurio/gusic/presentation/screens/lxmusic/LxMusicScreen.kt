@@ -163,6 +163,7 @@ import kotlin.math.abs
 import com.gurio.gusic.R
 import com.gurio.gusic.data.lxmusic.LxSongMapper
 import com.gurio.gusic.data.lxmusic.LxSources
+import com.gurio.gusic.data.lxmusic.LxWriteOp
 import com.gurio.gusic.presentation.components.MiniPlayerHeight
 import com.gurio.gusic.presentation.components.ExpressiveScrollBar
 import com.gurio.gusic.presentation.components.SmartImage
@@ -684,14 +685,16 @@ fun LxMusicScreen(
                                             mineNickname = kugouNickname
                                             mineAvatar = kugouAvatar
                                             mineVipType = kugouVipType
-                                            mineShowFollow = kugouLoggedIn && viewModel.accountWritesEnabled
+                                            mineShowFollow = kugouLoggedIn &&
+                                                viewModel.writeEnabledFor(LxSources.KUGOU, LxWriteOp.ARTIST_FOLLOW)
                                             mineLogout = { viewModel.logoutKugou() }
                                         }
                                         LxSources.KUWO -> {
                                             mineNickname = kuwoNickname
                                             mineAvatar = kuwoAvatar
                                             mineVipType = kuwoVipType
-                                            mineShowFollow = kuwoLoggedIn && viewModel.accountWritesEnabled
+                                            mineShowFollow = kuwoLoggedIn &&
+                                                viewModel.writeEnabledFor(LxSources.KUWO, LxWriteOp.ARTIST_FOLLOW)
                                             mineLogout = { viewModel.logoutKuwo() }
                                         }
                                         else -> {
@@ -780,8 +783,10 @@ fun LxMusicScreen(
         val batchSource = selectedLxSongs.firstOrNull()?.source
         val canBatchAddToPlaylist = batchSameSource && when (batchSource) {
             LxSources.NETEASE -> neteaseLoggedIn
-            LxSources.KUGOU -> kugouLoggedIn && viewModel.accountWritesEnabled
-            LxSources.KUWO -> kuwoLoggedIn && viewModel.accountWritesEnabled
+            LxSources.KUGOU -> kugouLoggedIn &&
+                viewModel.writeEnabledFor(LxSources.KUGOU, LxWriteOp.PLAYLIST_ADD_SONGS)
+            LxSources.KUWO -> kuwoLoggedIn &&
+                viewModel.writeEnabledFor(LxSources.KUWO, LxWriteOp.PLAYLIST_ADD_SONGS)
             else -> false
         }
         val canBatchDelete = batchSameSource && batchSource != null &&
@@ -908,15 +913,19 @@ fun LxMusicScreen(
             },
             addToPlaylistEnabled = when (infoLxSong.source) {
                 LxSources.NETEASE -> neteaseLoggedIn
-                LxSources.KUGOU -> kugouLoggedIn && viewModel.accountWritesEnabled
-                LxSources.KUWO -> kuwoLoggedIn && viewModel.accountWritesEnabled
+                LxSources.KUGOU -> kugouLoggedIn &&
+                    viewModel.writeEnabledFor(LxSources.KUGOU, LxWriteOp.PLAYLIST_ADD_SONGS)
+                LxSources.KUWO -> kuwoLoggedIn &&
+                    viewModel.writeEnabledFor(LxSources.KUWO, LxWriteOp.PLAYLIST_ADD_SONGS)
                 else -> false
             },
             removeFromPlaylist = run {
                 val loggedIn = when (infoLxSong.source) {
                     LxSources.NETEASE -> neteaseLoggedIn && viewModel.accountWritesEnabled
-                    LxSources.KUGOU -> kugouLoggedIn && viewModel.accountWritesEnabled
-                    LxSources.KUWO -> kuwoLoggedIn && viewModel.accountWritesEnabled
+                    LxSources.KUGOU -> kugouLoggedIn &&
+                        viewModel.writeEnabledFor(LxSources.KUGOU, LxWriteOp.PLAYLIST_REMOVE_SONGS)
+                    LxSources.KUWO -> kuwoLoggedIn &&
+                        viewModel.writeEnabledFor(LxSources.KUWO, LxWriteOp.PLAYLIST_REMOVE_SONGS)
                     else -> false
                 }
                 val ownCtx = if (loggedIn) viewModel.currentOwnPlaylistContext(infoLxSong.source) else null
@@ -1042,9 +1051,12 @@ fun LxMusicScreen(
                 shuffleAllPlaylist = shuffleAllPlaylist,
                 bottomBarHeightDp = bottomBarHeightDp,
                 showFollow = when (artistPageState.source) {
-                    LxSources.TENCENT -> tencentLoggedIn && viewModel.accountWritesEnabled
-                    LxSources.KUGOU -> kugouLoggedIn && viewModel.accountWritesEnabled
-                    LxSources.KUWO -> kuwoLoggedIn && viewModel.accountWritesEnabled
+                    LxSources.TENCENT -> tencentLoggedIn &&
+                        viewModel.writeEnabledFor(LxSources.TENCENT, LxWriteOp.ARTIST_FOLLOW)
+                    LxSources.KUGOU -> kugouLoggedIn &&
+                        viewModel.writeEnabledFor(LxSources.KUGOU, LxWriteOp.ARTIST_FOLLOW)
+                    LxSources.KUWO -> kuwoLoggedIn &&
+                        viewModel.writeEnabledFor(LxSources.KUWO, LxWriteOp.ARTIST_FOLLOW)
                     else -> neteaseLoggedIn
                 },
                 onBack = viewModel::dismissSearchArtistOverlay,
@@ -1910,10 +1922,11 @@ private fun LxBoardPage(
                 .fillMaxWidth()
                 .padding(vertical = 5.dp),
         ) {
-            val boardCollectState = if (browseState.moduleSource == LxSources.KUGOU ||
-                browseState.moduleSource == LxSources.KUWO ||
-                (browseState.moduleSource != LxSources.NETEASE &&
-                    !viewModel.accountWritesEnabled)
+            val boardSource = browseState.moduleSource
+            val boardCollectState = if (boardSource == LxSources.KUGOU ||
+                boardSource == LxSources.KUWO ||
+                (boardSource != null && boardSource != LxSources.NETEASE &&
+                    !viewModel.writeEnabledFor(boardSource, LxWriteOp.PLAYLIST_COLLECT))
             ) null else
                 rememberCollectState(
                     viewModel, LxMusicViewModel.CollectKind.PLAYLIST, boardPlaylistId,
@@ -2258,8 +2271,9 @@ private fun LxPlaylistPage(
                                 detailListState.animateScrollToItem(detailLocateIndex)
                             }
                         },
-                        collectState = if (browseState.moduleSource != LxSources.NETEASE &&
-                                !viewModel.accountWritesEnabled
+                        collectState = if (browseState.moduleSource != null &&
+                            browseState.moduleSource != LxSources.NETEASE &&
+                            !viewModel.writeEnabledFor(browseState.moduleSource!!, LxWriteOp.PLAYLIST_COLLECT)
                         ) null else
                             rememberCollectState(
                                 viewModel, LxMusicViewModel.CollectKind.PLAYLIST, detailPlaylistId,
@@ -3375,7 +3389,8 @@ private fun LxSearchArtistPage(
                                 showLocate = false,
                                 onLocate = {},
                                 collectState = if (state.source == LxSources.KUGOU ||
-                                    (state.source != LxSources.NETEASE && !viewModel.accountWritesEnabled)
+                                    (state.source != LxSources.NETEASE &&
+                                        !viewModel.writeEnabledFor(state.source, LxWriteOp.ALBUM_COLLECT))
                                 ) null else
                                     rememberCollectState(viewModel, albumKind, album.id, name = album.name),
                                 collectBusy = albumCollectBusyKeys.contains(
@@ -3774,7 +3789,8 @@ private fun LxSearchAlbumPage(
                             showLocate = false,
                             onLocate = {},
                             collectState = if (state.source == LxSources.KUGOU ||
-                                (state.source != LxSources.NETEASE && !viewModel.accountWritesEnabled)
+                                (state.source != LxSources.NETEASE &&
+                                    !viewModel.writeEnabledFor(state.source, LxWriteOp.ALBUM_COLLECT))
                             ) null else
                                 rememberCollectState(viewModel, collectKind, album.id, name = album.name),
                             collectBusy = collectBusyKeys.contains(viewModel.collectKey(collectKind, album.id)),

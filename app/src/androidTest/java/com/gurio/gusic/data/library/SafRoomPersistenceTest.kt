@@ -50,7 +50,7 @@ class SafRoomPersistenceTest {
     fun collidingSongIdNeverMutatesLocalCloudOrDifferentSafRow() = runTest {
         val collisionCases = listOf(
             SourceType.LOCAL to "file:///storage/emulated/0/Music/original.mp3",
-            SourceType.NAVIDROME to "navidrome://original-song",
+            SourceType.LX_MUSIC to "lxmusic://original-song",
             SourceType.SAF to "content://provider.example/document/other-document",
             SourceType.SAF to "content://other.provider/document/requested-document-3",
         )

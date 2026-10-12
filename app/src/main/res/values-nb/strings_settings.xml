@@ -214,7 +214,7 @@
     <string name="setcat_theme_light">Lyst tema</string>
     <string name="setcat_trigger_crash_subtitle">Simuler et krasj for å teste rapporteringssystemet.</string>
     <string name="setcat_trigger_crash_title">Utløs test-krasj</string>
-    <string name="settings_accounts_row_subtitle">Administrer Navidrome- og Jellyfin-tjenester</string>
+    <string name="settings_accounts_row_subtitle">Administrer ListenBrainz-scrobbling-tjenesten din</string>
     <string name="settings_accounts_row_title">Kontoer</string>
     <string name="settings_category_about_subtitle">App-info, versjon og bidragsytere</string>
     <string name="settings_category_about_title">Om</string>

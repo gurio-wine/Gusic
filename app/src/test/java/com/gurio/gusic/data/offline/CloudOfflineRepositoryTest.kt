@@ -7,49 +7,47 @@ import org.junit.jupiter.api.Test
 class CloudOfflineRepositoryTest {
     @Test
     fun `provider detection accepts only supported cloud schemes`() {
-        assertThat(CloudOfflineRepository.providerFor("navidrome://track_1")).isEqualTo("navidrome")
-        assertThat(CloudOfflineRepository.providerFor("jellyfin://ABC123")).isEqualTo("jellyfin")
-        assertThat(CloudOfflineRepository.providerFor("NAVIDROME://track_1")).isEqualTo("navidrome")
+        assertThat(CloudOfflineRepository.providerFor("lxmusic://track_1")).isEqualTo("lxmusic")
+        assertThat(CloudOfflineRepository.providerFor("LXMUSIC://track_1")).isEqualTo("lxmusic")
         assertThat(CloudOfflineRepository.providerFor("https://example.com/song.mp3")).isNull()
         assertThat(CloudOfflineRepository.providerFor("file:///music/song.mp3")).isNull()
     }
 
     @Test
     fun `download ids are stable and do not expose provider identifiers`() {
-        val uri = "navidrome://private-track-id"
+        val uri = "lxmusic://private-track-id"
         val first = CloudOfflineRepository.downloadId(uri)
         val second = CloudOfflineRepository.downloadId(uri)
 
         assertThat(first).isEqualTo(second)
         assertThat(first).hasLength(64)
         assertThat(first).doesNotContain("private-track-id")
-        assertThat(first).isNotEqualTo(CloudOfflineRepository.downloadId("navidrome://other"))
+        assertThat(first).isNotEqualTo(CloudOfflineRepository.downloadId("lxmusic://other"))
     }
 
     @Test
     fun `cloud song detection uses canonical playback uri`() {
-        assertThat(CloudOfflineRepository.isCloudSong(song("navidrome://abc"))).isTrue()
-        assertThat(CloudOfflineRepository.isCloudSong(song("jellyfin://ABC123"))).isTrue()
+        assertThat(CloudOfflineRepository.isCloudSong(song("lxmusic://abc"))).isTrue()
         assertThat(CloudOfflineRepository.isCloudSong(song("content://media/audio/1"))).isFalse()
     }
 
     @Test
-    fun `download candidates keep both providers while excluding local songs and duplicate uris`() {
-        val navidrome = song("navidrome://one")
-        val duplicate = song("navidrome://one").copy(id = "duplicate")
-        val jellyfin = song("jellyfin://two")
+    fun `download candidates keep only lxmusic songs while excluding local songs and duplicate uris`() {
+        val lxmusic = song("lxmusic://one")
+        val duplicate = song("lxmusic://one").copy(id = "duplicate")
+        val other = song("lxmusic://two")
         val local = song("content://media/audio/3")
 
         val candidates = CloudOfflineRepository.downloadCandidates(
-            listOf(navidrome, duplicate, jellyfin, local)
+            listOf(lxmusic, duplicate, other, local)
         )
 
-        assertThat(candidates).containsExactly(navidrome, jellyfin).inOrder()
+        assertThat(candidates).containsExactly(lxmusic, other).inOrder()
     }
 
     @Test
     fun `separate attempts cannot share temporary or final file names`() {
-        val downloadId = CloudOfflineRepository.downloadId("navidrome://track_1")
+        val downloadId = CloudOfflineRepository.downloadId("lxmusic://track_1")
 
         val first = CloudOfflineRepository.attemptFileStem(downloadId, "attempt-a")
         val second = CloudOfflineRepository.attemptFileStem(downloadId, "attempt-b")

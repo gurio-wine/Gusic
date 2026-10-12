@@ -254,7 +254,6 @@ internal fun FullPlayerContent(
     }
 
     val song = currentSong ?: retainedSong ?: return
-    var showSongInfoBottomSheet by remember { mutableStateOf(false) }
     var showArtistPicker by rememberSaveable { mutableStateOf(false) }
     val lxMusicViewModel: LxMusicViewModel = hiltViewModel(
         viewModelStoreOwner = LocalContext.current as androidx.activity.ComponentActivity
@@ -432,7 +431,6 @@ internal fun FullPlayerContent(
     }
 
     val onSongMetadataQueueClick = {
-        showSongInfoBottomSheet = true
         onShowQueueClicked()
     }
 
@@ -944,32 +942,6 @@ internal fun FullPlayerContent(
                                 Icon(
                                     painter = painterResource(R.drawable.rounded_keyboard_arrow_down_24),
                                     contentDescription = stringResource(R.string.presentation_batch_g_player_cd_collapse),
-                                    tint = playerAccentColor
-                                )
-                            }
-                        }
-                    },
-                    actions = {
-                        Row(
-                            modifier = Modifier
-                                .padding(end = 14.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(playerOnAccentColor.copy(alpha = 0.7f))
-                                    .clickable {
-                                        showSongInfoBottomSheet = true
-                                        onShowQueueClicked()
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.rounded_queue_music_24),
-                                    contentDescription = stringResource(R.string.presentation_batch_g_player_cd_queue),
                                     tint = playerAccentColor
                                 )
                             }
@@ -1808,6 +1780,19 @@ private fun SongMetadataDisplaySection(
                             else R.drawable.rounded_favorite_24
                         ),
                         contentDescription = stringResource(R.string.presentation_batch_h_cd_favorite)
+                    )
+                }
+                FilledIconButton(
+                    modifier = Modifier.size(width = 48.dp, height = 48.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = chipColor,
+                        contentColor = chipContentColor
+                    ),
+                    onClick = onClickQueue,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.rounded_queue_music_24),
+                        contentDescription = stringResource(R.string.presentation_batch_g_player_cd_queue)
                     )
                 }
             }

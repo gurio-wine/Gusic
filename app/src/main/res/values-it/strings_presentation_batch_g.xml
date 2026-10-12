@@ -364,8 +364,6 @@
     <string name="presentation_batch_g_stats_tracks_in_range_subtitle">Brani più riprodotti per l\'intervallo temporale selezionato.</string>
     <string name="presentation_batch_g_stats_tracks_in_range_title">Brani in questo intervallo</string>
     <string name="presentation_batch_g_stats_unique_tracks">Brani unici</string>
-    <string name="presentation_batch_g_streaming_subtitle">Riproduci in streaming la musica dai tuoi account cloud</string>
-    <string name="presentation_batch_g_streaming_title">Streaming cloud</string>
     <string name="presentation_batch_g_sync_percent">%1$d%%</string>
     <string name="presentation_batch_g_topbar_build_debug">Debug</string>
     <string name="presentation_batch_g_topbar_build_stable">Stabile</string>

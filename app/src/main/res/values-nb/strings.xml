@@ -13,9 +13,7 @@
     <string name="accounts_listenbrainz_now_playing_idle">Ingenting spilles akkurat nå</string>
     <string name="accounts_listenbrainz_now_playing_label">Scrobbler nå</string>
     <string name="accounts_listenbrainz_reconnect">Koble til på nytt</string>
-    <string name="accounts_listenbrainz_scrobble_jellyfin">Scrobble Jellyfin-strømming</string>
     <string name="accounts_listenbrainz_scrobble_local">Scrobble lokale filer</string>
-    <string name="accounts_listenbrainz_scrobble_navidrome">Scrobble Subsonic-strømming</string>
     <string name="accounts_listenbrainz_server_hint">Server-URL (valgfritt)</string>
     <string name="accounts_listenbrainz_server_supporting">La stå tomt for listenbrainz.org. Fungerer med selvhostede servere som støtter ListenBrainz-API-et, som Maloja.</string>
     <string name="accounts_listenbrainz_stat_listens">Lyttinger totalt</string>

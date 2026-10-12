@@ -210,8 +210,6 @@
     <string name="presentation_batch_g_lyrics_mode_synced">同步歌词</string>
     <string name="presentation_batch_g_lyrics_mode_static">静态歌词</string>
     <string name="presentation_batch_g_lyrics_cd_options">歌词选项</string>
-    <string name="presentation_batch_g_streaming_title">云端串流</string>
-    <string name="presentation_batch_g_streaming_subtitle">从你的云端账号播放音乐</string>
     <string name="presentation_batch_g_sort_source">来源</string>
     <string name="presentation_batch_g_sort_order">排序</string>
     <string name="presentation_batch_g_sort_descending">降序</string>
@@ -600,5 +598,14 @@
         <item>酷狗短信登录完整原生实现：发送验证码、登录并同步昵称头像</item>
         <item>酷我网页登录后获取昵称与头像</item>
         <item>仅有静态歌词的歌也可从预览区进入歌词页；无歌词的歌在那里提供搜索/导入入口</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101206_whats_new">
+        <item>酷狗“喜欢”真实可用：播放页平台红心可收藏/取消酷狗歌曲，“我喜欢”里可查看酷狗喜欢列表（QQ音乐红心也一并恢复可用）</item>
+        <item>收藏歌单扩展到酷狗和QQ音乐：在歌单详情页即可收藏/取消收藏，与网易云一致</item>
+        <item>移除云端串流功能（Navidrome 与 Jellyfin）及其账号入口；ListenBrainz 听歌记录保留</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101206_changes">
+        <item>播放页的队列按钮从顶栏移到下方按钮行，位于喜欢按钮右侧</item>
+        <item>“我喜欢”里已登录平台即使 0 首也显示数量，与本软件“我喜欢”一致</item>
     </string-array>
 </resources>

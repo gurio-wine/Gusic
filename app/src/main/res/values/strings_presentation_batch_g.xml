@@ -210,8 +210,6 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
     <string name="presentation_batch_g_lyrics_mode_synced">Synced</string>
     <string name="presentation_batch_g_lyrics_mode_static">Static</string>
     <string name="presentation_batch_g_lyrics_cd_options">Lyrics options</string>
-    <string name="presentation_batch_g_streaming_title">Cloud Streaming</string>
-    <string name="presentation_batch_g_streaming_subtitle">Stream music from your cloud accounts</string>
     <string name="presentation_batch_g_sort_source">Source</string>
     <string name="presentation_batch_g_sort_order">Order</string>
     <string name="presentation_batch_g_sort_descending">Descending</string>
@@ -600,5 +598,14 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>Kugou SMS sign-in is now fully implemented natively: send code, sign in, and sync nickname and avatar</item>
         <item>Kuwo now fetches nickname and avatar after web sign-in</item>
         <item>Songs with only plain lyrics open the lyrics page from the preview; songs with no lyrics offer a search-and-import entry there</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101206_whats_new">
+        <item>Kugou likes are now real: the platform heart on the player toggles Kugou favorites, and the Liked tab lists them (QQ Music hearts work again too)</item>
+        <item>Playlist favorites now work on Kugou and QQ Music alongside NetEase — collect any playlist from its detail page</item>
+        <item>Cloud streaming (Navidrome and Jellyfin) has been removed together with its account entries; ListenBrainz scrobbling stays</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101206_changes">
+        <item>The queue button moves from the player top bar to the chip row below, right of the heart button</item>
+        <item>Liked tab: signed-in platforms show their song count even at zero, just like this app&#8217;s favorites</item>
     </string-array>
 </resources>

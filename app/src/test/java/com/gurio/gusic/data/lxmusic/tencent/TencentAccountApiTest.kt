@@ -144,4 +144,33 @@ class TencentAccountApiTest {
         assertNull(TencentAccountApi.mapTrack(JsonParser.parseString("""{"name":"x"}""")))
         assertNull(TencentAccountApi.mapTrack(JsonParser.parseString("[1,2]")))
     }
+
+    @Test
+    fun `hash33 matches g_tk algorithm and anonymous 5381`() {
+        assertEquals(5381L, TencentAccountApi.hash33(""))
+        // 手工验算：h=5381; 逐字符 h += (h<<5)+code；取正 31 位
+        assertEquals(2090726337L, TencentAccountApi.hash33("skey"))
+        assertEquals(2000982994L, TencentAccountApi.hash33("qm_keyst_token"))
+    }
+
+    @Test
+    fun `legacyGtk uses skey for qq login and p_skey for wechat musickey`() {
+        val qqOnly = linkedMapOf("qm_keyst" to "PlainKey", "skey" to "skey", "p_skey" to "pskey")
+        assertEquals(TencentAccountApi.hash33("skey"), TencentAccountApi.legacyGtk(qqOnly))
+        val wechatOnly = linkedMapOf("qm_keyst" to "W_XWeChatKey", "p_skey" to "pskey", "uin" to "123")
+        assertEquals(TencentAccountApi.hash33("pskey"), TencentAccountApi.legacyGtk(wechatOnly))
+        // 空 cookie 退化为匿名 g_tk=5381
+        assertEquals(5381L, TencentAccountApi.legacyGtk(emptyMap()))
+    }
+
+    @Test
+    fun `zzcSign produces stable zzc-prefixed lowercase signature`() {
+        val body = """{"comm":{"ct":1},"req_0":{"module":"m"}}"""
+        val sign = TencentAccountApi.zzcSign(body)
+        assertTrue(sign.startsWith("zzc"))
+        assertEquals(sign, TencentAccountApi.zzcSign(body))
+        assertTrue(!sign.contains('/') && !sign.contains('+') && !sign.contains('='))
+        assertEquals(sign, sign.lowercase())
+        assertTrue(sign != TencentAccountApi.zzcSign(body + "x"))
+    }
 }

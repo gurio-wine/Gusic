@@ -68,6 +68,17 @@ class LxMusicRepository @Inject constructor(
 
     val accountWritesEnabled: Boolean get() = accountExtension.isAvailable
 
+    /**
+     * 按平台 × 操作粒度查询账号写能力（内置实现只声明真实支持的写操作）。
+     * 反射加载的扩展实现若未实现能力接口（AbstractMethodError），退化为
+     * “isAvailable && 非 kuwo”的粗粒度判断，避免旧实现被全部关闸。
+     */
+    fun writeEnabledFor(source: String, op: LxWriteOp): Boolean {
+        val caps = runCatching { accountExtension.writeCapabilities() }.getOrNull()
+            ?: return accountExtension.isAvailable && source != LxSources.KUWO
+        return caps[source].orEmpty().contains(op)
+    }
+
     private val _scripts = MutableStateFlow<List<LxScriptMeta>>(emptyList())
     val scripts: StateFlow<List<LxScriptMeta>> = _scripts.asStateFlow()
 
@@ -2035,6 +2046,24 @@ class LxMusicRepository @Inject constructor(
     suspend fun fetchKwLikedSongIds(): Set<String> =
         accountExtension.kwFetchLikedSongIds() ?: emptySet()
 
+    /**
+     * 拉取平台“我喜欢”歌曲数量：返回 null 表示拉取失败（与“成功但为 0”区分）。
+     * 酷狗返回的 id 集合含杂质（如歌单 id），只统计 32 位十六进制的歌曲 id。
+     */
+    suspend fun fetchPlatformLikedCountOrNull(source: String): Int? = when (source) {
+        LxSources.NETEASE -> {
+            ensureNeteaseLikedListLoaded()
+            // 冷启动首调可能仅解析出 uid 尚未拉取列表，补一次再判断成败
+            if (!neteaseLikedListLoaded) refreshNeteaseLikedSongIds()
+            if (neteaseLikedListLoaded) neteaseLikedSongIds.value.size else null
+        }
+        LxSources.TENCENT -> accountExtension.txFetchLikedSongs()?.size
+        LxSources.KUGOU -> accountExtension.kgFetchLikedSongIds()
+            ?.count { id -> id.length == 32 && id.all { c -> c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F' } }
+        LxSources.KUWO -> accountExtension.kwFetchLikedSongIds()?.size
+        else -> null
+    }
+
     internal fun kwUserSession(cookie: String): Pair<String, String>? {
         val uid = kuwoCookieStore.getAccountId().takeIf { it >= 0 }?.toString()
             ?: extractCookieValue(cookie, "userid")
@@ -2118,6 +2147,10 @@ class LxMusicRepository @Inject constructor(
 
     suspend fun txSetSongLike(songId: String, songType: Int, like: Boolean): TxSongLikeResult =
         accountExtension.txApplySongLike(songId, songType, like)
+
+    /** tx 收藏/取消收藏歌单（PlaylistFavWrite）。 */
+    suspend fun txSetPlaylistFav(disstid: String, fav: Boolean): Boolean =
+        accountExtension.txSetPlaylistFav(disstid, fav)
 
     /**
      * 收藏 tx 歌曲前解析红心接口需要的数字 songId/songType。

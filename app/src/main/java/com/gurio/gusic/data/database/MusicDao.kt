@@ -234,6 +234,9 @@ interface MusicDao {
     @Query("SELECT id FROM songs WHERE source_type = 0")
     suspend fun getAllMediaStoreSongIds(): List<Long>
 
+    @Query("SELECT id FROM songs WHERE source_type = 7")
+    suspend fun getAllLxSongIds(): List<Long>
+
     @Query("DELETE FROM songs WHERE id IN (:songIds)")
     suspend fun deleteSongsByIds(songIds: List<Long>)
 
@@ -275,12 +278,6 @@ interface MusicDao {
     """)
     suspend fun refreshAlbumSongCounts()
 
-    @Query("SELECT id FROM songs WHERE source_type = 5")
-    suspend fun getAllNavidromeSongIds(): List<Long>
-
-    @Query("SELECT id FROM songs WHERE source_type = 6")
-    suspend fun getAllJellyfinSongIds(): List<Long>
-
     @Transaction
     suspend fun deleteSongsAndRelatedData(songIds: List<Long>) {
         if (songIds.isEmpty()) return
@@ -294,20 +291,6 @@ interface MusicDao {
         deleteOrphanedArtists()
         refreshAlbumSongCounts()
         refreshArtistTrackCounts()
-    }
-
-    @Transaction
-    suspend fun clearAllNavidromeSongs() {
-        val navidromeSongIds = getAllNavidromeSongIds()
-        if (navidromeSongIds.isEmpty()) return
-        deleteSongsAndRelatedData(navidromeSongIds)
-    }
-
-    @Transaction
-    suspend fun clearAllJellyfinSongs() {
-        val jellyfinSongIds = getAllJellyfinSongIds()
-        if (jellyfinSongIds.isEmpty()) return
-        deleteSongsAndRelatedData(jellyfinSongIds)
     }
 
     /**
@@ -559,7 +542,7 @@ interface MusicDao {
     @Query("SELECT COUNT(*) FROM songs")
     fun getSongCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM songs WHERE source_type IN (5, 6, 7)")
+    @Query("SELECT COUNT(*) FROM songs WHERE source_type = 7")
     fun getCloudSongCount(): Flow<Int>
 
     @Query("SELECT COUNT(*) FROM songs")
@@ -587,7 +570,7 @@ interface MusicDao {
         SELECT
             COUNT(*) AS totalCount,
             COALESCE(SUM(CASE WHEN source_type = 0 THEN 1 ELSE 0 END), 0) AS localCount,
-            COALESCE(SUM(CASE WHEN source_type IN (5, 6, 7) THEN 1 ELSE 0 END), 0) AS cloudCount,
+            COALESCE(SUM(CASE WHEN source_type = 7 THEN 1 ELSE 0 END), 0) AS cloudCount,
             COALESCE(SUM(CASE WHEN sample_rate > 48000 THEN 1 ELSE 0 END), 0) AS hiResCount,
             COALESCE(SUM(CASE WHEN sample_rate >= 176400 THEN 1 ELSE 0 END), 0) AS ultraHiResCount,
             COALESCE(SUM(CASE
@@ -623,7 +606,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND source_type IN (5, 6, 7)
+                AND source_type = 7
             )
         )
         ORDER BY RANDOM()
@@ -699,7 +682,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND source_type IN (5, 6, 7)
+                AND source_type = 7
             )
         )
         ORDER BY parent_directory_path ASC, title ASC
@@ -722,7 +705,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND source_type IN (5, 6, 7)
+                AND source_type = 7
             )
         )
         ORDER BY
@@ -772,7 +755,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND songs.source_type IN (5, 6, 7)
+                AND songs.source_type = 7
             )
         )
         ORDER BY
@@ -819,7 +802,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND source_type IN (5, 6, 7)
+                AND source_type = 7
             )
         )
         ORDER BY
@@ -872,7 +855,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND source_type IN (5, 6, 7)
+                AND source_type = 7
             )
         )
         ORDER BY
@@ -922,7 +905,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND songs.source_type IN (5, 6, 7)
+                AND songs.source_type = 7
             )
         )
         ORDER BY
@@ -965,7 +948,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND songs.source_type IN (5, 6, 7)
+                AND songs.source_type = 7
             )
         )
         ORDER BY songs.title COLLATE NOCASE ASC
@@ -989,7 +972,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND songs.source_type IN (5, 6, 7)
+                AND songs.source_type = 7
             )
         )
         ORDER BY
@@ -1035,7 +1018,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND songs.source_type IN (5, 6, 7)
+                AND songs.source_type = 7
             )
         )
     """)
@@ -1196,7 +1179,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND songs.source_type IN (5, 6, 7)
+                AND songs.source_type = 7
             )
         )
         GROUP BY
@@ -1240,7 +1223,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND songs.source_type IN (5, 6, 7)
+                AND songs.source_type = 7
             )
         )
         GROUP BY
@@ -1297,7 +1280,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND songs.source_type IN (5, 6, 7)
+                AND songs.source_type = 7
             )
         )
         GROUP BY
@@ -1500,7 +1483,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND songs.source_type IN (5, 6, 7)
+                AND songs.source_type = 7
             )
         )
         GROUP BY artists.id
@@ -1540,7 +1523,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND songs.source_type IN (5, 6, 7)
+                AND songs.source_type = 7
             )
         )
         GROUP BY artists.id
@@ -1574,7 +1557,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND songs.source_type IN (5, 6, 7)
+                AND songs.source_type = 7
             )
         )
         GROUP BY artists.id
@@ -2063,7 +2046,7 @@ interface MusicDao {
             )
             OR (
                 :filterMode = 2
-                AND songs.source_type IN (5, 6, 7)
+                AND songs.source_type = 7
             )
         )
         GROUP BY artists.id

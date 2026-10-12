@@ -22,8 +22,7 @@ import javax.inject.Singleton
  * threshold is evaluated synchronously (cheap math, safe inside the tracker's synchronized
  * finalize), everything else — song resolution, toggle check, queue insert — runs on [scope].
  *
- * The ListenBrainz threshold is deliberately independent of the tracker's own stats floor, and
- * of the Subsonic scrobble in MusicService (which fires on raw track-end with no threshold).
+ * The ListenBrainz threshold is deliberately independent of the tracker's own stats floor.
  */
 @Singleton
 class ScrobbleManager @Inject constructor(

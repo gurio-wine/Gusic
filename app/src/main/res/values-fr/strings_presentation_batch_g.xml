@@ -364,8 +364,6 @@
     <string name="presentation_batch_g_stats_tracks_in_range_subtitle">Les pistes les plus écoutées pour la période sélectionnée.</string>
     <string name="presentation_batch_g_stats_tracks_in_range_title">Pistes sur cette période</string>
     <string name="presentation_batch_g_stats_unique_tracks">Pistes uniques</string>
-    <string name="presentation_batch_g_streaming_subtitle">Diffusez de la musique depuis vos comptes cloud</string>
-    <string name="presentation_batch_g_streaming_title">Streaming Cloud</string>
     <string name="presentation_batch_g_sync_percent">%1$d%%</string>
     <string name="presentation_batch_g_topbar_build_debug">Débogage</string>
     <string name="presentation_batch_g_topbar_build_stable">Stable</string>

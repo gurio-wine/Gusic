@@ -13,9 +13,7 @@
     <string name="accounts_listenbrainz_now_playing_idle">Ahora mismo no suena nada</string>
     <string name="accounts_listenbrainz_now_playing_label">Enviando scrobble</string>
     <string name="accounts_listenbrainz_reconnect">Volver a conectar</string>
-    <string name="accounts_listenbrainz_scrobble_jellyfin">Scrobble del streaming de Jellyfin</string>
     <string name="accounts_listenbrainz_scrobble_local">Scrobble de archivos locales</string>
-    <string name="accounts_listenbrainz_scrobble_navidrome">Scrobble del streaming de Subsonic</string>
     <string name="accounts_listenbrainz_server_hint">URL del servidor (opcional)</string>
     <string name="accounts_listenbrainz_server_supporting">Déjalo vacío para usar listenbrainz.org. Funciona con servidores autoalojados que hablan la API de ListenBrainz, como Maloja.</string>
     <string name="accounts_listenbrainz_stat_listens">Escuchas totales</string>

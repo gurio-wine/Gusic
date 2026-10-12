@@ -13,9 +13,7 @@
     <string name="accounts_listenbrainz_now_playing_idle">현재 재생 중인 곡이 없습니다</string>
     <string name="accounts_listenbrainz_now_playing_label">지금 스크로블 중</string>
     <string name="accounts_listenbrainz_reconnect">다시 연결</string>
-    <string name="accounts_listenbrainz_scrobble_jellyfin">Jellyfin 스트리밍 스크로블</string>
     <string name="accounts_listenbrainz_scrobble_local">로컬 파일 스크로블</string>
-    <string name="accounts_listenbrainz_scrobble_navidrome">Subsonic 스트리밍 스크로블</string>
     <string name="accounts_listenbrainz_server_hint">서버 URL (선택 사항)</string>
     <string name="accounts_listenbrainz_server_supporting">listenbrainz.org를 사용하려면 비워 두세요. Maloja처럼 ListenBrainz API를 지원하는 자체 호스팅 서버에서도 작동합니다.</string>
     <string name="accounts_listenbrainz_stat_listens">총 감상 수</string>

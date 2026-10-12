@@ -364,8 +364,6 @@
     <string name="presentation_batch_g_stats_tracks_in_range_subtitle">Seçilen zaman aralığı için en çok çalınan parçalar.</string>
     <string name="presentation_batch_g_stats_tracks_in_range_title">Bu aralıktaki parçalar</string>
     <string name="presentation_batch_g_stats_unique_tracks">Benzersiz parçalar</string>
-    <string name="presentation_batch_g_streaming_subtitle">Bulut hesaplarınızdan müzik akışı yapın</string>
-    <string name="presentation_batch_g_streaming_title">Bulut Akışı</string>
     <string name="presentation_batch_g_sync_percent">%1$d%%</string>
     <string name="presentation_batch_g_topbar_build_debug">Hata Ayıklama</string>
     <string name="presentation_batch_g_topbar_build_stable">Kararlı</string>

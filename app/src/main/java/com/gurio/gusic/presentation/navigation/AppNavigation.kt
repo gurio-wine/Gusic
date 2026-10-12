@@ -265,13 +265,7 @@ fun AppNavigation(
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     AccountsScreen(
-                        onBackClick = { navController.popBackStack() },
-                        onOpenNavidromeDashboard = {
-                            navController.navigateSafely(Screen.NavidromeDashboard.route)
-                        },
-                        onOpenJellyfinDashboard = {
-                            navController.navigateSafely(Screen.JellyfinDashboard.route)
-                        }
+                        onBackClick = { navController.popBackStack() }
                     )
                 }
             }
@@ -598,32 +592,6 @@ fun AppNavigation(
                     com.gurio.gusic.presentation.screens.DeviceCapabilitiesScreen(
                         navController = navController,
                         playerViewModel = playerViewModel
-                    )
-                }
-            }
-            composable(
-                Screen.NavidromeDashboard.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
-            ) {
-                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    com.gurio.gusic.presentation.navidrome.dashboard.NavidromeDashboardScreen(
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-            }
-            composable(
-                Screen.JellyfinDashboard.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
-            ) {
-                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    com.gurio.gusic.presentation.jellyfin.dashboard.JellyfinDashboardScreen(
-                        onBack = { navController.popBackStack() }
                     )
                 }
             }

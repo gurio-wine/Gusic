@@ -88,7 +88,7 @@ internal class KugouAccountApi(
             KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(decoded)) as RSAPublicKey
         }
 
-        private fun md5Hex(input: String): String =
+        internal fun md5Hex(input: String): String =
             MessageDigest.getInstance("MD5").digest(input.toByteArray(Charsets.UTF_8))
                 .joinToString("") { "%02x".format(it) }
 
@@ -96,13 +96,13 @@ internal class KugouAccountApi(
          * 通用签名：MD5(salt + 按 key 字典序的 "k=v" 无分隔拼接 + body + salt)。
          * 与 helper.js signatureAndroidParams 逐字等价（Object.keys(params).sort() 为字典序）。
          */
-        private fun signParams(params: Map<String, String>, body: String): String {
+        internal fun signParams(params: Map<String, String>, body: String): String {
             val paramsString = params.keys.sorted().joinToString("") { key -> "$key=${params.getValue(key)}" }
             return md5Hex(SALT + paramsString + body + SALT)
         }
 
         /** 公共 query 参数（全部参与签名）；clienttime 为秒级时间戳，需与同名 header 一致。 */
-        private fun commonParams(mid: String, clienttimeSec: String): Map<String, String> = mapOf(
+        internal fun commonParams(mid: String, clienttimeSec: String): Map<String, String> = mapOf(
             "dfid" to "-",
             "mid" to mid,
             "uuid" to "-",
@@ -112,7 +112,7 @@ internal class KugouAccountApi(
         )
 
         /** 公共 header；dfid/mid/clienttime 独立头 + kg-* 内部标识头 + Cookie: mid=<mid>。 */
-        private fun commonHeaders(mid: String, clienttimeSec: String): Headers = Headers.headersOf(
+        internal fun commonHeaders(mid: String, clienttimeSec: String): Headers = Headers.headersOf(
             "User-Agent", UA_DEFAULT,
             "dfid", "-",
             "mid", mid,
@@ -124,9 +124,9 @@ internal class KugouAccountApi(
             "Cookie", "mid=$mid",
         )
 
-        /** key = MD5(appid + salt + clientver + clienttime_ms毫秒字符串)，与 helper.js signParamsKey 一致。 */
-        private fun signParamsKey(clienttimeMs: Long): String =
-            md5Hex(APPID + SALT + CLIENTVER + clienttimeMs.toString())
+        /** key = MD5(appid + salt + clientver + data)，与 helper.js signParamsKey 一致（登录传毫秒、云歌单传秒）。 */
+        internal fun signParamsKey(data: String): String =
+            md5Hex(APPID + SALT + CLIENTVER + data)
 
         /**
          * AES key/iv 派生（JS 源等价转换点，重点对照处）：
@@ -139,26 +139,53 @@ internal class KugouAccountApi(
             val realKey = md5Hex(tempKey)
             val keyBytes = realKey.toByteArray(Charsets.UTF_8)
             val ivBytes = realKey.substring(16, 32).toByteArray(Charsets.UTF_8)
+            return aesCipherRaw(keyBytes, ivBytes, opmode)
+        }
+
+        /** 直接以 key/iv 字节构建 AES-CBC-PKCS7 cipher（云歌单 delete_list 用 16 字节 key）。 */
+        internal fun aesCipherRaw(keyBytes: ByteArray, ivBytes: ByteArray, opmode: Int): Cipher {
             val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
             cipher.init(opmode, SecretKeySpec(keyBytes, "AES"), IvParameterSpec(ivBytes))
             return cipher
         }
 
-        private fun aesEncryptHex(plaintext: String, tempKey: String): String =
+        internal fun aesEncryptHex(plaintext: String, tempKey: String): String =
             aesCipher(tempKey, Cipher.ENCRYPT_MODE)
                 .doFinal(plaintext.toByteArray(Charsets.UTF_8))
                 .joinToString("") { "%02x".format(it) }
 
-        private fun aesDecryptHex(hex: String, tempKey: String): String =
+        internal fun aesDecryptHex(hex: String, tempKey: String): String =
             aesCipher(tempKey, Cipher.DECRYPT_MODE)
                 .doFinal(hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray())
                 .toString(Charsets.UTF_8)
+
+        /** AES-CBC-PKCS7 加密并 Base64（云歌单 delete_list 的密文格式）。 */
+        internal fun aesCbcEncryptToBase64(plaintext: String, key16: String, iv16: String): String {
+            val cipher = aesCipherRaw(
+                key16.toByteArray(Charsets.UTF_8),
+                iv16.toByteArray(Charsets.UTF_8),
+                Cipher.ENCRYPT_MODE,
+            )
+            return Base64.getEncoder().encodeToString(
+                cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8)),
+            )
+        }
+
+        /** 解密 AES-CBC-PKCS7 Base64 密文（delete_list 响应可能是整段密文）。 */
+        internal fun aesCbcDecryptBase64(base64: String, key16: String, iv16: String): String {
+            val cipher = aesCipherRaw(
+                key16.toByteArray(Charsets.UTF_8),
+                iv16.toByteArray(Charsets.UTF_8),
+                Cipher.DECRYPT_MODE,
+            )
+            return cipher.doFinal(Base64.getDecoder().decode(base64)).toString(Charsets.UTF_8)
+        }
 
         /**
          * RSA 裸加密（NO_PADDING）：UTF8 明文右侧补 0x00 至 128 字节 → modPow(e, n) →
          * 左补零至 128 字节 → hex 大写。与 crypto.js rsaRawEncrypt（hex padStart(256,'0')）等价。
          */
-        private fun rsaRawEncryptHexUppercase(plaintext: String): String {
+        internal fun rsaRawEncryptHexUppercase(plaintext: String): String {
             val data = plaintext.toByteArray(Charsets.UTF_8)
             check(data.size <= RSA_KEY_LENGTH) { "rsa raw plaintext too long" }
             val padded = ByteArray(RSA_KEY_LENGTH)
@@ -172,22 +199,38 @@ internal class KugouAccountApi(
             return out.joinToString("") { "%02X".format(it) }
         }
 
-        /** 16 位随机小写字母数字 tempKey。 */
-        private fun randomTempKey(): String {
+        /** RSA PKCS1-V1_5 加密 → hex 大写（云歌单 delete_list 的 p 参数，crypto.js rsaEncrypt2）。 */
+        internal fun rsaPkcs1EncryptHexUppercase(plaintext: String): String {
+            val cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding")
+            cipher.init(Cipher.ENCRYPT_MODE, rsaPublicKey)
+            return cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02X".format(it) }
+        }
+
+        /** 随机小写字母数字串（登录 tempKey 16 位；云歌单 delete_list tempKey 6 位）。 */
+        internal fun randomLowerAlphaNum(length: Int): String {
             val chars = "abcdefghijklmnopqrstuvwxyz0123456789"
             val rnd = SecureRandom()
-            return buildString { repeat(16) { append(chars[rnd.nextInt(chars.length)]) } }
+            return buildString { repeat(length) { append(chars[rnd.nextInt(chars.length)]) } }
         }
+
+        /** 16 位随机小写字母数字 tempKey。 */
+        private fun randomTempKey(): String = randomLowerAlphaNum(16)
 
         /** 脱敏手机号：前 2 位 + 五个星号 + 第 11 位（login_cellphone.js substring(0,2) 与 substring(10,11)）。 */
         private fun maskMobile(mobile: String): String =
             if (mobile.length >= 11) mobile.substring(0, 2) + "*****" + mobile.substring(10, 11) else mobile
 
-        private fun JsonObject.strOf(name: String): String? =
-            get(name)?.takeIf { it.isJsonPrimitive }?.let { runCatching { it.asString }.getOrNull() }
+        internal fun epochSeconds(): String = (System.currentTimeMillis() / 1000).toString()
 
-        private fun JsonObject.intOf(name: String): Int? =
-            get(name)?.takeIf { it.isJsonPrimitive }?.let { runCatching { it.asInt }.getOrNull() }
+        internal fun buildUrl(base: String, params: Map<String, String>, signature: String): String =
+            base.toHttpUrl().newBuilder().apply {
+                params.forEach { (key, value) -> addQueryParameter(key, value) }
+                addQueryParameter("signature", signature)
+            }.build().toString()
+
+        internal fun parseJsonObject(text: String): JsonObject? =
+            runCatching { JsonParser.parseString(text) }.getOrNull() as? JsonObject
     }
 
     /**
@@ -266,7 +309,7 @@ internal class KugouAccountApi(
             addProperty("t3", LOGIN_T3)
             addProperty("clienttime_ms", clienttimeMs)
             addProperty("mobile", maskMobile(mobile))
-            addProperty("key", signParamsKey(clienttimeMs))
+            addProperty("key", signParamsKey(clienttimeMs.toString()))
             addProperty("pk", pk)
             addProperty("params", paramsEncrypted)
         }.toString()
@@ -421,15 +464,25 @@ internal class KugouAccountApi(
         }.getOrNull()
         return fromJson?.takeIf(String::isNotBlank) ?: text.trim().takeIf(String::isNotEmpty)
     }
-
-    private fun buildUrl(base: String, params: Map<String, String>, signature: String): String =
-        base.toHttpUrl().newBuilder().apply {
-            params.forEach { (key, value) -> addQueryParameter(key, value) }
-            addQueryParameter("signature", signature)
-        }.build().toString()
-
-    private fun epochSeconds(): String = (System.currentTimeMillis() / 1000).toString()
-
-    private fun parseJsonObject(text: String): JsonObject? =
-        runCatching { JsonParser.parseString(text) }.getOrNull() as? JsonObject
 }
+
+/** JSON 字段兼容读取（数字/字符串两种原始类型互转）；酷狗各接口同一字段类型不统一，统一在此兜底。 */
+internal fun JsonObject.strOf(name: String): String? =
+    get(name)?.takeIf { it.isJsonPrimitive }?.let { runCatching { it.asString }.getOrNull() }
+
+internal fun JsonObject.intOf(name: String): Int? =
+    get(name)?.takeIf { it.isJsonPrimitive }?.let { runCatching { it.asInt }.getOrNull() }
+
+internal fun JsonObject.longOf(name: String): Long? =
+    get(name)?.takeIf { it.isJsonPrimitive }?.let { el ->
+        runCatching { el.asLong }.getOrElse {
+            runCatching { el.asString.trim().toDouble().toLong() }.getOrNull()
+        }
+    }
+
+internal fun JsonObject.boolOf(name: String): Boolean? =
+    get(name)?.takeIf { it.isJsonPrimitive }?.let { el ->
+        runCatching { el.asBoolean }.getOrElse {
+            runCatching { el.asInt != 0 }.getOrNull()
+        }
+    }

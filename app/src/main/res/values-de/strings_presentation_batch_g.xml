@@ -364,8 +364,6 @@
     <string name="presentation_batch_g_stats_tracks_in_range_subtitle">Meistgespielte Titel im gewählten Zeitraum.</string>
     <string name="presentation_batch_g_stats_tracks_in_range_title">Titel im Zeitraum</string>
     <string name="presentation_batch_g_stats_unique_tracks">Einzigartige Titel</string>
-    <string name="presentation_batch_g_streaming_subtitle">Musik aus deinen Cloud-Accounts streamen</string>
-    <string name="presentation_batch_g_streaming_title">Cloud-Streaming</string>
     <string name="presentation_batch_g_sync_percent">%1$d%%</string>
     <string name="presentation_batch_g_topbar_build_debug">Debug</string>
     <string name="presentation_batch_g_topbar_build_stable">Stabil</string>

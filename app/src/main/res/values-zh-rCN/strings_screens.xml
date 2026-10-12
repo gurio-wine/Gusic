@@ -201,17 +201,12 @@
     <string name="cd_contributor_avatar">%1$s 的头像</string>
     <string name="cd_contributor_icon">%1$s 的图标</string>
 
-    <string name="screen_subsonic_dashboard_title">Subsonic</string>
     <string name="dash_playlists_synced_count">已同步 %1$d 个歌单</string>
     <string name="dash_title_playlists">歌单</string>
     <string name="dash_library_playlist_title">音乐库</string>
     <string name="dash_action_sync">同步</string>
     <string name="dash_playlists_empty_title">尚未同步歌单</string>
-    <string name="dash_playlists_empty_hint_subsonic">点击同步拉取你的歌单</string>
-    <string name="dash_playlists_empty_hint_jellyfin">点击同步拉取 Jellyfin 歌单</string>
     <string name="dash_quick_actions">快捷操作</string>
-    <string name="dash_quick_actions_subsonic_subtitle">管理 Navidrome、Airsonic 以及其他兼容 Subsonic 的服务器。</string>
-    <string name="dash_quick_actions_jellyfin_subtitle">管理你的 Jellyfin 服务器连接。</string>
     <string name="dash_libraries_title">媒体库</string>
     <string name="dash_libraries_all">全部媒体库</string>
     <string name="dash_libraries_selected_count">已选 %1$d / %2$d</string>

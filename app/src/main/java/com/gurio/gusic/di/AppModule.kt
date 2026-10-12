@@ -30,6 +30,7 @@ import com.gurio.gusic.data.database.MIGRATION_8_9
 import com.gurio.gusic.data.database.MIGRATION_9_10
 import com.gurio.gusic.data.database.MIGRATION_10_11
 import com.gurio.gusic.data.database.MIGRATION_11_12
+import com.gurio.gusic.data.database.MIGRATION_12_13
 import com.gurio.gusic.data.database.MusicDao
 import com.gurio.gusic.data.database.OfflineTrackDao
 import com.gurio.gusic.data.database.GusicDatabase
@@ -152,6 +153,7 @@ object AppModule {
                 MIGRATION_9_10,
                 MIGRATION_10_11,
                 MIGRATION_11_12,
+                MIGRATION_12_13,
             )
             .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
 
@@ -208,18 +210,6 @@ object AppModule {
     @Provides
     fun provideLocalPlaylistDao(database: GusicDatabase): LocalPlaylistDao {
         return database.localPlaylistDao()
-    }
-
-    @Singleton
-    @Provides
-    fun provideNavidromeDao(database: GusicDatabase): com.gurio.gusic.data.database.NavidromeDao {
-        return database.navidromeDao()
-    }
-    
-    @Singleton
-    @Provides
-    fun provideJellyfinDao(database: GusicDatabase): com.gurio.gusic.data.database.JellyfinDao {
-        return database.jellyfinDao()
     }
 
     @Singleton
@@ -364,17 +354,14 @@ object AppModule {
             redactHeader("Proxy-Authorization")
             redactHeader("Cookie")
             redactHeader("Set-Cookie")
-            redactHeader("X-Emby-Token")
-            redactHeader("X-Emby-Authorization")
-            redactHeader("X-MediaBrowser-Token")
         }
-        
+
         val connectionPool = okhttp3.ConnectionPool(
             maxIdleConnections = 5,
             keepAliveDuration = 30,
             timeUnit = java.util.concurrent.TimeUnit.SECONDS
         )
-        
+
         return OkHttpClient.Builder()
             .connectionPool(connectionPool)
             .connectTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
@@ -414,17 +401,14 @@ object AppModule {
             redactHeader("Proxy-Authorization")
             redactHeader("Cookie")
             redactHeader("Set-Cookie")
-            redactHeader("X-Emby-Token")
-            redactHeader("X-Emby-Authorization")
-            redactHeader("X-MediaBrowser-Token")
         }
-        
+
         val connectionPool = okhttp3.ConnectionPool(
             maxIdleConnections = 5,
             keepAliveDuration = 30,
             timeUnit = java.util.concurrent.TimeUnit.SECONDS
         )
-        
+
         val dns = okhttp3.Dns { hostname ->
             try {
                 okhttp3.Dns.SYSTEM.lookup(hostname)

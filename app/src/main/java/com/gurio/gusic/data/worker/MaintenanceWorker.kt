@@ -33,8 +33,7 @@ class MaintenanceWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val musicDao: MusicDao,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val lyricsRepository: LyricsRepository,
-    private val cloudSyncCoordinator: CloudSyncCoordinator
+    private val lyricsRepository: LyricsRepository
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -57,7 +56,6 @@ class MaintenanceWorker @AssistedInject constructor(
                 applicationContext,
                 musicDao.getAllSongIds().toSet()
             )
-            cloudSyncCoordinator.syncUnifiedCloudLibraries()
             Result.success()
         } catch (cancelled: CancellationException) {
             throw cancelled

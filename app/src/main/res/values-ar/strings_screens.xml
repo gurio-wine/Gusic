@@ -86,13 +86,9 @@
     <string name="dash_libraries_sync_needed">زامن المكتبة لتطبيق التغييرات</string>
     <string name="dash_libraries_title">المكتبات</string>
     <string name="dash_library_playlist_title">المكتبة</string>
-    <string name="dash_playlists_empty_hint_jellyfin">اضغط على مزامنة لجلب قوائم تشغيل Jellyfin الخاصة بك</string>
-    <string name="dash_playlists_empty_hint_subsonic">اضغط على مزامنة لجلب قوائم التشغيل الخاصة بك</string>
     <string name="dash_playlists_empty_title">لم يتم مزامنة أي قوائم تشغيل بعد</string>
     <string name="dash_playlists_synced_count">تم مزامنة %1$d قائمة تشغيل</string>
     <string name="dash_quick_actions">إجراءات سريعة</string>
-    <string name="dash_quick_actions_jellyfin_subtitle">إدارة اتصال خادم Jellyfin الخاص بك.</string>
-    <string name="dash_quick_actions_subsonic_subtitle">إدارة خوادم Navidrome وAirsonic والخوادم الأخرى المتوافقة مع Subsonic.</string>
     <string name="dash_song_count">%1$d أغانٍ</string>
     <string name="dash_status_fetching_albums">جاري جلب قائمة الألبومات…</string>
     <string name="dash_status_fetching_playlists">جاري جلب قوائم التشغيل…</string>
@@ -133,7 +129,6 @@
     <string name="restore_selected">استعادة المحدد</string>
     <string name="restoring">جاري الاستعادة</string>
     <string name="screen_about">حول التطبيق</string>
-    <string name="screen_subsonic_dashboard_title">Subsonic</string>
     <string name="search_no_results_for_query">لا توجد نتائج لـ \"%1$s\"</string>
     <string name="search_no_results_found">لم يتم العثور على نتائج.</string>
     <string name="search_nothing_found">لم يتم العثور على شيء</string>

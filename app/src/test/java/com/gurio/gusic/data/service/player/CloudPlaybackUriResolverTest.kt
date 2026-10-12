@@ -6,23 +6,23 @@ import org.junit.jupiter.api.Test
 
 class CloudPlaybackUriResolverTest {
     @Test
-    fun `canonical jellyfin extra replaces a stale offline file uri`() {
+    fun `canonical lxmusic extra replaces a stale offline file uri`() {
         assertThat(
             selectCanonicalCloudPlaybackUri(
                 playerUri = "file:///deleted/offline.flac",
-                originalContentUri = "jellyfin://song-42",
+                originalContentUri = "lxmusic://song-42",
             )
-        ).isEqualTo("jellyfin://song-42")
+        ).isEqualTo("lxmusic://song-42")
     }
 
     @Test
-    fun `canonical navidrome extra replaces an ephemeral proxy uri`() {
+    fun `canonical lxmusic extra replaces an ephemeral proxy uri`() {
         assertThat(
             selectCanonicalCloudPlaybackUri(
                 playerUri = "http://127.0.0.1:54321/stream",
-                originalContentUri = "navidrome://song-42",
+                originalContentUri = "lxmusic://song-42",
             )
-        ).isEqualTo("navidrome://song-42")
+        ).isEqualTo("lxmusic://song-42")
     }
 
     @Test
@@ -41,7 +41,7 @@ class CloudPlaybackUriResolverTest {
         val calls = mutableListOf<String>()
 
         val result = resolvePreferredCloudPlaybackValue(
-            original = "jellyfin://song",
+            original = "lxmusic://song",
             resolveOffline = {
                 calls += "offline"
                 "file:///offline/song.flac"
@@ -65,7 +65,7 @@ class CloudPlaybackUriResolverTest {
         var remoteResolutionCount = 0
 
         val result = resolvePreferredCloudPlaybackValue(
-            original = "navidrome://song",
+            original = "lxmusic://song",
             resolveOffline = { null },
             resolveCachedRemote = { "http://127.0.0.1/cached" },
             resolveRemote = {
@@ -83,14 +83,14 @@ class CloudPlaybackUriResolverTest {
         val cachedValues = mutableListOf<String>()
 
         val remoteResult = resolvePreferredCloudPlaybackValue(
-            original = "navidrome://song",
+            original = "lxmusic://song",
             resolveOffline = { null },
             resolveCachedRemote = { null },
             resolveRemote = { "http://127.0.0.1/new" },
             onRemoteResolved = { cachedValues += it }
         )
         val fallbackResult = resolvePreferredCloudPlaybackValue(
-            original = "jellyfin://missing",
+            original = "lxmusic://missing",
             resolveOffline = { null },
             resolveCachedRemote = { null },
             resolveRemote = { null }
@@ -98,6 +98,6 @@ class CloudPlaybackUriResolverTest {
 
         assertThat(remoteResult).isEqualTo("http://127.0.0.1/new")
         assertThat(cachedValues).containsExactly("http://127.0.0.1/new")
-        assertThat(fallbackResult).isEqualTo("jellyfin://missing")
+        assertThat(fallbackResult).isEqualTo("lxmusic://missing")
     }
 }

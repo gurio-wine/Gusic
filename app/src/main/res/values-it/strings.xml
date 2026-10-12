@@ -13,9 +13,7 @@
     <string name="accounts_listenbrainz_now_playing_idle">Nessuna riproduzione al momento</string>
     <string name="accounts_listenbrainz_now_playing_label">Scrobbling in corso</string>
     <string name="accounts_listenbrainz_reconnect">Riconnetti</string>
-    <string name="accounts_listenbrainz_scrobble_jellyfin">Scrobbling dello streaming Jellyfin</string>
     <string name="accounts_listenbrainz_scrobble_local">Scrobbling dei file locali</string>
-    <string name="accounts_listenbrainz_scrobble_navidrome">Scrobbling dello streaming Subsonic</string>
     <string name="accounts_listenbrainz_server_hint">URL server (opzionale)</string>
     <string name="accounts_listenbrainz_server_supporting">Lascia vuoto per listenbrainz.org. Funziona con i server self-hosted che supportano l\'API ListenBrainz, come Maloja.</string>
     <string name="accounts_listenbrainz_stat_listens">Ascolti totali</string>

@@ -88,8 +88,6 @@ import com.gurio.gusic.data.preferences.CollagePattern
 import com.gurio.gusic.presentation.components.AlbumArtCollage
 import com.gurio.gusic.presentation.components.BetaInfoBottomSheet
 import com.gurio.gusic.presentation.components.ChangelogBottomSheet
-import com.gurio.gusic.presentation.jellyfin.dashboard.JellyfinDashboardViewModel
-import com.gurio.gusic.presentation.navidrome.dashboard.NavidromeDashboardViewModel
 import com.gurio.gusic.presentation.components.DailyMixSection
 import com.gurio.gusic.presentation.components.HomeGradientTopBar
 import com.gurio.gusic.presentation.components.HomeOptionsBottomSheet
@@ -103,7 +101,6 @@ import com.gurio.gusic.presentation.model.collectRecentlyPlayedSongIds
 import com.gurio.gusic.presentation.model.mapRecentlyPlayedSongs
 import com.gurio.gusic.presentation.components.subcomps.PlayingEqIcon
 import com.gurio.gusic.presentation.navigation.Screen
-import com.gurio.gusic.presentation.components.StreamingProviderSheet
 import com.gurio.gusic.presentation.viewmodel.AppUpdateViewModel
 import com.gurio.gusic.presentation.viewmodel.PlayerViewModel
 import com.gurio.gusic.presentation.viewmodel.SettingsViewModel
@@ -129,8 +126,6 @@ fun HomeScreen(
     paddingValuesParent: PaddingValues,
     playerViewModel: PlayerViewModel = hiltViewModel(),
     settingsViewModel: SettingsViewModel = hiltViewModel(),
-    navidromeViewModel: NavidromeDashboardViewModel = hiltViewModel(),
-    jellyfinViewModel: JellyfinDashboardViewModel = hiltViewModel(),
     onOpenSidebar: () -> Unit
 ) {
     val context = LocalContext.current
@@ -248,7 +243,6 @@ fun HomeScreen(
             .getOrNull() ?: "0.0.0"
     }
     LaunchedEffect(Unit) { appUpdateViewModel.checkForUpdates(appVersionName) }
-    var showStreamingProviderSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalSheetState()
     val betaSheetState = rememberModalSheetState()
     val scope = rememberCoroutineScope()
@@ -312,9 +306,6 @@ fun HomeScreen(
                         } else {
                             showBetaInfoBottomSheet = true
                         }
-                    },
-                    onStreamingClick = {
-                          showStreamingProviderSheet = true
                     },
                     onMenuClick = {
                     },
@@ -582,21 +573,6 @@ fun HomeScreen(
                 },
             )
         }
-    }
-    if (showStreamingProviderSheet) {
-        val isNavidromeLoggedIn by navidromeViewModel.isLoggedIn.collectAsStateWithLifecycle()
-        val isJellyfinLoggedIn by jellyfinViewModel.isLoggedIn.collectAsStateWithLifecycle()
-        StreamingProviderSheet(
-            onDismissRequest = { showStreamingProviderSheet = false },
-            isNavidromeLoggedIn = isNavidromeLoggedIn,
-            onNavigateToNavidromeDashboard = {
-                navController.navigateSafely(Screen.NavidromeDashboard.route)
-            },
-            isJellyfinLoggedIn = isJellyfinLoggedIn,
-            onNavigateToJellyfinDashboard = {
-                navController.navigateSafely(Screen.JellyfinDashboard.route)
-            }
-        )
     }
 }
 

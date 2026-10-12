@@ -276,12 +276,9 @@ class PlaylistsModuleHandler @Inject constructor(
         return text.trim().lowercase()
     }
 
-    private suspend fun buildCloudSongIdSet(): Set<String> {
-        val cloudIds = mutableSetOf<String>()
-        musicDao.getAllNavidromeSongIds().mapTo(cloudIds) { it.toString() }
-        musicDao.getAllJellyfinSongIds().mapTo(cloudIds) { it.toString() }
-        return cloudIds
-    }
+    /** Online (lx) songs cannot be restored from local MediaStore summaries, so they are excluded. */
+    private suspend fun buildCloudSongIdSet(): Set<String> =
+        musicDao.getAllLxSongIds().mapTo(mutableSetOf()) { it.toString() }
 
     private suspend fun restoreLegacyPreferenceEntries(payload: String) {
         val type = TypeToken.getParameterized(List::class.java, PreferenceBackupEntry::class.java).type
@@ -343,7 +340,7 @@ class PlaylistsModuleHandler @Inject constructor(
         private const val TAG = "PlaylistsModuleHandler"
         private const val DURATION_TOLERANCE_MS = 2000L
 
-        /** Playlist sources that are backed up. Cloud-sourced playlists are excluded. */
+        /** Playlist sources that are backed up. Online-sourced playlists are excluded. */
         private fun isBackedUpPlaylistSource(source: String): Boolean =
             source == "LOCAL" || isSmartPlaylistSource(source)
 
