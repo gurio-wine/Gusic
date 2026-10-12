@@ -88,6 +88,12 @@ enum class LibraryTabId(
             SortOption.LikedSongDateLiked,
             SortOption.LikedSongDateLikedAsc
         )
+    ),
+    // 平台收藏内容（歌手/专辑）；纯在线内容，无本地排序项
+    Collections(
+        stableKey = "COLLECTIONS",
+        labelRes = R.string.library_tab_collections,
+        sortOptions = emptyList()
     );
 
     companion object {

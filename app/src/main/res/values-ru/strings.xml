@@ -2,27 +2,6 @@
 <resources>
     <string name="a11y_toggle_off">Выкл.</string>
     <string name="a11y_toggle_on">Вкл.</string>
-    <string name="accounts_available_services">Доступные сервисы</string>
-    <string name="accounts_listenbrainz_connect">Подключить</string>
-    <string name="accounts_listenbrainz_connect_failed">Не удалось подключиться. Проверьте токен и URL сервера, затем повторите попытку.</string>
-    <string name="accounts_listenbrainz_custom_server">Скробблинг на %1$s</string>
-    <string name="accounts_listenbrainz_get_token">Открыть listenbrainz.org</string>
-    <string name="accounts_listenbrainz_invalid_url">Введите корректный URL сервера, например https://maloja.example.com/apis/listenbrainz</string>
-    <string name="accounts_listenbrainz_needs_reauth">Ваш токен больше не действителен — подключитесь заново, чтобы возобновить скробблинг. Прослушивания в очереди сохраняются.</string>
-    <string name="accounts_listenbrainz_now_playing_format">%1$s — %2$s</string>
-    <string name="accounts_listenbrainz_now_playing_idle">Сейчас ничего не воспроизводится</string>
-    <string name="accounts_listenbrainz_now_playing_label">Скробблинг сейчас</string>
-    <string name="accounts_listenbrainz_reconnect">Подключить заново</string>
-    <string name="accounts_listenbrainz_scrobble_local">Скробблить локальные файлы</string>
-    <string name="accounts_listenbrainz_server_hint">URL сервера (необязательно)</string>
-    <string name="accounts_listenbrainz_server_supporting">Оставьте пустым для listenbrainz.org. Работает с собственными серверами, поддерживающими API ListenBrainz, например Maloja.</string>
-    <string name="accounts_listenbrainz_stat_listens">Всего прослушиваний</string>
-    <string name="accounts_listenbrainz_stat_queued">В очереди</string>
-    <string name="accounts_listenbrainz_title">ListenBrainz</string>
-    <string name="accounts_listenbrainz_toggle_hint">Если ваш сервер уже отправляет данные в ListenBrainz, отключите здесь этот источник, чтобы избежать дублирования прослушиваний.</string>
-    <string name="accounts_listenbrainz_token_dialog_body">Вставьте пользовательский токен, чтобы отправлять прослушивания в ListenBrainz. Его можно найти в настройках вашего профиля на listenbrainz.org.</string>
-    <string name="accounts_listenbrainz_token_dialog_title">Подключить ListenBrainz</string>
-    <string name="accounts_listenbrainz_token_hint">Пользовательский токен</string>
     <string name="album_id_not_found">ID альбома не найден</string>
     <string name="album_not_found">Альбом не найден</string>
     <string name="all_files_access_title">Требуется специальное разрешение</string>

@@ -2,27 +2,6 @@
 <resources>
     <string name="a11y_toggle_off">Av</string>
     <string name="a11y_toggle_on">På</string>
-    <string name="accounts_available_services">Tilgjengelige tjenester</string>
-    <string name="accounts_listenbrainz_connect">Koble til</string>
-    <string name="accounts_listenbrainz_connect_failed">Kunne ikke koble til. Sjekk tokenet og server-URL-en, og prøv igjen.</string>
-    <string name="accounts_listenbrainz_custom_server">Scrobbler til %1$s</string>
-    <string name="accounts_listenbrainz_get_token">Åpne listenbrainz.org</string>
-    <string name="accounts_listenbrainz_invalid_url">Skriv inn en gyldig server-URL, for eksempel https://maloja.example.com/apis/listenbrainz</string>
-    <string name="accounts_listenbrainz_needs_reauth">Tokenet ditt er ikke lenger gyldig – koble til på nytt for å fortsette å scrobble. Lyttinger i kø beholdes.</string>
-    <string name="accounts_listenbrainz_now_playing_format">%1$s — %2$s</string>
-    <string name="accounts_listenbrainz_now_playing_idle">Ingenting spilles akkurat nå</string>
-    <string name="accounts_listenbrainz_now_playing_label">Scrobbler nå</string>
-    <string name="accounts_listenbrainz_reconnect">Koble til på nytt</string>
-    <string name="accounts_listenbrainz_scrobble_local">Scrobble lokale filer</string>
-    <string name="accounts_listenbrainz_server_hint">Server-URL (valgfritt)</string>
-    <string name="accounts_listenbrainz_server_supporting">La stå tomt for listenbrainz.org. Fungerer med selvhostede servere som støtter ListenBrainz-API-et, som Maloja.</string>
-    <string name="accounts_listenbrainz_stat_listens">Lyttinger totalt</string>
-    <string name="accounts_listenbrainz_stat_queued">I kø</string>
-    <string name="accounts_listenbrainz_title">ListenBrainz</string>
-    <string name="accounts_listenbrainz_toggle_hint">Hvis serveren din allerede scrobbler til ListenBrainz, slå av den kilden her for å unngå doble lyttinger.</string>
-    <string name="accounts_listenbrainz_token_dialog_body">Lim inn brukertokenet ditt for å scrobble lyttingene dine til ListenBrainz. Du finner det i innstillingene dine på listenbrainz.org.</string>
-    <string name="accounts_listenbrainz_token_dialog_title">Koble til ListenBrainz</string>
-    <string name="accounts_listenbrainz_token_hint">Brukertoken</string>
     <string name="album_id_not_found">Album-ID ikke funnet</string>
     <string name="album_not_found">Album ikke funnet</string>
     <string name="all_files_access_title">Spesiell tillatelse kreves</string>

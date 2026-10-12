@@ -2,27 +2,6 @@
 <resources>
     <string name="a11y_toggle_off">Désactivé</string>
     <string name="a11y_toggle_on">Activé</string>
-    <string name="accounts_available_services">Services disponibles</string>
-    <string name="accounts_listenbrainz_connect">Se connecter</string>
-    <string name="accounts_listenbrainz_connect_failed">Connexion impossible. Vérifiez votre jeton et l\'URL du serveur, puis réessayez.</string>
-    <string name="accounts_listenbrainz_custom_server">Scrobbling vers %1$s</string>
-    <string name="accounts_listenbrainz_get_token">Ouvrir listenbrainz.org</string>
-    <string name="accounts_listenbrainz_invalid_url">Saisissez une URL de serveur valide, comme https://maloja.example.com/apis/listenbrainz</string>
-    <string name="accounts_listenbrainz_needs_reauth">Votre jeton n\'est plus valide — reconnectez-vous pour reprendre le scrobbling. Les écoutes en attente sont conservées.</string>
-    <string name="accounts_listenbrainz_now_playing_format">%1$s — %2$s</string>
-    <string name="accounts_listenbrainz_now_playing_idle">Rien ne joue pour le moment</string>
-    <string name="accounts_listenbrainz_now_playing_label">Scrobbling en cours</string>
-    <string name="accounts_listenbrainz_reconnect">Se reconnecter</string>
-    <string name="accounts_listenbrainz_scrobble_local">Scrobbler les fichiers locaux</string>
-    <string name="accounts_listenbrainz_server_hint">URL du serveur (facultatif)</string>
-    <string name="accounts_listenbrainz_server_supporting">Laissez vide pour listenbrainz.org. Fonctionne avec les serveurs auto-hébergés qui parlent l\'API ListenBrainz, comme Maloja.</string>
-    <string name="accounts_listenbrainz_stat_listens">Écoutes totales</string>
-    <string name="accounts_listenbrainz_stat_queued">En attente</string>
-    <string name="accounts_listenbrainz_title">ListenBrainz</string>
-    <string name="accounts_listenbrainz_toggle_hint">Si votre serveur envoie déjà ses scrobbles à ListenBrainz, désactivez cette source ici pour éviter les écoutes en double.</string>
-    <string name="accounts_listenbrainz_token_dialog_body">Collez votre jeton utilisateur pour envoyer vos écoutes à ListenBrainz. Vous le trouverez dans vos paramètres sur listenbrainz.org.</string>
-    <string name="accounts_listenbrainz_token_dialog_title">Connecter ListenBrainz</string>
-    <string name="accounts_listenbrainz_token_hint">Jeton utilisateur</string>
     <string name="album_id_not_found">ID d\'album non trouvé</string>
     <string name="album_not_found">Album non trouvé</string>
     <string name="all_files_access_title">Autorisation spéciale requise</string>

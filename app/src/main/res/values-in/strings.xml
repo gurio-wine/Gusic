@@ -2,27 +2,6 @@
 <resources>
     <string name="a11y_toggle_off">Nonaktif</string>
     <string name="a11y_toggle_on">Aktif</string>
-    <string name="accounts_available_services">Layanan yang tersedia</string>
-    <string name="accounts_listenbrainz_connect">Hubungkan</string>
-    <string name="accounts_listenbrainz_connect_failed">Tidak dapat terhubung. Periksa token dan URL server Anda, lalu coba lagi.</string>
-    <string name="accounts_listenbrainz_custom_server">Scrobble ke %1$s</string>
-    <string name="accounts_listenbrainz_get_token">Buka listenbrainz.org</string>
-    <string name="accounts_listenbrainz_invalid_url">Masukkan URL server yang valid, misalnya https://maloja.example.com/apis/listenbrainz</string>
-    <string name="accounts_listenbrainz_needs_reauth">Token Anda sudah tidak valid — hubungkan kembali untuk melanjutkan scrobble. Riwayat dengar yang mengantre tetap disimpan.</string>
-    <string name="accounts_listenbrainz_now_playing_format">%1$s — %2$s</string>
-    <string name="accounts_listenbrainz_now_playing_idle">Tidak ada yang sedang diputar</string>
-    <string name="accounts_listenbrainz_now_playing_label">Sedang di-scrobble</string>
-    <string name="accounts_listenbrainz_reconnect">Hubungkan kembali</string>
-    <string name="accounts_listenbrainz_scrobble_local">Scrobble file lokal</string>
-    <string name="accounts_listenbrainz_server_hint">URL server (opsional)</string>
-    <string name="accounts_listenbrainz_server_supporting">Biarkan kosong untuk listenbrainz.org. Berfungsi dengan server mandiri yang mendukung API ListenBrainz, seperti Maloja.</string>
-    <string name="accounts_listenbrainz_stat_listens">Total riwayat dengar</string>
-    <string name="accounts_listenbrainz_stat_queued">Dalam antrean</string>
-    <string name="accounts_listenbrainz_title">ListenBrainz</string>
-    <string name="accounts_listenbrainz_toggle_hint">Jika server Anda sudah mengirim scrobble ke ListenBrainz, matikan sumber itu di sini agar riwayat dengar tidak terhitung dua kali.</string>
-    <string name="accounts_listenbrainz_token_dialog_body">Tempelkan token pengguna Anda untuk mengirim riwayat dengar ke ListenBrainz. Token dapat ditemukan di pengaturan Anda pada listenbrainz.org.</string>
-    <string name="accounts_listenbrainz_token_dialog_title">Hubungkan ListenBrainz</string>
-    <string name="accounts_listenbrainz_token_hint">Token pengguna</string>
     <string name="album_id_not_found">ID album tidak ditemukan</string>
     <string name="album_not_found">Album tidak ditemukan</string>
     <string name="all_files_access_title">Izin Khusus Diperlukan</string>

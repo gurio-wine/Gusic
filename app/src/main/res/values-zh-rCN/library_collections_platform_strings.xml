@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_collections_platform_unavailable">该平台暂不支持查看关注歌手与收藏专辑</string>
+    <string name="library_collections_not_logged_in">登录后即可查看关注歌手与收藏专辑</string>
+</resources>

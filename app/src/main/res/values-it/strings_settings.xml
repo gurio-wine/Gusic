@@ -214,8 +214,6 @@
     <string name="setcat_theme_light">Tema chiaro</string>
     <string name="setcat_trigger_crash_subtitle">Simula un crash per testare il sistema di segnalazione crash.</string>
     <string name="setcat_trigger_crash_title">Attiva crash di test</string>
-    <string name="settings_accounts_row_subtitle">Gestisci il tuo servizio di scrobbling ListenBrainz</string>
-    <string name="settings_accounts_row_title">Account</string>
     <string name="settings_category_about_subtitle">Info app, versione e crediti</string>
     <string name="settings_category_about_title">Informazioni</string>
     <string name="settings_category_appearance_subtitle">Temi, layout e stili visuali</string>

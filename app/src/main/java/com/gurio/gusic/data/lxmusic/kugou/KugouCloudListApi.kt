@@ -15,6 +15,8 @@ internal data class KugouCloudList(
     val listid: Long,
     val name: String,
     val isDefault: Boolean,
+    /** 收藏的专辑混在云歌单列表里：收藏歌单的 gid 以 collection_ 开头（分享 URL 实证），其他前缀判为专辑。 */
+    val isAlbum: Boolean,
     val pic: String?,
     val trackCount: Int?,
     val gid: String?,
@@ -218,10 +220,20 @@ internal class KugouCloudListApi(
             ?: obj.strOf("gid")?.takeIf(String::isNotBlank)
         val sourceListid = obj.longOf("list_create_listid")?.takeIf { it > 0 }
             ?: parseListidFromGid(gid)
+        val isDefault = obj.boolOf("is_default") == true
+        // 专辑区分依据：收藏歌单的 gid 形如 collection_<n>_<uid>_<listid>_<n>（分享 URL 实证）；
+        // 收藏专辑条目带其他前缀的 gid。留日志便于真机核对判定的准确性。
+        val isAlbum = gid != null && !gid.startsWith("collection_")
+        Timber.i(
+            "$TAG: cloud list item listid=%s name=%s gid=%s isDefault=%s isAlbum=%s type=%s source=%s",
+            listid, obj.strOf("name") ?: obj.strOf("listname"), gid, isDefault, isAlbum,
+            obj.get("type"), obj.get("source"),
+        )
         return KugouCloudList(
             listid = listid,
             name = obj.strOf("name") ?: obj.strOf("listname") ?: "",
-            isDefault = obj.boolOf("is_default") == true,
+            isDefault = isDefault,
+            isAlbum = isAlbum,
             pic = obj.strOf("pic")?.takeIf(String::isNotBlank),
             trackCount = obj.intOf("count") ?: obj.intOf("song_count")
                 ?: obj.longOf("total_file_num")?.toInt(),

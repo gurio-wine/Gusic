@@ -15,7 +15,9 @@ enum class LibraryTabId(
     ARTISTS("ARTIST", R.string.library_tab_artists, SortOption.ArtistNameAZ),
     PLAYLISTS("PLAYLISTS", R.string.library_tab_playlists, SortOption.PlaylistNameAZ),
     FOLDERS("FOLDERS", R.string.library_tab_folders, SortOption.FolderNameAZ),
-    LIKED("LIKED", R.string.library_tab_liked, SortOption.LikedSongDateLiked);
+    LIKED("LIKED", R.string.library_tab_liked, SortOption.LikedSongDateLiked),
+    // 平台收藏内容（歌手/专辑两级）；纯在线内容不提供本地排序，defaultSort 仅为占位
+    COLLECTIONS("COLLECTIONS", R.string.library_tab_collections, SortOption.PlaylistNameAZ);
 
     companion object {
         fun fromStorageKey(key: String): LibraryTabId =

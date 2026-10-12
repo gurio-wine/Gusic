@@ -226,8 +226,6 @@
     <string name="setcat_theme_light">Açık Tema</string>
     <string name="setcat_trigger_crash_subtitle">Çökme raporlama sistemini test etmek için bir çökme simüle edin.</string>
     <string name="setcat_trigger_crash_title">Test Çökmesi Tetikle</string>
-    <string name="settings_accounts_row_subtitle">ListenBrainz scrobble hizmetinizi yönetin</string>
-    <string name="settings_accounts_row_title">Hesaplar</string>
     <string name="settings_category_about_subtitle">Uygulama bilgisi, sürüm ve katkıda bulunanlar</string>
     <string name="settings_category_about_title">Hakkında</string>
     <string name="settings_category_appearance_subtitle">Temalar, düzen ve görsel stiller</string>

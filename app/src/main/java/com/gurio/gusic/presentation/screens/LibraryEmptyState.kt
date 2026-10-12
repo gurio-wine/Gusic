@@ -122,6 +122,14 @@ private fun libraryEmptySpec(
             titleRes = R.string.lib_empty_playlists_title,
             subtitleRes = R.string.lib_empty_playlists_subtitle
         )
+
+        // “收藏”分类为纯在线内容（平台歌手/专辑，自带空态），本地空态骨架不会实际展示；
+        // 仅补穷尽分支，复用歌曲空态资源
+        LibraryTabId.COLLECTIONS -> LibraryEmptySpec(
+            iconRes = R.drawable.rounded_music_off_24,
+            titleRes = R.string.lib_empty_songs_all_title,
+            subtitleRes = R.string.lib_empty_songs_all_subtitle
+        )
     }
 }
 

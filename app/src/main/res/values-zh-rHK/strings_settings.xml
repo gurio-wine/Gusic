@@ -9,8 +9,6 @@
     <string name="setcat_m3u_sync_now_subtitle">匯入並匯出變更，不覆蓋衝突項</string>
     <string name="setcat_m3u_sync_result">%1$d 項已變更 · %2$d 項衝突 · %3$d 項未解決</string>
     <string name="settings_top_bar_title">設置</string>
-    <string name="settings_accounts_row_title">帳號</string>
-    <string name="settings_accounts_row_subtitle">管理 ListenBrainz 聽歌記錄服務</string>
 
     <string name="settings_search_hint">搜索設置</string>
     <string name="settings_search_no_results">未找到與「%1$s」匹配的結果</string>

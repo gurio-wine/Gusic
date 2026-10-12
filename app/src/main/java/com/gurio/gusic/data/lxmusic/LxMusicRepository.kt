@@ -205,6 +205,14 @@ class LxMusicRepository @Inject constructor(
     suspend fun fetchTxLikedAlbums(): List<LxAlbum> =
         accountExtension.txFetchLikedAlbums() ?: emptyList()
 
+    /** tx 关注的歌手（fcg_order_singer_getlist）；未登录/请求失败为 null，UI 走重试态。 */
+    suspend fun fetchTxFollowedArtists(): List<LxArtist>? =
+        accountExtension.txFetchFollowedArtists()
+
+    /** kg 关注的歌手（v4/follow_list）；未登录/请求失败为 null，UI 走重试态。 */
+    suspend fun fetchKgFollowedArtists(): List<LxArtist>? =
+        accountExtension.kgFetchFollowedArtists()
+
     @Volatile
     private var neteaseUid: String? = null
 
@@ -2104,6 +2112,10 @@ class LxMusicRepository @Inject constructor(
 
     suspend fun fetchKgUserPlaylists(): List<LxPlaylist> =
         accountExtension.kgFetchUserPlaylists() ?: emptyList()
+
+    /** 酷狗收藏的专辑（云歌单列表中区分出的专辑条目）。 */
+    suspend fun fetchKgCollectedAlbums(): List<LxPlaylist> =
+        accountExtension.kgFetchCollectedAlbums() ?: emptyList()
 
     suspend fun fetchKgCloudPlaylistSongs(listid: String): List<LxSong> =
         accountExtension.kgFetchCloudPlaylistSongs(listid) ?: emptyList()
@@ -5015,11 +5027,14 @@ class LxMusicRepository @Inject constructor(
     /**
      * 按“我的”页歌单引用加载歌曲：tx/kg/kw 用户歌单 id 带平台前缀（tx_pl_/kg_cloud_/kw_pl_），
      * wy 为裸数字 id。tx/kg/kw 一次性全量；wy 取第一页全量。
+     * kg_album_ 前缀是“收藏”分类里的酷狗收藏专辑条目（kgFetchCollectedAlbums 生成），
+     * 与云歌单同一 listid 体系，同样路由到 fetchKgCloudPlaylistSongs。
      * 未带前缀的 id 仅网易歌单合法（tx/kg/kw 的裸 id 是红心引用），其余形态返回 null 走错误态，
      * 避免把未知平台的引用误发给网易接口。
      */
     suspend fun fetchUserPlaylistSongsByRef(source: String, ref: String): List<LxSong>? = when {
         ref.startsWith("kg_cloud_") -> fetchKgCloudPlaylistSongs(ref.removePrefix("kg_cloud_"))
+        ref.startsWith("kg_album_") -> fetchKgCloudPlaylistSongs(ref.removePrefix("kg_album_"))
         ref.startsWith("kw_pl_") -> fetchKwUserPlaylistSongs(ref.removePrefix("kw_pl_"))
         ref.startsWith("tx_pl_") -> fetchTxUserPlaylistSongs(ref.removePrefix("tx_pl_"))
         source == LxSources.NETEASE -> fetchNeteasePlaylistSongs(ref).first

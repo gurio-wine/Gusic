@@ -124,11 +124,14 @@ class GusicApplication : Application(), ImageLoaderFactory, Configuration.Provid
         legacyM3uSyncRetirer.get().cancelQueuedWork()
 
         // Cloud streaming (Navidrome/Jellyfin) was removed; drop its leftover credential stores.
+        // ListenBrainz scrobbling was removed as well; drop its token stores too.
         listOf(
             "navidrome_prefs",
             "jellyfin_prefs",
             "navidrome_prefs_plain",
             "jellyfin_prefs_plain",
+            "listenbrainz_prefs",
+            "listenbrainz_prefs_plain",
         ).forEach { name ->
             runCatching { deleteSharedPreferences(name) }
         }

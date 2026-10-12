@@ -35,7 +35,6 @@ import com.gurio.gusic.data.preferences.LaunchTab
 import com.gurio.gusic.data.preferences.UserPreferencesRepository
 import com.gurio.gusic.presentation.screens.AlbumDetailScreen
 import com.gurio.gusic.presentation.screens.CloudDownloadsScreen
-import com.gurio.gusic.presentation.screens.AccountsScreen
 import com.gurio.gusic.presentation.screens.ArtistDetailScreen
 import com.gurio.gusic.presentation.screens.ArtistSettingsScreen
 import com.gurio.gusic.presentation.screens.DailyMixScreen
@@ -252,20 +251,6 @@ fun AppNavigation(
                         onNavigationIconClick = {
                             navController.popBackStack()
                         }
-                    )
-                }
-            }
-            composable(
-                route = Screen.Accounts.route,
-                arguments = listOf(navArgument("highlightKey") { type = NavType.StringType; nullable = true; defaultValue = null }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
-            ) {
-                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    AccountsScreen(
-                        onBackClick = { navController.popBackStack() }
                     )
                 }
             }

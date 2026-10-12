@@ -2,27 +2,6 @@
 <resources>
     <string name="a11y_toggle_off">Spento</string>
     <string name="a11y_toggle_on">Attivo</string>
-    <string name="accounts_available_services">Servizi disponibili</string>
-    <string name="accounts_listenbrainz_connect">Connetti</string>
-    <string name="accounts_listenbrainz_connect_failed">Connessione non riuscita. Controlla il token e l\'URL del server, poi riprova.</string>
-    <string name="accounts_listenbrainz_custom_server">Scrobbling su %1$s</string>
-    <string name="accounts_listenbrainz_get_token">Apri listenbrainz.org</string>
-    <string name="accounts_listenbrainz_invalid_url">Inserisci un URL server valido, ad esempio https://maloja.example.com/apis/listenbrainz</string>
-    <string name="accounts_listenbrainz_needs_reauth">Il tuo token non è più valido: riconnettiti per riprendere lo scrobbling. Gli ascolti in coda vengono conservati.</string>
-    <string name="accounts_listenbrainz_now_playing_format">%1$s — %2$s</string>
-    <string name="accounts_listenbrainz_now_playing_idle">Nessuna riproduzione al momento</string>
-    <string name="accounts_listenbrainz_now_playing_label">Scrobbling in corso</string>
-    <string name="accounts_listenbrainz_reconnect">Riconnetti</string>
-    <string name="accounts_listenbrainz_scrobble_local">Scrobbling dei file locali</string>
-    <string name="accounts_listenbrainz_server_hint">URL server (opzionale)</string>
-    <string name="accounts_listenbrainz_server_supporting">Lascia vuoto per listenbrainz.org. Funziona con i server self-hosted che supportano l\'API ListenBrainz, come Maloja.</string>
-    <string name="accounts_listenbrainz_stat_listens">Ascolti totali</string>
-    <string name="accounts_listenbrainz_stat_queued">In coda</string>
-    <string name="accounts_listenbrainz_title">ListenBrainz</string>
-    <string name="accounts_listenbrainz_toggle_hint">Se il tuo server invia già gli ascolti a ListenBrainz, disattiva qui quella sorgente per evitare ascolti duplicati.</string>
-    <string name="accounts_listenbrainz_token_dialog_body">Incolla il tuo token utente per inviare i tuoi ascolti a ListenBrainz. Lo trovi nelle impostazioni del tuo account su listenbrainz.org.</string>
-    <string name="accounts_listenbrainz_token_dialog_title">Connetti ListenBrainz</string>
-    <string name="accounts_listenbrainz_token_hint">Token utente</string>
     <string name="album_id_not_found">ID album non trovato</string>
     <string name="album_not_found">Album non trovato</string>
     <string name="all_files_access_title">Autorizzazione speciale richiesta</string>

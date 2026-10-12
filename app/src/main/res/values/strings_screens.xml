@@ -40,7 +40,6 @@
     <string name="delimiter_label_space">Space</string>
     <string name="cd_add_path_delimiter">Add delimiter</string>
 
-    <string name="accounts_unable_open_screen">Unable to open this screen right now.</string>
 
     <string name="setup_welcome_prefix">Welcome to </string>
     <string name="setup_beta_symbol">β</string>

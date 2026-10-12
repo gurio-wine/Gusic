@@ -1119,10 +1119,10 @@ class PlayerViewModel @Inject constructor(
             initialValue = 0
         )
 
-    // “我的”页默认顺序：我喜欢 → 歌单 → 历史（原“歌曲”）。
+    // “我的”页默认顺序：我喜欢 → 歌单 → 收藏 → 历史（原“歌曲”）。
     // 专辑/艺术家/文件夹分类已下线：保留用户自定义顺序，仅过滤已下线分类并补全缺失项。
     private fun normalizeLibraryTabs(raw: List<String>): ImmutableList<String> {
-        val valid = listOf("LIKED", "PLAYLISTS", "SONGS")
+        val valid = listOf("LIKED", "PLAYLISTS", "COLLECTIONS", "SONGS")
         val filtered = raw.filter { it in valid }.distinct()
         return (filtered + valid).distinct().toImmutableList()
     }
@@ -1162,6 +1162,8 @@ class PlayerViewModel @Inject constructor(
                     LibraryTabId.PLAYLISTS -> SortOption.PLAYLISTS
                     LibraryTabId.FOLDERS -> SortOption.FOLDERS
                     LibraryTabId.LIKED -> SortOption.LIKED
+                    // “收藏”分类为纯在线内容（平台歌手/专辑），不提供本地排序
+                    LibraryTabId.COLLECTIONS -> emptyList()
                 }
             } finally {
                 Trace.endSection()

@@ -4,6 +4,8 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.gurio.gusic.data.lxmusic.LxAlbum
+import com.gurio.gusic.data.lxmusic.LxArtist
 import com.gurio.gusic.data.lxmusic.LxPlaylist
 import com.gurio.gusic.data.lxmusic.LxSong
 import com.gurio.gusic.data.lxmusic.TxSongLikeResult
@@ -39,6 +41,7 @@ internal class TencentAccountApi(
         private const val PROFILE_URL = "https://c.y.qq.com/rsc/fcgi-bin/fcg_get_profile_homepage.fcg"
         private const val CREATED_DISS_URL = "https://c.y.qq.com/rsc/fcgi-bin/fcg_user_created_diss"
         private const val ORDER_ASSET_URL = "https://c.y.qq.com/fav/fcgi-bin/fcg_get_profile_order_asset.fcg"
+        private const val ORDER_SINGER_URL = "https://c.y.qq.com/rsc/fcgi-bin/fcg_order_singer_getlist.fcg"
         private const val FAV_WRITE_MODULE = "music.musicasset.PlaylistFavWrite"
         private const val USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
@@ -660,6 +663,143 @@ internal class TencentAccountApi(
         (created + collected)
             .filter { it.name.isNotBlank() && !QZONE_PLAYLIST.containsMatchIn("${it.name} ${it.creator.orEmpty()}") }
             .distinctBy { it.id }
+    }
+
+    /**
+     * 收藏的专辑（order_asset reqtype=2，data.albumlist）：先 sin=0&ein=0 探测 data.total，
+     * 再 sin=0&ein=<total> 拉全量。未登录/请求失败返回 null（与“成功但为空”区分）。
+     */
+    suspend fun fetchLikedAlbums(): List<LxAlbum>? = withContext(Dispatchers.IO) {
+        val (cookie, _) = loginCookie() ?: return@withContext null
+        val uin = cookieUin(parseCookieMap(cookie))
+
+        fun orderAssetCall(sin: Int, ein: Int): JsonObject? {
+            val url = ORDER_ASSET_URL.toHttpUrl().newBuilder().apply {
+                addQueryParameter("ct", "20")
+                addQueryParameter("cid", "205360956")
+                addQueryParameter("userid", uin)
+                addQueryParameter("reqtype", "2")
+                addQueryParameter("sin", sin.toString())
+                addQueryParameter("ein", ein.toString())
+            }.build()
+            val request = Request.Builder().url(url)
+                .header("User-Agent", USER_AGENT)
+                .header("Referer", "https://y.qq.com/portal/profile.html")
+                .header("Cookie", cookie)
+                .get()
+                .build()
+            return runCatching {
+                okHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        Timber.w("$TAG: liked albums http %s", response.code)
+                        return@use null
+                    }
+                    runCatching {
+                        JsonParser.parseString(response.body?.string().orEmpty()).asJsonObject
+                    }.getOrNull()
+                }
+            }.getOrElse { e ->
+                Timber.w(e, "$TAG: liked albums request failed")
+                null
+            }
+        }
+
+        // 第一步：空区间探测 total
+        val probe = orderAssetCall(sin = 0, ein = 0) ?: return@withContext null
+        val total = ((probe.get("data") as? JsonObject)?.intField("total")) ?: 0
+        if (total <= 0) return@withContext emptyList()
+
+        // 第二步：sin=0&ein=<total> 拉全量（ein 按调研规格取 total）
+        val root = orderAssetCall(sin = 0, ein = total) ?: return@withContext null
+        val albumList = (root.get("data") as? JsonObject)?.get("albumlist") as? JsonArray
+            ?: JsonArray()
+        albumList.mapNotNull { raw ->
+            val obj = raw as? JsonObject ?: return@mapNotNull null
+            val albumMid = obj.str("albummid")?.takeIf(String::isNotBlank)
+            val albumId = obj.str("albumid")?.takeIf { it.isNotBlank() && it != "0" }
+            val id = albumMid ?: albumId ?: return@mapNotNull null
+            val picMid = obj.str("picmid")?.takeIf(String::isNotBlank) ?: albumMid
+            LxAlbum(
+                id = id,
+                name = obj.str("albumname") ?: obj.str("name") ?: "",
+                pic = picMid?.let { "https://y.gtimg.cn/music/photo_new/T002R300x300M000$it.jpg" },
+                artistName = ((obj.get("singers") as? JsonArray)
+                    ?.mapNotNull { (it as? JsonObject)?.str("name") }
+                    ?.filter { it.isNotBlank() }
+                    ?.takeIf { it.isNotEmpty() })
+                    ?.joinToString("/"),
+                size = obj.intField("song_count") ?: 0,
+            )
+        }
+    }
+
+    /**
+     * 关注的歌手（fcg_order_singer_getlist.fcg）：perpage=30 翻页直到 num；
+     * 字段做大小写多形态兼容（FSINGERNAME/name 等）。未登录/请求失败返回 null。
+     */
+    suspend fun fetchFollowedArtists(): List<LxArtist>? = withContext(Dispatchers.IO) {
+        val (cookie, cookies) = loginCookie() ?: return@withContext null
+        val uin = cookieUin(cookies)
+        val result = mutableListOf<LxArtist>()
+        var page = 1
+        val perPage = 30
+        val maxPages = 20
+        var total = -1
+        while (page <= maxPages) {
+            val url = ORDER_SINGER_URL.toHttpUrl().newBuilder().apply {
+                addQueryParameter("utf8", "1")
+                addQueryParameter("page", page.toString())
+                addQueryParameter("perpage", perPage.toString())
+                addQueryParameter("uin", uin)
+                addQueryParameter("g_tk", "5381")
+                addQueryParameter("format", "json")
+            }.build()
+            val request = Request.Builder().url(url)
+                .header("User-Agent", USER_AGENT)
+                .header("Referer", "https://y.qq.com/portal/profile.html")
+                .header("Cookie", cookie)
+                .get()
+                .build()
+            val root = runCatching {
+                okHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        Timber.w("$TAG: followed artists http %s", response.code)
+                        return@use null
+                    }
+                    runCatching {
+                        JsonParser.parseString(response.body?.string().orEmpty()).asJsonObject
+                    }.getOrNull()
+                }
+            }.getOrElse { e ->
+                Timber.w(e, "$TAG: followed artists request failed")
+                null
+            } ?: return@withContext if (result.isEmpty()) null else result
+
+            // total 用 -1 表示未知（响应缺 num/total 字段时不再误判为 0 导致首页截断），
+            // 未知时依赖“返回页未满 perPage”终止
+            if (total < 0) total = root.intField("num") ?: root.intField("total") ?: -1
+            val list = root.get("list") as? JsonArray ?: JsonArray()
+            if (list.size() == 0) break
+            list.mapNotNull { raw ->
+                val obj = raw as? JsonObject ?: return@mapNotNull null
+                // 响应字段存在 FSINGERMID/FSINGERNAME 大写下划线风格，同时兼容 mid/name
+                val mid = obj.str("singermid") ?: obj.str("FSINGERMID") ?: obj.str("mid")
+                val name = obj.str("FSINGERNAME") ?: obj.str("singername")
+                    ?: obj.str("name") ?: ""
+                val id = mid?.takeIf(String::isNotBlank)
+                    ?: obj.str("singerid")?.takeIf { it.isNotBlank() && it != "0" }
+                    ?: return@mapNotNull null
+                LxArtist(
+                    id = id,
+                    name = name,
+                    pic = (obj.str("pic") ?: obj.str("avatar"))?.takeIf(String::isNotBlank),
+                )
+            }.let { result += it }
+            if (total >= 0 && result.size >= total) break
+            if (list.size() < perPage) break
+            page++
+        }
+        result.distinctBy { it.id }
     }
 
     private fun mapPlaylist(raw: JsonElement, subscribed: Boolean = false): LxPlaylist? {

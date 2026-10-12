@@ -11,10 +11,6 @@ sealed class Screen(val route: String) {
     object Library : Screen("library")
     object LxMusic : Screen("lx_music")
     object Settings : Screen("settings")
-    object Accounts : Screen("settings_accounts?highlightKey={highlightKey}") {
-        fun createRoute(highlightKey: String? = null) =
-            if (highlightKey != null) "settings_accounts?highlightKey=$highlightKey" else "settings_accounts"
-    }
     object SettingsCategory : Screen("settings_category/{categoryId}?highlightKey={highlightKey}") {
         fun createRoute(categoryId: String, highlightKey: String? = null) =
             if (highlightKey != null) "settings_category/$categoryId?highlightKey=$highlightKey" else "settings_category/$categoryId"

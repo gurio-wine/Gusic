@@ -18,7 +18,6 @@ import com.gurio.gusic.data.database.EngagementDao
 import com.gurio.gusic.data.database.FavoritesDao
 import com.gurio.gusic.data.database.LyricsDao
 import com.gurio.gusic.data.database.LocalPlaylistDao
-import com.gurio.gusic.data.database.ListenBrainzDao
 import com.gurio.gusic.data.database.MIGRATION_1_2
 import com.gurio.gusic.data.database.MIGRATION_2_3
 import com.gurio.gusic.data.database.MIGRATION_3_4
@@ -31,6 +30,7 @@ import com.gurio.gusic.data.database.MIGRATION_9_10
 import com.gurio.gusic.data.database.MIGRATION_10_11
 import com.gurio.gusic.data.database.MIGRATION_11_12
 import com.gurio.gusic.data.database.MIGRATION_12_13
+import com.gurio.gusic.data.database.MIGRATION_13_14
 import com.gurio.gusic.data.database.MusicDao
 import com.gurio.gusic.data.database.OfflineTrackDao
 import com.gurio.gusic.data.database.GusicDatabase
@@ -154,6 +154,7 @@ object AppModule {
                 MIGRATION_10_11,
                 MIGRATION_11_12,
                 MIGRATION_12_13,
+                MIGRATION_13_14,
             )
             .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
 
@@ -210,12 +211,6 @@ object AppModule {
     @Provides
     fun provideLocalPlaylistDao(database: GusicDatabase): LocalPlaylistDao {
         return database.localPlaylistDao()
-    }
-
-    @Singleton
-    @Provides
-    fun provideListenBrainzDao(database: GusicDatabase): ListenBrainzDao {
-        return database.listenBrainzDao()
     }
 
     @Singleton

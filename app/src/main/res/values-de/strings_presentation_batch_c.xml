@@ -48,6 +48,7 @@
     <string name="library_tab_artists">Künstler</string>
     <string name="library_tab_folders">Ordner</string>
     <string name="library_tab_liked">Lieblingssongs</string>
+    <string name="library_tab_collections">Sammlungen</string>
     <string name="library_tab_playlists">Playlists</string>
     <string name="library_tab_songs">Songs</string>
     <string name="lyrics_synced_badge">SYNCHRONISIERT</string>

@@ -327,6 +327,20 @@ fun LibraryScreen(
     val playlistSongs by playlistsStateHolder.playlistSongs.collectAsStateWithLifecycle()
     val isLoadingPlaylistSongs by playlistsStateHolder.playlistSongsLoading.collectAsStateWithLifecycle()
     val playlistSongsError by playlistsStateHolder.playlistSongsError.collectAsStateWithLifecycle()
+    // “收藏”三级结构：一级平台入口 / 二级歌手·专辑页签 / 三级歌手·专辑歌曲（平台登录态复用 liked 的 loggedInPlatforms）
+    val collectionsStateHolder = libraryViewModel.collections
+    val collectionsScope by collectionsStateHolder.collectionsScope.collectAsStateWithLifecycle()
+    val collectionsTab by collectionsStateHolder.collectionsTab.collectAsStateWithLifecycle()
+    val collectionArtists by collectionsStateHolder.platformArtists.collectAsStateWithLifecycle()
+    val collectionArtistsLoading by collectionsStateHolder.artistsLoading.collectAsStateWithLifecycle()
+    val collectionArtistsError by collectionsStateHolder.artistsError.collectAsStateWithLifecycle()
+    val collectionAlbums by collectionsStateHolder.platformAlbums.collectAsStateWithLifecycle()
+    val collectionAlbumsLoading by collectionsStateHolder.albumsLoading.collectAsStateWithLifecycle()
+    val collectionAlbumsError by collectionsStateHolder.albumsError.collectAsStateWithLifecycle()
+    val selectedCollectionDetail by collectionsStateHolder.selectedDetail.collectAsStateWithLifecycle()
+    val collectionDetailSongs by collectionsStateHolder.detailSongs.collectAsStateWithLifecycle()
+    val collectionDetailSongsLoading by collectionsStateHolder.detailSongsLoading.collectAsStateWithLifecycle()
+    val collectionDetailSongsError by collectionsStateHolder.detailSongsError.collectAsStateWithLifecycle()
     val favoriteSongCount by libraryViewModel.favoriteSongCountFlow.collectAsStateWithLifecycle(initialValue = 0)
     // Activity 级共享的 LxMusicViewModel（与 LxMusicScreen 等页面共用同一实例）
     val lxMusicViewModel: LxMusicViewModel = hiltViewModel(
@@ -349,6 +363,8 @@ fun LibraryScreen(
                 null, LxSources.LOCAL -> Unit
                 else -> likedStateHolder.refreshPlatformSongs()
             }
+            // “收藏”平台层级（二级/三级）走平台自己的强刷；一级入口无操作
+            LibraryTabId.COLLECTIONS -> if (collectionsScope != null) collectionsStateHolder.refresh()
             // 专辑/艺术家 tab 已下线，无可刷新的分页流（保留分支以保枚举穷尽性）
             LibraryTabId.ALBUMS,
             LibraryTabId.ARTISTS -> Unit
@@ -419,6 +435,38 @@ fun LibraryScreen(
                     songsToPlay = queueSongs.map { LxSongMapper.toSong(it) },
                     startSong = LxSongMapper.toSong(song),
                     queueName = latestSelectedPlatformPlaylist?.name
+                        ?: LxSources.labelRes(song.source)?.let { context.getString(it) }
+                        ?: LxSources.shortLabel(song.source),
+                    origin = PlaybackOrigin.ONLINE
+                )
+            }
+        }
+    }
+    val latestCollectionDetailSongs by rememberUpdatedState(collectionDetailSongs)
+    val latestSelectedCollectionDetail by rememberUpdatedState(selectedCollectionDetail)
+    // 收藏三级歌曲（歌手热门歌曲/专辑曲目）的五步播放链路（与 onPlayPlaylistSong 逐字一致，仅队列名不同）
+    val onPlayCollectionSong: (LxSong) -> Unit = remember(lxMusicViewModel, playerViewModel, context) {
+        { song ->
+            scope.launch {
+                val resolved = lxMusicViewModel.ensureActiveScriptForPlayback()
+                if (resolved == null && song.source !in LxSources.ALL) {
+                    val hasDisabled = lxMusicViewModel.hasUserDisabledScripts()
+                    Toast.makeText(
+                        context,
+                        if (hasDisabled) context.getString(R.string.lx_msg_source_disabled)
+                        else context.getString(R.string.lxmusic_need_script_or_cookie),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@launch
+                }
+                val queueSongs = latestCollectionDetailSongs.ifEmpty { listOf(song) }
+                lxMusicViewModel.recordPlay(song)
+                lxMusicViewModel.cacheSongsMetadata(queueSongs)
+                lxMusicViewModel.setPlaybackQueueLxSongs(queueSongs)
+                playerViewModel.playSongs(
+                    songsToPlay = queueSongs.map { LxSongMapper.toSong(it) },
+                    startSong = LxSongMapper.toSong(song),
+                    queueName = latestSelectedCollectionDetail?.name
                         ?: LxSources.labelRes(song.source)?.let { context.getString(it) }
                         ?: LxSources.shortLabel(song.source),
                     origin = PlaybackOrigin.ONLINE
@@ -647,7 +695,9 @@ fun LibraryScreen(
         LibraryTabId.ALBUMS -> isAlbumSelectionMode
         LibraryTabId.SONGS,
         LibraryTabId.LIKED,
-        LibraryTabId.FOLDERS -> isSelectionMode
+        LibraryTabId.FOLDERS,
+        // 收藏分类不接入多选（纯在线列表），多选激活切到本 tab 时仍允许返回键清除选择
+        LibraryTabId.COLLECTIONS -> isSelectionMode
         LibraryTabId.ARTISTS -> isArtistSelectionMode
     }
     val canHandleFolderBack by remember {
@@ -671,8 +721,15 @@ fun LibraryScreen(
                     !isSortSheetVisible
         }
     }
+    val canHandleCollectionsBack by remember {
+        derivedStateOf {
+            currentTabId == LibraryTabId.COLLECTIONS &&
+                    collectionsScope != null &&
+                    !isSortSheetVisible
+        }
+    }
 
-    BackHandler(enabled = hasSelectionInCurrentTab || canHandleFolderBack || canHandleLikedBack || canHandlePlaylistsBack) {
+    BackHandler(enabled = hasSelectionInCurrentTab || canHandleFolderBack || canHandleLikedBack || canHandlePlaylistsBack || canHandleCollectionsBack) {
         when {
             hasSelectionInCurrentTab -> {
                 when (currentTabId) {
@@ -702,6 +759,9 @@ fun LibraryScreen(
                         showMultiSelectionSheet = false
                     }
 
+                    // 收藏页签不进入多选态，此处仅为 when 穷尽
+                    LibraryTabId.COLLECTIONS -> Unit
+
                 }
             }
 
@@ -715,6 +775,10 @@ fun LibraryScreen(
 
             canHandlePlaylistsBack -> {
                 playlistsStateHolder.back()
+            }
+
+            canHandleCollectionsBack -> {
+                collectionsStateHolder.back()
             }
         }
     }
@@ -1019,6 +1083,8 @@ fun LibraryScreen(
                             LibraryTabId.PLAYLISTS -> playlistUiState.currentPlaylistSortOption
                             LibraryTabId.LIKED -> playerUiState.currentFavoriteSortOption
                             LibraryTabId.FOLDERS -> playerUiState.currentFolderSortOption
+                            // 收藏分类无本地排序
+                            LibraryTabId.COLLECTIONS -> null
                         }
 
                         val onSortOptionChanged: (SortOption) -> Unit = remember(playerViewModel, playlistViewModel, currentTabId) {
@@ -1030,6 +1096,8 @@ fun LibraryScreen(
                                     LibraryTabId.PLAYLISTS -> playlistViewModel.sortPlaylists(option)
                                     LibraryTabId.LIKED -> playerViewModel.sortFavoriteSongs(option)
                                     LibraryTabId.FOLDERS -> playerViewModel.sortFolders(option)
+                                    // 收藏分类无本地排序
+                                    LibraryTabId.COLLECTIONS -> Unit
                                 }
                             }
                         }
@@ -1180,8 +1248,10 @@ fun LibraryScreen(
                         // 歌单排序面板仅在一级本软件歌单列表中可用（平台层级不显示）
                         val playlistsSortSheetAllowed = currentTabId != LibraryTabId.PLAYLISTS ||
                             playlistsScope == null
+                        // 收藏分类为纯在线内容，排序面板整个不可用
+                        val collectionsSortSheetAllowed = currentTabId != LibraryTabId.COLLECTIONS
                         if (isSortSheetVisible && sanitizedSortOptions.isNotEmpty() &&
-                            likedSortSheetAllowed && playlistsSortSheetAllowed
+                            likedSortSheetAllowed && playlistsSortSheetAllowed && collectionsSortSheetAllowed
                         ) {
                             val currentSelectionKey = currentSelectedSortOption?.storageKey
                             val selectedOptionForSheet = sanitizedSortOptions.firstOrNull { option ->
@@ -1446,6 +1516,33 @@ fun LibraryScreen(
                                         )
                                     }
 
+                                    LibraryTabId.COLLECTIONS -> {
+                                        LibraryCollectionsTab(
+                                            collectionsScope = collectionsScope,
+                                            loggedInPlatforms = loggedInPlatforms,
+                                            collectionsTab = collectionsTab,
+                                            platformArtists = collectionArtists,
+                                            artistsLoading = collectionArtistsLoading,
+                                            artistsError = collectionArtistsError,
+                                            platformAlbums = collectionAlbums,
+                                            albumsLoading = collectionAlbumsLoading,
+                                            albumsError = collectionAlbumsError,
+                                            selectedDetail = selectedCollectionDetail,
+                                            detailSongs = collectionDetailSongs,
+                                            detailSongsLoading = collectionDetailSongsLoading,
+                                            detailSongsError = collectionDetailSongsError,
+                                            onSelectCollectionsScope = { collectionsStateHolder.selectCollectionsScope(it) },
+                                            onSelectCollectionsTab = { collectionsStateHolder.selectCollectionsTab(it) },
+                                            onOpenArtist = { collectionsStateHolder.openArtist(it) },
+                                            onOpenAlbum = { collectionsStateHolder.openAlbum(it) },
+                                            onPlayDetailSong = onPlayCollectionSong,
+                                            onRefresh = { collectionsStateHolder.refresh() },
+                                            bottomBarHeight = bottomBarHeightDp,
+                                            onBackToEntries = { collectionsStateHolder.backToCollectionsEntries() },
+                                            onCloseDetail = { collectionsStateHolder.closeDetail() }
+                                        )
+                                    }
+
                                     LibraryTabId.FOLDERS -> {
                                         val folders = playerUiState.musicFolders
                                         val currentFolder = playerUiState.currentFolder
@@ -1510,7 +1607,8 @@ fun LibraryScreen(
                                 LibraryTabId.ARTISTS -> selectedArtists.size.takeIf { isArtistSelectionMode } ?: 0
                                 LibraryTabId.SONGS,
                                 LibraryTabId.LIKED,
-                                LibraryTabId.FOLDERS -> selectedSongs.size
+                                LibraryTabId.FOLDERS,
+                                LibraryTabId.COLLECTIONS -> selectedSongs.size
                             }
                             SelectionCountPill(
                                 selectedCount = selectionCount,
@@ -2462,6 +2560,7 @@ private fun LibraryTabId.iconRes(): Int = when (this) {
     LibraryTabId.PLAYLISTS -> R.drawable.rounded_playlist_play_24
     LibraryTabId.FOLDERS -> R.drawable.rounded_folder_24
     LibraryTabId.LIKED -> R.drawable.round_favorite_24
+    LibraryTabId.COLLECTIONS -> R.drawable.rounded_library_music_24
 }
 
 @Composable

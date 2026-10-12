@@ -214,8 +214,6 @@
     <string name="setcat_theme_light">Tema Terang</string>
     <string name="setcat_trigger_crash_subtitle">Simulasikan crash untuk menguji sistem pelaporan crash.</string>
     <string name="setcat_trigger_crash_title">Picu Crash Uji Coba</string>
-    <string name="settings_accounts_row_subtitle">Kelola layanan scrobbling ListenBrainz kamu</string>
-    <string name="settings_accounts_row_title">Akun</string>
     <string name="settings_category_about_subtitle">Info aplikasi, versi, dan kredit</string>
     <string name="settings_category_about_title">Tentang</string>
     <string name="settings_category_appearance_subtitle">Tema, tata letak, dan gaya visual</string>

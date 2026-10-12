@@ -119,7 +119,9 @@ class LibraryLikedStateHolder @Inject constructor(
 
     /**
      * 切换“我喜欢”二级作用域：
-     * - null/"local" 直接切状态；平台则置 scope 并异步加载（有缓存先用缓存）。
+     * - null/"local" 直接切状态；平台则置 scope 并加载。
+     * 进入平台（含同平台重进）时绕过会话缓存直接拉取（清该平台缓存再 load），
+     * 保证平台收藏变化进入即刷新；仅保留在途加载去重防连点。
      */
     fun selectLikedScope(scope: String?) {
         when (scope) {
@@ -133,6 +135,8 @@ class LibraryLikedStateHolder @Inject constructor(
                 // 同平台在途加载中时去重，避免连点入口重复发起请求
                 if (_likedScope.value == scope && platformLoadJob?.isActive == true) return
                 _likedScope.value = scope
+                // 进入即刷新：清掉该平台缓存再加载，不命中旧数据
+                platformLikedCache.remove(scope)
                 loadPlatformSongs(scope)
             }
             // 未知 scope 直接回到一级入口，避免悬空状态

@@ -602,10 +602,20 @@
     <string-array name="presentation_batch_g_changelog_v26101206_whats_new">
         <item>酷狗“喜欢”真实可用：播放页平台红心可收藏/取消酷狗歌曲，“我喜欢”里可查看酷狗喜欢列表（QQ音乐红心也一并恢复可用）</item>
         <item>收藏歌单扩展到酷狗和QQ音乐：在歌单详情页即可收藏/取消收藏，与网易云一致</item>
-        <item>移除云端串流功能（Navidrome 与 Jellyfin）及其账号入口；ListenBrainz 听歌记录保留</item>
+        <item>移除云端串流功能（Navidrome 与 Jellyfin）与 ListenBrainz 听歌记录上报，并移除账号页</item>
     </string-array>
     <string-array name="presentation_batch_g_changelog_v26101206_changes">
         <item>播放页的队列按钮从顶栏移到下方按钮行，位于喜欢按钮右侧</item>
         <item>“我喜欢”里已登录平台即使 0 首也显示数量，与本软件“我喜欢”一致</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101207_whats_new">
+        <item>“我的”页新增“收藏”分类：选择平台后浏览关注的歌手与专辑（网易云、QQ、酷狗；酷我暂不支持）</item>
+        <item>移除 ListenBrainz 听歌记录上报与设置中的账号页；播放统计与历史保留</item>
+        <item>酷狗歌单列表不再重复显示自动管理的“我喜欢”歌单，收藏的专辑与歌单区分开</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101207_changes">
+        <item>酷我“我喜欢”列表可加载并显示数量</item>
+        <item>发现页移除平台内“我的”页签；网易云“推荐”升级为与“排行榜”并列，资料条保留登出入口</item>
+        <item>“我喜欢”“歌单”“收藏”进入平台时立即刷新</item>
     </string-array>
 </resources>

@@ -214,8 +214,6 @@
     <string name="setcat_theme_light">Tema claro</string>
     <string name="setcat_trigger_crash_subtitle">Simular un fallo para probar el sistema de informe de errores.</string>
     <string name="setcat_trigger_crash_title">Provocar cierre forzado de prueba</string>
-    <string name="settings_accounts_row_subtitle">Gestiona tu servicio de scrobbling de ListenBrainz</string>
-    <string name="settings_accounts_row_title">Cuentas</string>
     <string name="settings_category_about_subtitle">Información de la app, versión y créditos</string>
     <string name="settings_category_about_title">Acerca de</string>
     <string name="settings_category_appearance_subtitle">Temas, diseño y estilos visuales</string>

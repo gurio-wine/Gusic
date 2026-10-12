@@ -2,27 +2,6 @@
 <resources>
     <string name="a11y_toggle_off">Desactivado</string>
     <string name="a11y_toggle_on">Activado</string>
-    <string name="accounts_available_services">Servicios disponibles</string>
-    <string name="accounts_listenbrainz_connect">Conectar</string>
-    <string name="accounts_listenbrainz_connect_failed">No se pudo conectar. Revisa tu token y la URL del servidor e inténtalo de nuevo.</string>
-    <string name="accounts_listenbrainz_custom_server">Enviando scrobbles a %1$s</string>
-    <string name="accounts_listenbrainz_get_token">Abrir listenbrainz.org</string>
-    <string name="accounts_listenbrainz_invalid_url">Introduce una URL de servidor válida, como https://maloja.example.com/apis/listenbrainz</string>
-    <string name="accounts_listenbrainz_needs_reauth">Tu token ya no es válido: vuelve a conectarte para seguir enviando scrobbles. Las escuchas en cola se conservan.</string>
-    <string name="accounts_listenbrainz_now_playing_format">%1$s — %2$s</string>
-    <string name="accounts_listenbrainz_now_playing_idle">Ahora mismo no suena nada</string>
-    <string name="accounts_listenbrainz_now_playing_label">Enviando scrobble</string>
-    <string name="accounts_listenbrainz_reconnect">Volver a conectar</string>
-    <string name="accounts_listenbrainz_scrobble_local">Scrobble de archivos locales</string>
-    <string name="accounts_listenbrainz_server_hint">URL del servidor (opcional)</string>
-    <string name="accounts_listenbrainz_server_supporting">Déjalo vacío para usar listenbrainz.org. Funciona con servidores autoalojados que hablan la API de ListenBrainz, como Maloja.</string>
-    <string name="accounts_listenbrainz_stat_listens">Escuchas totales</string>
-    <string name="accounts_listenbrainz_stat_queued">En cola</string>
-    <string name="accounts_listenbrainz_title">ListenBrainz</string>
-    <string name="accounts_listenbrainz_toggle_hint">Si tu servidor ya envía scrobbles a ListenBrainz, desactiva aquí esa fuente para evitar escuchas duplicadas.</string>
-    <string name="accounts_listenbrainz_token_dialog_body">Pega tu token de usuario para enviar tus escuchas a ListenBrainz. Lo encontrarás en tus ajustes de listenbrainz.org.</string>
-    <string name="accounts_listenbrainz_token_dialog_title">Conectar ListenBrainz</string>
-    <string name="accounts_listenbrainz_token_hint">Token de usuario</string>
     <string name="album_id_not_found">ID de álbum no encontrado</string>
     <string name="album_not_found">Álbum no encontrado</string>
     <string name="all_files_access_title">Permiso especial requerido</string>

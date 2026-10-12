@@ -350,3 +350,12 @@ val MIGRATION_12_13 = object : Migration(12, 13) {
         )
     }
 }
+
+/**
+ * v13 -> v14: ListenBrainz 听歌记录上报（scrobble）功能整体移除，删除对应队列表。
+ */
+val MIGRATION_13_14 = object : Migration(13, 14) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS `listenbrainz_pending_listens`")
+    }
+}

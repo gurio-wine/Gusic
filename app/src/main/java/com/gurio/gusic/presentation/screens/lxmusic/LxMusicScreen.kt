@@ -84,6 +84,7 @@ import com.gurio.gusic.presentation.components.subcomps.SelectionCountPill
 import com.gurio.gusic.data.lxmusic.LxQualities
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Edit
@@ -390,12 +391,16 @@ fun LxMusicScreen(
 
     val mineAvailable = currentSourceLoggedIn
 
-    val browseBackActive = (browseState.module == "mine" &&
+    val browseBackActive = (browseState.module == "recommend" &&
         mineState.page !is LxMusicViewModel.MinePage.Home) ||
         browseState.module == "playlist" ||
         browseState.selectedPlaylist != null ||
         browseState.isPlaylistSearchMode ||
-        browseState.module == "board" || browseState.module == "search"
+        // 榜单详情返回菜单；board 根只有网易可再回“推荐”——
+        // 其他音源根态不启用，让返回键交给外层退出浏览页
+        (browseState.module == "board" &&
+            (browseState.selectedBoard != null || selectedSource == LxSources.NETEASE)) ||
+        browseState.module == "search"
     val topLayerVisible = playerSheetState == com.gurio.gusic.presentation.viewmodel.PlayerSheetState.EXPANDED ||
         queueSheetVisible || showLoginDialog
     BackHandler(enabled = isSelectionMode && !topLayerVisible) {
@@ -488,18 +493,22 @@ fun LxMusicScreen(
             )
         },
     ) { innerPadding ->
-        // “我的”模块固定保留（未登录时显示登录引导占位），浏览态仅 mine/board 两页
-        fun modulePageIndex(module: String): Int = when (module) {
-            "mine" -> 0
-            else -> 1
+        // 浏览态页签：网易音源 = 推荐 + 排行榜 两页；其他音源仅排行榜一页
+        // （原“我的”模块已下线，收藏内容由“我的”页收藏分类承载）
+        val recommendTabAvailable = selectedSource == LxSources.NETEASE
+        fun modulePageIndex(module: String): Int = when {
+            module == "recommend" -> 0
+            recommendTabAvailable -> 1
+            else -> 0
         }
-        fun pageIndexToModule(page: Int): String = when (page) {
-            0 -> "mine"; else -> "board"
+        fun pageIndexToModule(page: Int): String = when {
+            page == 0 && recommendTabAvailable -> "recommend"
+            else -> "board"
         }
 
         val pagerState = rememberPagerState(
             initialPage = modulePageIndex(browseState.module),
-            pageCount = { 2 },
+            pageCount = { if (recommendTabAvailable) 2 else 1 },
         )
         val isListScrolling = remember { mutableStateOf(false) }
         LaunchedEffect(browseState.module, browseState.selectedPlaylist != null, mineAvailable) {
@@ -521,7 +530,7 @@ fun LxMusicScreen(
                     if (browseState.module != target) viewModel.selectModule(target)
                 }
         }
-        val indicatorModule by remember(mineAvailable) {
+        val indicatorModule by remember(recommendTabAvailable) {
             derivedStateOf { pageIndexToModule(pagerState.targetPage) }
         }
         val focusManager = LocalFocusManager.current
@@ -575,7 +584,7 @@ fun LxMusicScreen(
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    val mineLabel = stringResource(R.string.lx_tab_mine)
+                    val recommendLabel = stringResource(R.string.lx_tab_recommend)
                     val boardLabel = stringResource(R.string.lx_tab_board)
                     val searchActive = browseState.module == "search"
                     val playlistDetailActive = browseState.module == "playlist" ||
@@ -639,22 +648,68 @@ fun LxMusicScreen(
                             }
                         }
                     } else {
+                    // 平台资料条（头像/昵称/退出）：原“我的”页头部的最小保留——应用内唯一登出入口。
+                    // 登录后常驻显示在模块行上方；未登录时不渲染。
+                    val profileNickname: String?
+                    val profileAvatar: String?
+                    val profileVipType: Int
+                    val onProfileLogout: () -> Unit
+                    when (selectedSource) {
+                        LxSources.TENCENT -> {
+                            profileNickname = tencentNickname
+                            profileAvatar = tencentAvatar
+                            profileVipType = tencentVipType
+                            onProfileLogout = { viewModel.logoutTencent() }
+                        }
+                        LxSources.KUGOU -> {
+                            profileNickname = kugouNickname
+                            profileAvatar = kugouAvatar
+                            profileVipType = kugouVipType
+                            onProfileLogout = { viewModel.logoutKugou() }
+                        }
+                        LxSources.KUWO -> {
+                            profileNickname = kuwoNickname
+                            profileAvatar = kuwoAvatar
+                            profileVipType = kuwoVipType
+                            onProfileLogout = { viewModel.logoutKuwo() }
+                        }
+                        else -> {
+                            profileNickname = neteaseNickname
+                            profileAvatar = neteaseAvatar
+                            profileVipType = neteaseVipType
+                            onProfileLogout = {
+                                clearNeteaseWebViewSession()
+                                viewModel.logoutNetease()
+                            }
+                        }
+                    }
+                    if (mineAvailable) {
+                        LxProfileStrip(
+                            nickname = profileNickname,
+                            avatarUrl = profileAvatar,
+                            vipType = profileVipType,
+                            onLogout = onProfileLogout,
+                        )
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
+                            .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        LxModuleButton(
-                            label = mineLabel,
-                            icon = Icons.Rounded.Person,
-                            selected = indicatorModule == "mine",
-                            onClick = { viewModel.selectModule("mine") },
-                            modifier = Modifier.weight(1f),
-                        )
-                        // “排行榜”三字更长，多分一点宽度保证完整显示
+                        if (recommendTabAvailable) {
+                            LxModuleButton(
+                                label = recommendLabel,
+                                icon = Icons.Rounded.AutoAwesome,
+                                selected = indicatorModule == "recommend",
+                                onClick = { viewModel.selectModule("recommend") },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        // “排行榜”三字更长，多分一点宽度保证完整显示（单页签时占满整行）
                         LxModuleButton(boardLabel, Icons.Rounded.Leaderboard,
-                            indicatorModule == "board", { viewModel.selectModule("board") }, Modifier.weight(1.3f))
+                            indicatorModule == "board", { viewModel.selectModule("board") },
+                            Modifier.weight(if (recommendTabAvailable) 1.3f else 1f))
                     }
                     Box(modifier = Modifier.fillMaxSize()) {
                     HorizontalPager(
@@ -665,56 +720,18 @@ fun LxMusicScreen(
                         key = { it },
                         pageSpacing = 0.dp,
                     ) { page ->
-                        when (page) {
-                            0 -> {
+                        when {
+                            page == 0 && recommendTabAvailable -> {
                                 if (mineAvailable) {
-                                    val mineNickname: String?
-                                    val mineAvatar: String?
-                                    val mineVipType: Int
-                                    val mineShowFollow: Boolean
-                                    val mineLogout: () -> Unit
-                                    when (selectedSource) {
-                                        LxSources.TENCENT -> {
-                                            mineNickname = tencentNickname
-                                            mineAvatar = tencentAvatar
-                                            mineVipType = tencentVipType
-                                            mineShowFollow = false
-                                            mineLogout = { viewModel.logoutTencent() }
-                                        }
-                                        LxSources.KUGOU -> {
-                                            mineNickname = kugouNickname
-                                            mineAvatar = kugouAvatar
-                                            mineVipType = kugouVipType
-                                            mineShowFollow = kugouLoggedIn &&
-                                                viewModel.writeEnabledFor(LxSources.KUGOU, LxWriteOp.ARTIST_FOLLOW)
-                                            mineLogout = { viewModel.logoutKugou() }
-                                        }
-                                        LxSources.KUWO -> {
-                                            mineNickname = kuwoNickname
-                                            mineAvatar = kuwoAvatar
-                                            mineVipType = kuwoVipType
-                                            mineShowFollow = kuwoLoggedIn &&
-                                                viewModel.writeEnabledFor(LxSources.KUWO, LxWriteOp.ARTIST_FOLLOW)
-                                            mineLogout = { viewModel.logoutKuwo() }
-                                        }
-                                        else -> {
-                                            mineNickname = neteaseNickname
-                                            mineAvatar = neteaseAvatar
-                                            mineVipType = neteaseVipType
-                                            mineShowFollow = neteaseLoggedIn
-                                            mineLogout = {
-                                                clearNeteaseWebViewSession()
-                                                viewModel.logoutNetease()
-                                            }
-                                        }
-                                    }
-                                    LxMinePage(
-                                        mineState, mineNickname, mineAvatar, mineVipType,
-                                        viewModel, playerViewModel, playLxSong,
-                                        playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
+                                    LxRecommendPage(
+                                        recommendState = mineState,
+                                        viewModel = viewModel,
+                                        playerViewModel = playerViewModel,
+                                        playLxSong = playLxSong,
+                                        playAllPlaylist = playAllPlaylist,
+                                        shuffleAllPlaylist = shuffleAllPlaylist,
+                                        bottomBarHeightDp = bottomBarHeightDp,
                                         onScrollingChange = { if (pagerState.currentPage == 0) isListScrolling.value = it },
-                                        showArtistFollow = mineShowFollow,
-                                        onLogout = mineLogout,
                                         onSongMoreOptions = { lxInfoSong = it },
                                         isSelectionMode = isSelectionMode,
                                         selectedSongIds = selectedSongIds,
@@ -753,7 +770,7 @@ fun LxMusicScreen(
                             } else {
                                 LxBoardPage(browseState, viewModel, playerViewModel, playLxSong,
                                     playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
-                                    onScrollingChange = { if (pagerState.currentPage == 1) isListScrolling.value = it },
+                                    onScrollingChange = { if (pagerState.currentPage == modulePageIndex("board")) isListScrolling.value = it },
                                     onSongMoreOptions = { lxInfoSong = it },
                                     isSelectionMode = isSelectionMode,
                                     selectedSongIds = selectedSongIds,

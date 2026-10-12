@@ -602,10 +602,20 @@
     <string-array name="presentation_batch_g_changelog_v26101206_whats_new">
         <item>酷狗「喜歡」真實可用：播放頁平台紅心可收藏/取消酷狗歌曲，「我喜歡」裡可查看酷狗喜歡清單（QQ音樂紅心也一併恢復可用）</item>
         <item>收藏歌單擴展到酷狗和QQ音樂：在歌單詳情頁即可收藏/取消收藏，與網易雲一致</item>
-        <item>移除雲端串流功能（Navidrome 與 Jellyfin）及其帳號入口；ListenBrainz 聽歌記錄保留</item>
+        <item>移除雲端串流功能（Navidrome 與 Jellyfin）與 ListenBrainz 聽歌記錄上報，並移除帳號頁</item>
     </string-array>
     <string-array name="presentation_batch_g_changelog_v26101206_changes">
         <item>播放頁的佇列按鈕從頂欄移到下方按鈕行，位於喜歡按鈕右側</item>
         <item>「我喜歡」裡已登入平台即使 0 首也顯示數量，與本軟體「我喜歡」一致</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101207_whats_new">
+        <item>「我的」頁新增「收藏」分類：選擇平台後瀏覽關注的歌手與專輯（網易雲、QQ、酷狗；酷我暫不支援）</item>
+        <item>移除 ListenBrainz 聽歌記錄上報與設定中的帳號頁；播放統計與歷史保留</item>
+        <item>酷狗歌單清單不再重複顯示自動管理的「我喜歡」歌單，收藏的專輯與歌單區分開</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101207_changes">
+        <item>酷我「我喜歡」清單可載入並顯示數量</item>
+        <item>發現頁移除平台內「我的」頁籤；網易雲「推薦」升級為與「排行榜」並列，資料條保留登出入口</item>
+        <item>「我喜歡」「歌單」「收藏」進入平台時立即重新整理</item>
     </string-array>
 </resources>

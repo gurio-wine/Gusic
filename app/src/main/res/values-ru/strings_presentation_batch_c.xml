@@ -48,6 +48,7 @@
     <string name="library_tab_artists">Исполнители</string>
     <string name="library_tab_folders">Папки</string>
     <string name="library_tab_liked">Избранное</string>
+    <string name="library_tab_collections">Коллекции</string>
     <string name="library_tab_playlists">Плейлисты</string>
     <string name="library_tab_songs">Песни</string>
     <string name="lyrics_synced_badge">СИНХР.</string>

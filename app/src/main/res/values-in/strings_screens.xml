@@ -16,7 +16,6 @@
     <string name="about_upstream_credits_title">Penghargaan untuk proyek upstream</string>
     <string name="about_upstream_credits_subtitle">Penulis dan pemelihara asli PixelPlayer, diberi kredit atas kontribusi mereka pada proyek upstream.</string>
     <string name="about_version_format">Versi v%1$s</string>
-    <string name="accounts_unable_open_screen">Tidak dapat membuka layar ini sekarang.</string>
     <string name="action_copy">Salin</string>
     <string name="action_reset">Reset</string>
     <string name="action_share">Bagikan</string>

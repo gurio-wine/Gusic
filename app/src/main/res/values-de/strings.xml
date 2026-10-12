@@ -2,27 +2,6 @@
 <resources>
     <string name="a11y_toggle_off">Aus</string>
     <string name="a11y_toggle_on">An</string>
-    <string name="accounts_available_services">Verfügbare Dienste</string>
-    <string name="accounts_listenbrainz_connect">Verbinden</string>
-    <string name="accounts_listenbrainz_connect_failed">Verbindung fehlgeschlagen. Prüfe Token und Server-URL und versuche es nochmal.</string>
-    <string name="accounts_listenbrainz_custom_server">Scrobbeln zu %1$s</string>
-    <string name="accounts_listenbrainz_get_token">listenbrainz.org öffnen</string>
-    <string name="accounts_listenbrainz_invalid_url">Gib eine gültige Server-URL ein, z. B. https://maloja.example.com/apis/listenbrainz</string>
-    <string name="accounts_listenbrainz_needs_reauth">Dein Token ist nicht mehr gültig – verbinde dich neu, um weiter zu scrobbeln. Wartende Listens bleiben erhalten.</string>
-    <string name="accounts_listenbrainz_now_playing_format">%1$s — %2$s</string>
-    <string name="accounts_listenbrainz_now_playing_idle">Gerade läuft nichts</string>
-    <string name="accounts_listenbrainz_now_playing_label">Wird jetzt gescrobbelt</string>
-    <string name="accounts_listenbrainz_reconnect">Neu verbinden</string>
-    <string name="accounts_listenbrainz_scrobble_local">Lokale Dateien scrobbeln</string>
-    <string name="accounts_listenbrainz_server_hint">Server-URL (optional)</string>
-    <string name="accounts_listenbrainz_server_supporting">Leer lassen für listenbrainz.org. Funktioniert mit selbst gehosteten Servern, die die ListenBrainz-API sprechen, etwa Maloja.</string>
-    <string name="accounts_listenbrainz_stat_listens">Listens gesamt</string>
-    <string name="accounts_listenbrainz_stat_queued">In Warteschlange</string>
-    <string name="accounts_listenbrainz_title">ListenBrainz</string>
-    <string name="accounts_listenbrainz_toggle_hint">Wenn dein Server schon selbst zu ListenBrainz scrobbelt, schalte diese Quelle hier aus, um doppelte Listens zu vermeiden.</string>
-    <string name="accounts_listenbrainz_token_dialog_body">Füge dein User-Token ein, um deine Listens zu ListenBrainz zu scrobbeln. Du findest es in deinen Einstellungen auf listenbrainz.org.</string>
-    <string name="accounts_listenbrainz_token_dialog_title">ListenBrainz verbinden</string>
-    <string name="accounts_listenbrainz_token_hint">User-Token</string>
     <string name="album_id_not_found">Album-ID nicht gefunden</string>
     <string name="album_not_found">Album nicht gefunden</string>
     <string name="all_files_access_title">Berechtigung erforderlich</string>

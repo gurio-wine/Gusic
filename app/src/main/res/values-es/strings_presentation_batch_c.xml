@@ -48,6 +48,7 @@
     <string name="library_tab_artists">Artistas</string>
     <string name="library_tab_folders">Carpetas</string>
     <string name="library_tab_liked">Me gusta</string>
+    <string name="library_tab_collections">Colecciones</string>
     <string name="library_tab_playlists">Listas</string>
     <string name="library_tab_songs">Canciones</string>
     <string name="lyrics_synced_badge">SINCRONIZADA</string>

@@ -256,23 +256,6 @@ class LxMusicViewModel @Inject constructor(
                 repository.kwLikedSongIds,
             ) { wy, kg, tx, kw -> LikedSets(wy, kg, tx, kw) }.collect { cur ->
                 val source = _selectedSource.value
-                val st = _mineState.value
-                if (st.homeLoaded) {
-                    val count = when (source) {
-                        LxSources.KUGOU -> cur.kg.count { it.length == 32 && it.all { c -> c.isDigit() || c in 'a'..'f' || c in 'A'..'F' } }
-                        LxSources.TENCENT -> cur.tx.size
-                        LxSources.KUWO -> cur.kw.size
-                        LxSources.NETEASE -> cur.wy.size
-                        else -> null
-                    }
-                    if (count != null) {
-                        _mineState.value = st.copy(
-                            myPlaylists = st.myPlaylists.map {
-                                if (it.specialType == 5) it.copy(trackCount = count) else it
-                            },
-                        )
-                    }
-                }
                 val (removed, currentSet) = when (source) {
                     LxSources.NETEASE -> (prevWy - cur.wy) to cur.wy
                     LxSources.KUGOU -> (prevKg - cur.kg) to cur.kg
@@ -387,7 +370,7 @@ class LxMusicViewModel @Inject constructor(
                 }
             }
             if (_selectedSource.value == LxSources.NETEASE && neteaseCookieStore.hasCookie()) {
-                _browseState.value = _browseState.value.copy(module = "mine")
+                _browseState.value = _browseState.value.copy(module = "recommend")
                 ensureMineHome()
             } else {
                 startModuleLoad("board", _selectedSource.value, force = false)
@@ -739,9 +722,11 @@ class LxMusicViewModel @Inject constructor(
         }
         resetMineNavigation()
         val restoredModule = when (val remembered = perSourceModule[source]) {
+            // “推荐”仅网易提供；其他音源没有独立模块，恢复到排行榜
+            "recommend" -> if (source == LxSources.NETEASE) "recommend" else "board"
+            // 兼容历史记忆值 "mine"（原“我的”模块已下线）：网易映射到推荐，其他回退排行榜
+            "mine" -> if (source == LxSources.NETEASE) "recommend" else "board"
             null -> "board"
-            // “我的”模块固定保留，未登录时由界面显示占位
-            "mine" -> "mine"
             // "playlist" 仅作为歌单详情的内部模块值，不作为恢复目标；
             // 兼容历史记忆值（如 "search"/"playlist"），一律回退浏览根模块
             else -> "board"
@@ -804,7 +789,7 @@ class LxMusicViewModel @Inject constructor(
 
         when (restoredModule) {
             "board", "playlist" -> startModuleLoad(restoredModule, source, force = true)
-            "mine" -> ensureMineHome()
+            "recommend" -> ensureMineHome()
         }
     }
 
@@ -921,10 +906,12 @@ class LxMusicViewModel @Inject constructor(
         currentLoadJob?.cancel()
         loadEpoch++
 
-        if (module == "mine") {
-            // 未登录也允许进入“我的”模块：界面显示未登录占位与登录入口
-            _browseState.value = _browseState.value.copy(module = "mine", error = null)
-            perSourceModule[_selectedSource.value] = "mine"
+        if (module == "recommend") {
+            // “推荐”仅网易音源提供（内容全部来自网易推荐接口）；
+            // 未登录也允许进入：界面显示登录引导占位
+            if (_selectedSource.value != LxSources.NETEASE) return
+            _browseState.value = _browseState.value.copy(module = "recommend", error = null)
+            perSourceModule[_selectedSource.value] = "recommend"
             if (isSourceLoggedIn(_selectedSource.value)) ensureMineHome()
             return
         }
@@ -1152,14 +1139,13 @@ class LxMusicViewModel @Inject constructor(
 
     fun back(): Boolean {
         val st = _browseState.value
-        // 排行榜详情返回菜单页，再返回才回到“我的”
+        // 排行榜详情返回菜单页，网易音源再返回才回到“推荐”
         if (st.module == "board" && st.selectedBoard != null) {
             backToBoardMenu()
             return true
         }
-        // “我的”模块固定保留，返回的根模块始终为 mine（未登录时显示占位）
-        val rootModule = "mine"
-        if (st.module == "mine") {
+        // “推荐”模块（网易）：返回先退子页，子页退完交给外层处理
+        if (st.module == "recommend") {
             if (mineBackStack.size > 1) {
                 backMinePage()
                 return true
@@ -1182,7 +1168,7 @@ class LxMusicViewModel @Inject constructor(
                     selectedPlaylist = null, playlistSongs = emptyList(),
                     loadingPlaylistSongs = false, error = null,
                 )
-                selectModule(rootModule)
+                selectRootModuleForBack()
             } else {
                 backToPlaylistList()
             }
@@ -1197,7 +1183,7 @@ class LxMusicViewModel @Inject constructor(
             return true
         }
         if (st.module == "playlist") {
-            selectModule(rootModule)
+            selectRootModuleForBack()
             return true
         }
         if (st.module == "search") {
@@ -1205,9 +1191,17 @@ class LxMusicViewModel @Inject constructor(
             exitSearch()
             return true
         }
-        // board 返回也回到“我的”（未登录时是占位页）
-        selectModule("mine")
-        return true
+        // board 根：网易回到“推荐”，其他音源没有根级模块，交由外层退出页面
+        return selectRootModuleForBack()
+    }
+
+    /** 返回浏览根模块：网易音源为“推荐”，其他音源无根模块（返回 false 交给外层退出页面）。 */
+    private fun selectRootModuleForBack(): Boolean {
+        if (_selectedSource.value == LxSources.NETEASE) {
+            selectModule("recommend")
+            return true
+        }
+        return false
     }
 
 
@@ -1316,12 +1310,11 @@ class LxMusicViewModel @Inject constructor(
     }
 
 
+    // 原平台“我的”页已下线：仅保留网易“推荐”页签的子页（推荐歌单/歌曲列表）。
+    // 歌手/专辑子页及歌手详情页移除，收藏内容改由“我的”页收藏分类承载。
     sealed interface MinePage {
         data object Home : MinePage
         data object RecommendPlaylists : MinePage
-        data object SubArtists : MinePage
-        data object SubAlbums : MinePage
-        data class Artist(val id: String, val name: String) : MinePage
 
         data class SongList(
             val title: String,
@@ -1335,6 +1328,7 @@ class LxMusicViewModel @Inject constructor(
     data class MineState(
         val loadingHome: Boolean = false,
         val homeLoaded: Boolean = false,
+        // myPlaylists/subArtists/subAlbums 仍被收藏态判定（collectStateOf）与搜索关注态消费，保留
         val recommendPlaylists: List<LxPlaylist> = emptyList(),
         val myPlaylists: List<LxPlaylist> = emptyList(),
         val subArtists: List<LxArtist> = emptyList(),
@@ -1344,17 +1338,8 @@ class LxMusicViewModel @Inject constructor(
         val pageSongs: List<LxSong> = emptyList(),
         val pageLoading: Boolean = false,
         val pagePlaylists: List<LxPlaylist> = emptyList(),
-        val pageArtists: List<LxArtist> = emptyList(),
-        val pageAlbums: List<LxAlbum> = emptyList(),
         val pageSongsHasMore: Boolean = false,
         val pageLoadingMore: Boolean = false,
-        val artistTab: String = "songs", // songs | albums
-        val artistInfo: LxArtist? = null,
-        val artistFollowed: Boolean? = null,
-        val artistFollowBusy: Boolean = false,
-        val artistSongsTotal: Int = 0,
-        val artistSongsHasMore: Boolean = false,
-        val artistLoadingMore: Boolean = false,
         val navSession: Long = 0,
         val error: String? = null,
     )
@@ -1364,17 +1349,8 @@ class LxMusicViewModel @Inject constructor(
         val pageTitle: String,
         val pageSongs: List<LxSong>,
         val pagePlaylists: List<LxPlaylist>,
-        val pageArtists: List<LxArtist>,
-        val pageAlbums: List<LxAlbum>,
         val pageSongsHasMore: Boolean,
         val pageLoadingMore: Boolean,
-        val artistTab: String,
-        val artistInfo: LxArtist?,
-        val artistFollowed: Boolean?,
-        val artistFollowBusy: Boolean,
-        val artistSongsTotal: Int,
-        val artistSongsHasMore: Boolean,
-        val artistLoadingMore: Boolean,
         val navSession: Long,
         val pageLoading: Boolean,
         val error: String?,
@@ -1385,17 +1361,8 @@ class LxMusicViewModel @Inject constructor(
         pageTitle = pageTitle,
         pageSongs = pageSongs,
         pagePlaylists = pagePlaylists,
-        pageArtists = pageArtists,
-        pageAlbums = pageAlbums,
         pageSongsHasMore = pageSongsHasMore,
         pageLoadingMore = pageLoadingMore,
-        artistTab = artistTab,
-        artistInfo = artistInfo,
-        artistFollowed = artistFollowed,
-        artistFollowBusy = artistFollowBusy,
-        artistSongsTotal = artistSongsTotal,
-        artistSongsHasMore = artistSongsHasMore,
-        artistLoadingMore = artistLoadingMore,
         navSession = navSession,
         pageLoading = pageLoading,
         error = error,
@@ -1406,17 +1373,8 @@ class LxMusicViewModel @Inject constructor(
         pageTitle = s.pageTitle,
         pageSongs = s.pageSongs,
         pagePlaylists = s.pagePlaylists,
-        pageArtists = s.pageArtists,
-        pageAlbums = s.pageAlbums,
         pageSongsHasMore = s.pageSongsHasMore,
         pageLoadingMore = s.pageLoadingMore,
-        artistTab = s.artistTab,
-        artistInfo = s.artistInfo,
-        artistFollowed = s.artistFollowed,
-        artistFollowBusy = s.artistFollowBusy,
-        artistSongsTotal = s.artistSongsTotal,
-        artistSongsHasMore = s.artistSongsHasMore,
-        artistLoadingMore = s.artistLoadingMore,
         navSession = s.navSession,
         pageLoading = s.pageLoading,
         error = s.error,
@@ -1460,7 +1418,7 @@ class LxMusicViewModel @Inject constructor(
                         _selectedSource.value = LxSources.NETEASE
                         persistSelectedSource()
                     }
-                    _browseState.value = _browseState.value.copy(module = "mine", error = null)
+                    _browseState.value = _browseState.value.copy(module = "recommend", error = null)
                     loadMineHome(force = true)
                     onResult(true, null)
                 }
@@ -1483,7 +1441,7 @@ class LxMusicViewModel @Inject constructor(
         _mineState.value = MineState()
         _searchState.value = SearchState()
         repository.clearNeteaseUid()
-        // 登出后停留在“我的”占位页，方便用户直接重新登录
+        // 登出后停留在发现页，可直接重新登录
     }
 
 
@@ -1514,7 +1472,8 @@ class LxMusicViewModel @Inject constructor(
                 persistSelectedSource()
             }
             resetMineNavigation()
-            _browseState.value = _browseState.value.copy(module = "mine", error = null)
+            // tx/kw 登录后无“推荐”模块（网易专属），落回排行榜；loadMineHome 仅预热收藏态数据
+            _browseState.value = _browseState.value.copy(module = "board", error = null)
             loadMineHome(force = true)
             onResult(true, null)
         }
@@ -1569,7 +1528,7 @@ class LxMusicViewModel @Inject constructor(
                 persistSelectedSource()
             }
             resetMineNavigation()
-            _browseState.value = _browseState.value.copy(module = "mine", error = null)
+            _browseState.value = _browseState.value.copy(module = "board", error = null)
             loadMineHome(force = true)
             onResult(true, null)
         }
@@ -1592,7 +1551,10 @@ class LxMusicViewModel @Inject constructor(
         clearAllWebViewSession()
         tencentCookieStore.clear()
         repository.setTxLikedSongIds(emptySet())
-        // 登出后停留在“我的”占位页，方便用户直接重新登录
+        resetMineNavigation()
+        _mineState.value = MineState()
+        _searchState.value = SearchState()
+        // 登出后停留在发现页，可直接重新登录
     }
 
     fun logoutKugou() {
@@ -1600,7 +1562,10 @@ class LxMusicViewModel @Inject constructor(
         kugouCookieStore.clear()
         repository.clearKgCloudCache()
         repository.setKgLikedSongIds(emptySet())
-        // 登出后停留在“我的”占位页，方便用户直接重新登录
+        resetMineNavigation()
+        _mineState.value = MineState()
+        _searchState.value = SearchState()
+        // 登出后停留在发现页，可直接重新登录
     }
 
     fun logoutKuwo() {
@@ -1608,7 +1573,10 @@ class LxMusicViewModel @Inject constructor(
         kuwoCookieStore.clear()
         repository.clearKwLikedListCache()
         repository.setKwLikedSongIds(emptySet())
-        // 登出后停留在“我的”占位页，方便用户直接重新登录
+        resetMineNavigation()
+        _mineState.value = MineState()
+        _searchState.value = SearchState()
+        // 登出后停留在发现页，可直接重新登录
     }
 
     private fun MineState.likedPlaylist(): LxPlaylist? =
@@ -1729,6 +1697,10 @@ class LxMusicViewModel @Inject constructor(
         _collectDataVersion.update { it + 1 }
     }
 
+    /**
+     * tx/kg/kw 平台数据预热：仅保留收藏态判定（collectStateOf）需要的 profile/红心 id/用户歌单。
+     * 收藏内容（关注歌手/收藏专辑）改由库页“收藏”分类的独立 holder 承载。
+     */
     private suspend fun loadPlatformMineHome(source: String) {
         val (nick, avatar) = runCatching {
             when (source) {
@@ -1781,24 +1753,13 @@ class LxMusicViewModel @Inject constructor(
             trackCount = likedCount,
             specialType = 5,
         )
-        val kwArtists = if (source == LxSources.KUWO) {
-            (runCatching { repository.fetchKwFollowedArtists() }.getOrNull()
-                ?: repository.kwFollowedArtists.value)
-        } else emptyList()
-        val kwAlbums = if (source == LxSources.KUWO) {
-            (runCatching { repository.fetchKwLikedAlbums() }.getOrNull()
-                ?: repository.kwLikedAlbums.value)
-        } else emptyList()
-        val txAlbums = if (source == LxSources.TENCENT) {
-            runCatching { repository.fetchTxLikedAlbums() }.getOrDefault(emptyList())
-        } else emptyList()
         _mineState.value = _mineState.value.copy(
             loadingHome = false,
             homeLoaded = true,
             recommendPlaylists = emptyList(),
             myPlaylists = listOf(likedPlaylist) + cloudPlaylists,
-            subArtists = kwArtists,
-            subAlbums = kwAlbums + txAlbums,
+            subArtists = emptyList(),
+            subAlbums = emptyList(),
             error = null,
         )
         _collectDataVersion.update { it + 1 }
@@ -1820,81 +1781,15 @@ class LxMusicViewModel @Inject constructor(
                 pageTitle = context.getString(R.string.lx_title_recommend_playlists),
                 pagePlaylists = recommendPlaylists,
                 pageSongs = emptyList(),
-                pageArtists = emptyList(),
-                pageAlbums = emptyList(),
-                artistInfo = null,
                 pageLoading = false,
                 error = null,
             )
         }
     }
 
-
-    fun openLikedPlaylist() {
-        val liked = _mineState.value.likedPlaylist() ?: return
-        openMineSongs(MinePage.SongList(liked.name, "playlist", playlistId = liked.id))
-    }
 
     fun openMinePlaylist(playlist: LxPlaylist) =
         openMineSongs(MinePage.SongList(playlist.name, "playlist", playlistId = playlist.id))
-
-    fun openSubArtistsPage() {
-        navigateForward {
-            copy(
-                page = MinePage.SubArtists,
-                pageTitle = context.getString(R.string.lx_title_sub_artists),
-                pageArtists = subArtists,
-                pageSongs = emptyList(),
-                pagePlaylists = emptyList(),
-                pageAlbums = emptyList(),
-                artistInfo = null,
-                pageLoading = false,
-                error = null,
-            )
-        }
-    }
-
-    fun openSubAlbumsPage() {
-        navigateForward {
-            copy(
-                page = MinePage.SubAlbums,
-                pageTitle = context.getString(R.string.lx_title_sub_albums),
-                pageAlbums = subAlbums,
-                pageSongs = emptyList(),
-                pagePlaylists = emptyList(),
-                pageArtists = emptyList(),
-                pageSongsHasMore = false,
-                pageLoadingMore = false,
-                artistInfo = null,
-                pageLoading = false,
-                error = null,
-            )
-        }
-    }
-
-    fun openArtistPage(artist: LxArtist) {
-        val page = MinePage.Artist(artist.id, artist.name.ifBlank { context.getString(R.string.lx_default_artist_name) })
-        navigateForward {
-            copy(
-                page = page,
-                pageTitle = page.name,
-                artistTab = "songs",
-                artistInfo = artist,
-                artistFollowed = null,
-                artistFollowBusy = false,
-                pageSongs = emptyList(),
-                pageAlbums = emptyList(),
-                pageArtists = emptyList(),
-                pagePlaylists = emptyList(),
-                artistSongsTotal = 0,
-                artistSongsHasMore = false,
-                artistLoadingMore = false,
-                pageLoading = true,
-                error = null,
-            )
-        }
-        loadArtistSongs(artist.id)
-    }
 
     fun openArtistFromSearch(artist: LxArtist, source: String? = null) {
         _searchAlbumOverlay.value = false
@@ -2155,62 +2050,6 @@ class LxMusicViewModel @Inject constructor(
             }
         }
     }
-
-    fun toggleArtistFollow() {
-        if ((_selectedSource.value == LxSources.KUGOU || _selectedSource.value == LxSources.KUWO) &&
-            !repository.writeEnabledFor(_selectedSource.value, LxWriteOp.ARTIST_FOLLOW)
-        ) return
-        val cur = _mineState.value
-        val page = cur.page as? MinePage.Artist ?: return
-        val followed = cur.artistFollowed ?: return
-        if (cur.artistFollowBusy) return
-        _mineState.value = cur.copy(artistFollowBusy = true)
-        val wantFollow = !followed
-        viewModelScope.launch {
-            val ok = runCatching {
-                when (_selectedSource.value) {
-                    LxSources.KUGOU -> repository.kgFollowSinger(page.id, wantFollow)
-                    LxSources.KUWO -> repository.kwFollowArtist(page.id, wantFollow)
-                    else -> repository.followNeteaseArtist(page.id, wantFollow)
-                }
-            }.getOrDefault(false)
-            val now = _mineState.value
-            if (now.page !is MinePage.Artist || (now.page as MinePage.Artist).id != page.id) return@launch
-            if (ok) {
-                _mineState.value = now.copy(artistFollowBusy = false, artistFollowed = wantFollow)
-                val info = now.artistInfo ?: LxArtist(page.id, page.name)
-                if (_selectedSource.value == LxSources.KUWO) {
-                    if (wantFollow) repository.addKwFollowedArtist(info)
-                    else repository.removeKwFollowedArtist(page.id)
-                }
-                val subs = _mineState.value.subArtists
-                val newSubs = if (wantFollow) {
-                    if (subs.any { it.id == page.id }) subs else listOf(info) + subs
-                } else {
-                    subs.filterNot { it.id == page.id }
-                }
-                _mineState.value = _mineState.value.copy(subArtists = newSubs)
-            } else {
-                _mineState.value = now.copy(artistFollowBusy = false)
-                _toastMessage.tryEmit(context.getString(R.string.lx_msg_operation_failed))
-            }
-        }
-    }
-
-    fun selectArtistTab(tab: String) {
-        val cur = _mineState.value
-        val page = cur.page as? MinePage.Artist ?: return
-        if (cur.artistTab == tab) return
-        _mineState.value = cur.copy(artistTab = tab, error = null)
-        when (tab) {
-            "albums" -> if (cur.pageAlbums.isEmpty()) loadArtistAlbums(page.id)
-            else -> if (cur.pageSongs.isEmpty()) loadArtistSongs(page.id)
-        }
-    }
-
-    fun openAlbumPage(album: LxAlbum) =
-        openMineSongs(MinePage.SongList(album.name, "album", albumId = album.id))
-
 
     enum class CollectKind { PLAYLIST, ALBUM }
 
@@ -2916,11 +2755,8 @@ class LxMusicViewModel @Inject constructor(
                 pageSongs = emptyList(),
                 pageLoading = true,
                 pagePlaylists = emptyList(),
-                pageArtists = emptyList(),
-                pageAlbums = emptyList(),
                 pageSongsHasMore = false,
                 pageLoadingMore = false,
-                artistInfo = null,
                 error = null,
             )
         }
@@ -3012,156 +2848,16 @@ class LxMusicViewModel @Inject constructor(
             if (seed != null) repository.fetchNeteaseSimilarSongs(seed) else emptyList()
         })
         "playlist" -> ({
-            val pid = page.playlistId.orEmpty()
-            when {
-                pid.startsWith("kg_cloud_") -> repository.fetchKgCloudPlaylistSongs(pid.removePrefix("kg_cloud_"))
-                pid.startsWith("kw_pl_") -> repository.fetchKwUserPlaylistSongs(pid.removePrefix("kw_pl_"))
-                pid.startsWith("tx_pl_") -> repository.fetchTxUserPlaylistSongs(pid.removePrefix("tx_pl_"))
-                _selectedSource.value == LxSources.TENCENT -> repository.fetchTxLikedSongs()
-                _selectedSource.value == LxSources.KUGOU -> repository.fetchKgLikedSongs()
-                _selectedSource.value == LxSources.KUWO -> repository.fetchKwLikedSongs()
-                else -> repository.fetchNeteasePlaylistSongs(pid).first
-            }
-        })
-        "album" -> ({
-            val aid = page.albumId.orEmpty()
-            when (_selectedSource.value) {
-                LxSources.TENCENT -> repository.fetchTxAlbumDetail(aid).second
-                LxSources.KUGOU -> repository.fetchKgAlbumDetail(aid).second
-                LxSources.KUWO -> repository.fetchKwAlbumDetail(aid, page.title).second
-                else -> repository.fetchNeteaseAlbumDetail(aid).second
-            }
-        })
-        "artist_songs" -> ({
-            val aid = page.artistId.orEmpty()
-            when (_selectedSource.value) {
-                LxSources.TENCENT -> repository.fetchTxArtistSongs(aid, page.title).first
-                LxSources.KUGOU -> repository.fetchKgArtistSongs(aid).first
-                LxSources.KUWO -> repository.fetchKwArtistSongs(aid, page.title).first
-                else -> repository.fetchNeteaseArtistSongs(aid).first
-            }
+            // 推荐页签为网易专属内容，歌单引用一律为网易裸 id
+            repository.fetchNeteasePlaylistSongs(page.playlistId.orEmpty()).first
         })
         else -> ({ emptyList() })
     }
 
+    /** 搜索歌手浮层翻页大小（歌手子页已下线，该常量仅供搜索浮层使用）。 */
     private val artistSongsPageSize = 30
 
     private val playlistSongsPageSize = 100
-
-    private fun loadArtistSongs(artistId: String) {
-        mineJob?.cancel()
-        val source = _selectedSource.value
-        val artistName = (_mineState.value.page as? MinePage.Artist)?.name.orEmpty()
-        _mineState.value = _mineState.value.copy(
-            pageLoading = true,
-            error = null,
-            artistSongsTotal = 0,
-            artistSongsHasMore = false,
-            artistLoadingMore = false,
-        )
-        mineJob = viewModelScope.launch {
-            val infoDeferred = async {
-                runCatching {
-                    when (source) {
-                        LxSources.TENCENT -> repository.fetchTxArtistDetail(artistId)
-                        LxSources.KUGOU -> repository.fetchKgArtistDetail(artistId)
-                        LxSources.KUWO -> repository.fetchKwArtistDetail(artistId, artistName)
-                        else -> repository.fetchNeteaseArtistInfo(artistId)
-                    }
-                }.getOrNull()
-            }
-            val (songs, total) = runCatching {
-                when (source) {
-                    LxSources.TENCENT -> repository.fetchTxArtistSongs(artistId, artistName, offset = 0, limit = artistSongsPageSize)
-                    LxSources.KUGOU -> repository.fetchKgArtistSongs(artistId, offset = 0, limit = artistSongsPageSize)
-                    LxSources.KUWO -> repository.fetchKwArtistSongs(artistId, artistName, offset = 0, limit = artistSongsPageSize)
-                    else -> repository.fetchNeteaseArtistSongs(artistId, offset = 0, limit = artistSongsPageSize)
-                }
-            }.getOrDefault(emptyList<LxSong>() to 0)
-            val detail = infoDeferred.await()
-            val cur = _mineState.value
-            val page = cur.page as? MinePage.Artist ?: return@launch
-            if (page.id != artistId) return@launch
-            val loggedIn = when (source) {
-                LxSources.TENCENT -> tencentCookieStore.hasCookie()
-                LxSources.KUGOU -> kugouCookieStore.hasCookie()
-                LxSources.KUWO -> kuwoCookieStore.hasCookie()
-                else -> neteaseCookieStore.hasCookie()
-            }
-            val followed = detail?.followed
-                ?: if (loggedIn) cur.subArtists.any { it.id == artistId } else null
-            if (songs.isNotEmpty()) loadPicsForResults(songs)
-            _mineState.value = cur.copy(
-                artistInfo = detail?.artist ?: cur.artistInfo,
-                artistFollowed = followed,
-                pageLoading = false,
-                pageSongs = songs,
-                artistSongsTotal = total,
-                artistSongsHasMore = songs.isNotEmpty() &&
-                    (if (total > 0) songs.size < total else songs.size >= artistSongsPageSize),
-                error = if (songs.isEmpty()) context.getString(R.string.lx_error_artist_no_hot_songs) else null,
-            )
-        }
-    }
-
-    fun loadMoreArtistSongs() {
-        val before = _mineState.value
-        val page = before.page as? MinePage.Artist ?: return
-        if (before.pageLoading || before.artistLoadingMore || !before.artistSongsHasMore) return
-        val source = _selectedSource.value
-        _mineState.value = before.copy(artistLoadingMore = true)
-        viewModelScope.launch {
-            val offset = before.pageSongs.size
-            val (batch, total) = runCatching {
-                when (source) {
-                    LxSources.TENCENT -> repository.fetchTxArtistSongs(page.id, page.name, offset = offset, limit = artistSongsPageSize)
-                    LxSources.KUGOU -> repository.fetchKgArtistSongs(page.id, offset = offset, limit = artistSongsPageSize)
-                    LxSources.KUWO -> repository.fetchKwArtistSongs(page.id, page.name, offset = offset, limit = artistSongsPageSize)
-                    else -> repository.fetchNeteaseArtistSongs(page.id, offset = offset, limit = artistSongsPageSize)
-                }
-            }.getOrDefault(emptyList<LxSong>() to before.artistSongsTotal)
-            val cur = _mineState.value
-            val nowPage = cur.page as? MinePage.Artist ?: return@launch
-            if (nowPage.id != page.id) return@launch
-            val merged = (cur.pageSongs + batch).distinctBy { it.songmid }
-            if (batch.isNotEmpty()) loadPicsForResults(batch)
-            val hasMore = batch.isNotEmpty() && when {
-                total > 0 -> merged.size < total
-                else -> batch.size >= artistSongsPageSize
-            }
-            _mineState.value = cur.copy(
-                artistLoadingMore = false,
-                pageSongs = merged,
-                artistSongsTotal = if (total > 0) total else merged.size,
-                artistSongsHasMore = hasMore,
-            )
-        }
-    }
-
-    private fun loadArtistAlbums(artistId: String) {
-        mineJob?.cancel()
-        val source = _selectedSource.value
-        val artistName = (_mineState.value.page as? MinePage.Artist)?.name.orEmpty()
-        _mineState.value = _mineState.value.copy(pageLoading = true, error = null)
-        mineJob = viewModelScope.launch {
-            val albums = runCatching {
-                when (source) {
-                    LxSources.TENCENT -> repository.fetchTxArtistAlbums(artistId, artistName)
-                    LxSources.KUGOU -> repository.fetchKgArtistAlbums(artistId)
-                    LxSources.KUWO -> repository.fetchKwArtistAlbums(artistId, artistName)
-                    else -> repository.fetchNeteaseArtistAlbums(artistId)
-                }
-            }.getOrDefault(emptyList())
-            val cur = _mineState.value
-            val page = cur.page as? MinePage.Artist ?: return@launch
-            if (page.id != artistId) return@launch
-            _mineState.value = cur.copy(
-                pageLoading = false,
-                pageAlbums = albums,
-                error = if (albums.isEmpty()) context.getString(R.string.lx_error_artist_no_albums) else null,
-            )
-        }
-    }
 
     private var lastMineBackAtMs = 0L
 
@@ -3180,40 +2876,6 @@ class LxMusicViewModel @Inject constructor(
         repository.invalidateNeteasePlaylistDetailCache()
         when (val page = _mineState.value.page) {
             MinePage.Home, MinePage.RecommendPlaylists -> loadMineHome(force = true)
-            MinePage.SubArtists, MinePage.SubAlbums -> {
-                mineJob?.cancel()
-                mineJob = viewModelScope.launch {
-                    _mineState.value = _mineState.value.copy(pageLoading = true)
-                    val a = when (_selectedSource.value) {
-                        LxSources.KUWO -> runCatching { repository.fetchKwFollowedArtists() }.getOrNull()
-                            ?: repository.kwFollowedArtists.value
-                        else -> runCatching { repository.fetchNeteaseSubArtists() }.getOrDefault(emptyList())
-                    }
-                    val al = when (_selectedSource.value) {
-                        LxSources.KUWO -> runCatching { repository.fetchKwLikedAlbums() }.getOrNull()
-                            ?: repository.kwLikedAlbums.value
-                        LxSources.TENCENT -> runCatching { repository.fetchTxLikedAlbums() }.getOrDefault(emptyList())
-                        else -> runCatching { repository.fetchNeteaseSubAlbums() }.getOrDefault(emptyList())
-                    }
-                    var s = _mineState.value.copy(
-                        loadingHome = false,
-                        homeLoaded = true,
-                        subArtists = a,
-                        subAlbums = al,
-                        pageLoading = false,
-                    )
-                    s = when (s.page) {
-                        MinePage.SubArtists -> s.copy(pageArtists = a)
-                        MinePage.SubAlbums -> s.copy(pageAlbums = al)
-                        else -> s
-                    }
-                    _mineState.value = s
-                }
-            }
-            is MinePage.Artist -> {
-                if (_mineState.value.artistTab == "albums") loadArtistAlbums(page.id)
-                else loadArtistSongs(page.id)
-            }
             is MinePage.SongList -> openMineSongs(page, forward = false)
         }
     }
@@ -3225,7 +2887,7 @@ class LxMusicViewModel @Inject constructor(
         currentLoadJob?.cancel()
         val epoch = ++loadEpoch
         when {
-            st.module == "mine" -> refreshMineCurrent()
+            st.module == "recommend" -> refreshMineCurrent()
             st.selectedPlaylist != null ->
                 currentLoadJob = viewModelScope.launch {
                     loadPlaylistSongsInternal(st.selectedPlaylist, source, epoch)

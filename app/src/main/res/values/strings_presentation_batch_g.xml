@@ -602,10 +602,20 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
     <string-array name="presentation_batch_g_changelog_v26101206_whats_new">
         <item>Kugou likes are now real: the platform heart on the player toggles Kugou favorites, and the Liked tab lists them (QQ Music hearts work again too)</item>
         <item>Playlist favorites now work on Kugou and QQ Music alongside NetEase — collect any playlist from its detail page</item>
-        <item>Cloud streaming (Navidrome and Jellyfin) has been removed together with its account entries; ListenBrainz scrobbling stays</item>
+        <item>Cloud streaming (Navidrome and Jellyfin) and ListenBrainz scrobbling have been removed, along with the accounts screen</item>
     </string-array>
     <string-array name="presentation_batch_g_changelog_v26101206_changes">
         <item>The queue button moves from the player top bar to the chip row below, right of the heart button</item>
         <item>Liked tab: signed-in platforms show their song count even at zero, just like this app&#8217;s favorites</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101207_whats_new">
+        <item>New Collections tab on the My page: pick a platform, then browse the artists and albums you follow there (NetEase, QQ and Kugou; Kuwo is not supported)</item>
+        <item>ListenBrainz scrobbling and the accounts page are gone; player stats and history stay</item>
+        <item>Kugou playlist list no longer duplicates the auto-managed liked playlist, and collected albums are told apart from playlists</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101207_changes">
+        <item>Kuwo liked songs now load with their count in the Liked tab</item>
+        <item>The in-platform My tab is removed from Discover; NetEase gains Recommendations as a peer of Top charts, and a profile strip keeps sign-out within reach</item>
+        <item>Liked, Playlists and Collections refresh the moment you enter a platform</item>
     </string-array>
 </resources>

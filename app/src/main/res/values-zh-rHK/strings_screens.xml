@@ -39,7 +39,6 @@
     <string name="delimiter_label_space">空格</string>
     <string name="cd_add_path_delimiter">添加分隔符</string>
 
-    <string name="accounts_unable_open_screen">暫時無法打開該頁面。</string>
 
     <string name="setup_welcome_prefix">歡迎使用 </string>
     <string name="setup_beta_symbol">β</string>

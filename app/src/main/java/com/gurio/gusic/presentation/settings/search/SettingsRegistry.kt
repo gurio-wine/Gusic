@@ -138,17 +138,7 @@ object SettingsRegistry {
                 keywordsStatic = listOf("reset lyrics", "clear", "remove", "delete lyrics")
             ),
 
-            // --- ACCOUNTS (grouped under Library) ---
-            SettingSpec(
-                id = "accounts_hub",
-                itemKey = "item_accounts_hub",
-                titleRes = R.string.settings_accounts_row_title,
-                subtitleRes = R.string.settings_accounts_row_subtitle,
-                category = SettingsCategory.LIBRARY,
-                subscreenRoute = Screen.Accounts.createRoute(),
-                type = SettingType.NAVIGABLE_CARD,
-                keywordsStatic = listOf("accounts", "listenbrainz", "scrobble", "login")
-            ),
+            // --- LIBRARY DOWNLOADS (grouped under Library) ---
             SettingSpec(
                 id = "cloud_downloads",
                 itemKey = "item_cloud_downloads",
@@ -164,16 +154,6 @@ object SettingsRegistry {
                     "thread", "threads", "concurrent", "concurrency", "parallel",
                     "线程", "下载线程", "并发", "并行", "等待中", "queued", "waiting"
                 )
-            ),
-            SettingSpec(
-                id = "accounts_listenbrainz",
-                itemKey = "item_accounts_listenbrainz",
-                titleRes = R.string.accounts_listenbrainz_title,
-                subtitleStatic = "Scrobble your listens to ListenBrainz",
-                category = SettingsCategory.LIBRARY,
-                subscreenRoute = Screen.Accounts.createRoute(),
-                type = SettingType.NAVIGABLE_CARD,
-                keywordsStatic = listOf("scrobble", "scrobbling", "listens", "maloja", "last.fm", "history")
             ),
 
             // --- APPEARANCE CATEGORY ---

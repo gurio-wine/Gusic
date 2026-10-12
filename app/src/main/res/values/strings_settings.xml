@@ -9,8 +9,6 @@
     <string name="setcat_m3u_sync_now_subtitle" tools:ignore="MissingTranslation">Import and export changes without overwriting conflicts</string>
     <string name="setcat_m3u_sync_result" tools:ignore="MissingTranslation">%1$d changed · %2$d conflicts · %3$d unresolved entries</string>
     <string name="settings_top_bar_title">Settings</string>
-    <string name="settings_accounts_row_title">Accounts</string>
-    <string name="settings_accounts_row_subtitle">Manage your ListenBrainz scrobbling service</string>
 
     <string name="settings_search_hint">Search settings</string>
     <string name="settings_search_no_results">No results for \"%1$s\"</string>

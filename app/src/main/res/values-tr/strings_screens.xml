@@ -16,7 +16,6 @@
     <string name="about_upstream_credits_title">Upstream katkıları</string>
     <string name="about_upstream_credits_subtitle">PixelPlayer\'ın orijinal yazarları ve bakımcıları, upstream projeye katkılarıyla anılıyor.</string>
     <string name="about_version_format">Sürüm v%1$s</string>
-    <string name="accounts_unable_open_screen">Bu ekran şu anda açılamıyor.</string>
     <string name="action_copy">Kopyala</string>
     <string name="action_reset">Sıfırla</string>
     <string name="action_share">Paylaş</string>

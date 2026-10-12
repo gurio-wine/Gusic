@@ -2,27 +2,6 @@
 <resources>
     <string name="a11y_toggle_off">معطل</string>
     <string name="a11y_toggle_on">مفعل</string>
-    <string name="accounts_available_services">الخدمات المتاحة</string>
-    <string name="accounts_listenbrainz_connect">اتصال</string>
-    <string name="accounts_listenbrainz_connect_failed">تعذر الاتصال. تحقق من الرمز المميز وعنوان الخادم، ثم أعد المحاولة.</string>
-    <string name="accounts_listenbrainz_custom_server">تسجيل الاستماع في %1$s</string>
-    <string name="accounts_listenbrainz_get_token">فتح listenbrainz.org</string>
-    <string name="accounts_listenbrainz_invalid_url">أدخل عنوان خادم صالحاً، مثل https://maloja.example.com/apis/listenbrainz</string>
-    <string name="accounts_listenbrainz_needs_reauth">لم يعد الرمز المميز صالحاً — أعد الاتصال لاستئناف تسجيل الاستماع. تُحفظ عمليات الاستماع الموجودة في قائمة الانتظار.</string>
-    <string name="accounts_listenbrainz_now_playing_format">%1$s — %2$s</string>
-    <string name="accounts_listenbrainz_now_playing_idle">لا يوجد تشغيل في الوقت الحالي</string>
-    <string name="accounts_listenbrainz_now_playing_label">جاري تسجيل الاستماع</string>
-    <string name="accounts_listenbrainz_reconnect">إعادة الاتصال</string>
-    <string name="accounts_listenbrainz_scrobble_local">تسجيل استماع الملفات المحلية</string>
-    <string name="accounts_listenbrainz_server_hint">عنوان الخادم (اختياري)</string>
-    <string name="accounts_listenbrainz_server_supporting">اتركه فارغاً لاستخدام listenbrainz.org. يعمل مع الخوادم المستضافة ذاتياً التي تدعم واجهة ListenBrainz البرمجية، مثل Maloja.</string>
-    <string name="accounts_listenbrainz_stat_listens">إجمالي عمليات الاستماع</string>
-    <string name="accounts_listenbrainz_stat_queued">في قائمة الانتظار</string>
-    <string name="accounts_listenbrainz_title">ListenBrainz</string>
-    <string name="accounts_listenbrainz_toggle_hint">إذا كان خادمك يسجل الاستماع في ListenBrainz بالفعل، فعطّل ذلك المصدر هنا لتجنب تكرار عمليات الاستماع.</string>
-    <string name="accounts_listenbrainz_token_dialog_body">الصق الرمز المميز الخاص بك لتسجيل عمليات استماعك في ListenBrainz. ستجده في إعدادات حسابك على listenbrainz.org.</string>
-    <string name="accounts_listenbrainz_token_dialog_title">الاتصال بـ ListenBrainz</string>
-    <string name="accounts_listenbrainz_token_hint">الرمز المميز للمستخدم</string>
     <string name="album_id_not_found">لم يتم العثور على معرف الألبوم</string>
     <string name="album_not_found">لم يتم العثور على الألبوم</string>
     <string name="all_files_access_title">مطلوب إذن خاص</string>

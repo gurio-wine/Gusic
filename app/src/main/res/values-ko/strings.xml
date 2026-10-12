@@ -2,27 +2,6 @@
 <resources>
     <string name="a11y_toggle_off">꺼짐</string>
     <string name="a11y_toggle_on">켜짐</string>
-    <string name="accounts_available_services">사용 가능한 서비스</string>
-    <string name="accounts_listenbrainz_connect">연결</string>
-    <string name="accounts_listenbrainz_connect_failed">연결할 수 없습니다. 토큰과 서버 URL을 확인한 후 다시 시도해 주세요.</string>
-    <string name="accounts_listenbrainz_custom_server">%1$s(으)로 스크로블 중</string>
-    <string name="accounts_listenbrainz_get_token">listenbrainz.org 열기</string>
-    <string name="accounts_listenbrainz_invalid_url">유효한 서버 URL을 입력하세요. 예: https://maloja.example.com/apis/listenbrainz</string>
-    <string name="accounts_listenbrainz_needs_reauth">토큰이 더 이상 유효하지 않습니다 — 스크로블을 재개하려면 다시 연결하세요. 대기 중인 감상 기록은 그대로 보관됩니다.</string>
-    <string name="accounts_listenbrainz_now_playing_format">%1$s — %2$s</string>
-    <string name="accounts_listenbrainz_now_playing_idle">현재 재생 중인 곡이 없습니다</string>
-    <string name="accounts_listenbrainz_now_playing_label">지금 스크로블 중</string>
-    <string name="accounts_listenbrainz_reconnect">다시 연결</string>
-    <string name="accounts_listenbrainz_scrobble_local">로컬 파일 스크로블</string>
-    <string name="accounts_listenbrainz_server_hint">서버 URL (선택 사항)</string>
-    <string name="accounts_listenbrainz_server_supporting">listenbrainz.org를 사용하려면 비워 두세요. Maloja처럼 ListenBrainz API를 지원하는 자체 호스팅 서버에서도 작동합니다.</string>
-    <string name="accounts_listenbrainz_stat_listens">총 감상 수</string>
-    <string name="accounts_listenbrainz_stat_queued">대기 중</string>
-    <string name="accounts_listenbrainz_title">ListenBrainz</string>
-    <string name="accounts_listenbrainz_toggle_hint">서버가 이미 ListenBrainz로 스크로블하고 있다면, 감상 기록이 중복되지 않도록 여기에서 해당 소스를 꺼 주세요.</string>
-    <string name="accounts_listenbrainz_token_dialog_body">감상 기록을 ListenBrainz에 스크로블하려면 사용자 토큰을 붙여넣으세요. 토큰은 listenbrainz.org의 설정에서 확인할 수 있습니다.</string>
-    <string name="accounts_listenbrainz_token_dialog_title">ListenBrainz 연결</string>
-    <string name="accounts_listenbrainz_token_hint">사용자 토큰</string>
     <string name="album_id_not_found">앨범 ID를 찾을 수 없습니다</string>
     <string name="album_not_found">앨범을 찾을 수 없습니다</string>
     <string name="all_files_access_title">특별 권한 필요</string>

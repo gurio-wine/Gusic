@@ -48,6 +48,7 @@
     <string name="library_tab_artists">Artisti</string>
     <string name="library_tab_folders">Cartelle</string>
     <string name="library_tab_liked">Preferiti</string>
+    <string name="library_tab_collections">Collezioni</string>
     <string name="library_tab_playlists">Playlist</string>
     <string name="library_tab_songs">Brani</string>
     <string name="lyrics_synced_badge">SINCRONIZZATO</string>

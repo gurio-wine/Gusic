@@ -6,6 +6,7 @@
     <string name="library_tab_playlists">歌單</string>
     <string name="library_tab_folders">文件夾</string>
     <string name="library_tab_liked">我喜歡</string>
+    <string name="library_tab_collections">收藏</string>
     <string name="library_error_loading_songs">加載歌曲出錯</string>
     <string name="library_error_loading_albums">加載專輯出錯</string>
     <string name="library_error_loading_artists">加載藝術家出錯</string>

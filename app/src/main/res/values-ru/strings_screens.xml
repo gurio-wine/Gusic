@@ -16,7 +16,6 @@
     <string name="about_upstream_credits_title">Благодарность авторам исходного проекта</string>
     <string name="about_upstream_credits_subtitle">Авторы и сопровождающие оригинального PixelPlayer отмечены за работу над исходным проектом.</string>
     <string name="about_version_format">Версия v%1$s</string>
-    <string name="accounts_unable_open_screen">Сейчас невозможно открыть этот экран.</string>
     <string name="action_copy">Копировать</string>
     <string name="action_reset">Сброс</string>
     <string name="action_share">Поделиться</string>

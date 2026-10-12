@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.ChevronRight
@@ -31,7 +31,6 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QueueMusic
@@ -86,8 +85,6 @@ import com.gurio.gusic.data.lxmusic.LxArtist
 import com.gurio.gusic.data.lxmusic.LxPlaylist
 import com.gurio.gusic.data.lxmusic.LxSong
 import com.gurio.gusic.data.lxmusic.LxSongMapper
-import com.gurio.gusic.data.lxmusic.LxSources
-import com.gurio.gusic.data.lxmusic.LxWriteOp
 import com.gurio.gusic.R
 import com.gurio.gusic.presentation.components.ExpressiveScrollBar
 import com.gurio.gusic.presentation.components.MiniPlayerHeight
@@ -102,11 +99,8 @@ import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun LxMinePage(
-    mineState: LxMusicViewModel.MineState,
-    nickname: String?,
-    avatarUrl: String?,
-    vipType: Int,
+fun LxRecommendPage(
+    recommendState: LxMusicViewModel.MineState,
     viewModel: LxMusicViewModel,
     playerViewModel: PlayerViewModel,
     playLxSong: (LxSong, List<LxSong>, String) -> Unit,
@@ -114,8 +108,6 @@ fun LxMinePage(
     shuffleAllPlaylist: (List<LxSong>, String) -> Unit,
     bottomBarHeightDp: Dp,
     onScrollingChange: (Boolean) -> Unit = {},
-    onLogout: () -> Unit = {},
-    showArtistFollow: Boolean = false,
     subPageBackOverride: (() -> Unit)? = null,
     onSongMoreOptions: (LxSong) -> Unit = {},
     isSelectionMode: Boolean = false,
@@ -129,61 +121,44 @@ fun LxMinePage(
 ) {
     val density = LocalDensity.current
     var headerHeightPx by remember { mutableIntStateOf(0) }
-    val headerHeight = with(density) { headerHeightPx.toDp() }.takeIf { it > 0.dp } ?: 72.dp
+    val headerHeight = with(density) { headerHeightPx.toDp() }.takeIf { it > 0.dp } ?: 0.dp
     val pullToRefreshState = rememberPullToRefreshState()
-    val currentSource by viewModel.selectedSource.collectAsStateWithLifecycle()
-    val isNeteaseSource = currentSource == LxSources.NETEASE
-    var homeTab by remember(currentSource) {
-        mutableStateOf(if (isNeteaseSource) MINE_TAB_RECOMMEND else MINE_TAB_FAVORITE)
-    }
     val scope = rememberCoroutineScope()
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
 
-    val page = mineState.page
+    val page = recommendState.page
     val isHome = page is LxMusicViewModel.MinePage.Home
-    val isArtistPage = page is LxMusicViewModel.MinePage.Artist
     val isSongPage = page is LxMusicViewModel.MinePage.SongList
-    val showSongActions =
-        (isSongPage || (isArtistPage && mineState.artistTab == "songs")) &&
-            mineState.pageSongs.isNotEmpty()
+    val showSongActions = isSongPage && recommendState.pageSongs.isNotEmpty()
     val refreshing = if (isHome || page is LxMusicViewModel.MinePage.RecommendPlaylists)
-        mineState.loadingHome else mineState.pageLoading
+        recommendState.loadingHome else recommendState.pageLoading
 
     val listStateStore = remember { mutableStateMapOf<Any, androidx.compose.foundation.lazy.LazyListState>() }
-    val subScrollKey: Any = if (isArtistPage) {
-        mineState.navSession to "artist_${mineState.artistTab}"
-    } else {
-        mineState.navSession to page
-    }
+    val subScrollKey: Any = recommendState.navSession to page
     val subListState = listStateStore.getOrPut(subScrollKey) { androidx.compose.foundation.lazy.LazyListState() }
-    val homeScrollKey: Any = mineState.navSession to "home_$homeTab"
+    val homeScrollKey: Any = recommendState.navSession to "home"
     val homeListState = listStateStore.getOrPut(homeScrollKey) { androidx.compose.foundation.lazy.LazyListState() }
-    val homeContentEmpty = if (homeTab == MINE_TAB_FAVORITE) {
-        mineState.myPlaylists.isEmpty()
-    } else {
-        mineState.recommendPlaylists.isEmpty()
+    var homeContentWasEmpty by remember(homeScrollKey) { mutableStateOf(recommendState.recommendPlaylists.isEmpty()) }
+    LaunchedEffect(homeScrollKey, recommendState.recommendPlaylists.isEmpty()) {
+        if (homeContentWasEmpty && recommendState.recommendPlaylists.isNotEmpty()) homeListState.scrollToItem(0)
+        homeContentWasEmpty = recommendState.recommendPlaylists.isNotEmpty()
     }
-    var homeContentWasEmpty by remember(homeScrollKey) { mutableStateOf(homeContentEmpty) }
-    LaunchedEffect(homeScrollKey, homeContentEmpty) {
-        if (homeContentWasEmpty && !homeContentEmpty) homeListState.scrollToItem(0)
-        homeContentWasEmpty = homeContentEmpty
-    }
-    LaunchedEffect(mineState.navSession) {
-        val current = mineState.navSession
+    LaunchedEffect(recommendState.navSession) {
+        val current = recommendState.navSession
         listStateStore.keys.filterIsInstance<Pair<*, *>>()
             .filter { (it.first as? Long ?: 0L) > current }
             .forEach { listStateStore.remove(it) }
     }
 
     val folderPage = (page as? LxMusicViewModel.MinePage.SongList)
-        ?.takeIf { it.kind == "playlist" || it.kind == "album" }
+        ?.takeIf { it.kind == "playlist" }
     if (folderPage != null) {
-        LaunchedEffect(folderPage.playlistId, folderPage.albumId) {
+        LaunchedEffect(folderPage.playlistId) {
             viewModel.ensureCollectDataLoaded()
         }
     }
-    val perSongIds = remember(mineState.pageSongs) {
-        mineState.pageSongs.map {
+    val perSongIds = remember(recommendState.pageSongs) {
+        recommendState.pageSongs.map {
             com.gurio.gusic.data.lxmusic.LxSongMapper
                 .matchIds(it.source, it.songmid, it.hash)
         }
@@ -203,25 +178,22 @@ fun LxMinePage(
     val onFolderShare = rememberFolderShare(viewModel)
     val folderActions: (@Composable () -> Unit)? = if (folderPage != null) {
         @Composable {
-            val kind = if (folderPage.kind == "playlist")
-                LxMusicViewModel.CollectKind.PLAYLIST else LxMusicViewModel.CollectKind.ALBUM
-            val targetId = if (kind == LxMusicViewModel.CollectKind.PLAYLIST)
-                folderPage.playlistId else folderPage.albumId
+            val targetId = folderPage.playlistId
             val entryGid = remember(targetId) {
                 targetId?.let { tid ->
-                    mineState.myPlaylists.firstOrNull { it.id == tid }?.originGid
+                    recommendState.myPlaylists.firstOrNull { it.id == tid }?.originGid
                 }
             }
             LxFolderActionCapsule(
                 showLocate = folderLocateVisible,
                 onLocate = { if (folderLocateIndex >= 0) scope.launch { subListState.animateScrollToItem(folderLocateIndex) } },
-                collectState = rememberCollectState(viewModel, kind, targetId, gid = entryGid),
+                collectState = rememberCollectState(viewModel, LxMusicViewModel.CollectKind.PLAYLIST, targetId, gid = entryGid),
                 collectBusy = targetId != null &&
-                    collectBusyKeys.contains(viewModel.collectKey(kind, targetId)),
+                    collectBusyKeys.contains(viewModel.collectKey(LxMusicViewModel.CollectKind.PLAYLIST, targetId)),
                 onCollectClick = {
-                    targetId?.let { viewModel.onCollectButtonClick(kind, it, gid = entryGid) }
+                    targetId?.let { viewModel.onCollectButtonClick(LxMusicViewModel.CollectKind.PLAYLIST, it, gid = entryGid) }
                 },
-                onShare = { targetId?.let { onFolderShare(kind, it) } },
+                onShare = { targetId?.let { onFolderShare(LxMusicViewModel.CollectKind.PLAYLIST, it) } },
             )
         }
     } else null
@@ -264,43 +236,21 @@ fun LxMinePage(
                 smoothnessAsPercentBR = 60,
             )
             if (isHome) {
-                val homeAwaiting =
-                    !isNeteaseSource && !mineState.homeLoaded && mineState.error == null
-                if (homeAwaiting) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = headerHeight),
-                        contentAlignment = Alignment.TopCenter,
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .padding(top = 44.dp)
-                                .size(30.dp),
-                            strokeWidth = 2.5.dp,
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        state = homeListState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = headerHeight)
-                            .clip(clipShape)
-                            .mineVerticalDragGate(onScrollingChange),
-                        contentPadding = PaddingValues(
-                            start = 8.dp,
-                            end = 14.dp,
-                            bottom = bottomPadding,
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        if (isNeteaseSource && homeTab == MINE_TAB_RECOMMEND) {
-                            mineRecommendSection(mineState, viewModel)
-                        } else {
-                            mineFavoriteSection(mineState, viewModel, currentSource)
-                        }
-                    }
+                LazyColumn(
+                    state = homeListState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(clipShape)
+                        .mineVerticalDragGate(onScrollingChange),
+                    contentPadding = PaddingValues(
+                        start = 8.dp,
+                        end = 14.dp,
+                        top = 8.dp,
+                        bottom = bottomPadding,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    mineRecommendSection(recommendState, viewModel)
                 }
             } else {
                 LazyColumn(
@@ -320,12 +270,12 @@ fun LxMinePage(
                     when (page) {
                         is LxMusicViewModel.MinePage.SongList -> {
                             mineSongItems(
-                                songs = mineState.pageSongs,
-                                loading = mineState.pageLoading,
-                                error = mineState.error,
+                                songs = recommendState.pageSongs,
+                                loading = recommendState.pageLoading,
+                                error = recommendState.error,
                                 stablePlayerState = stablePlayerState,
                                 playLxSong = playLxSong,
-                                queueName = mineState.pageTitle,
+                                queueName = recommendState.pageTitle,
                                 onSongMoreOptions = onSongMoreOptions,
                                 isSelectionMode = isSelectionMode,
                                 selectedSongIds = selectedSongIds,
@@ -333,13 +283,13 @@ fun LxMinePage(
                                 onSongSelectionToggle = onSongSelectionToggle,
                                 getSelectionIndex = getSelectionIndex,
                             )
-                            if (!mineState.pageLoading && mineState.pageSongs.isNotEmpty() &&
-                                (mineState.pageSongsHasMore || mineState.pageLoadingMore)
+                            if (!recommendState.pageLoading && recommendState.pageSongs.isNotEmpty() &&
+                                (recommendState.pageSongsHasMore || recommendState.pageLoadingMore)
                             ) {
                                 val isPersonalFm = page.kind == "personal_fm"
                                 item(key = "mine_songs_load_more") {
                                     LxLoadMoreButton(
-                                        loading = mineState.pageLoadingMore,
+                                        loading = recommendState.pageLoadingMore,
                                         onClick = viewModel::loadMoreMineSongs,
                                         label = if (isPersonalFm) stringResource(R.string.lx_btn_refresh_batch) else stringResource(R.string.lx_btn_load_more_default),
                                         modifier = Modifier
@@ -350,192 +300,34 @@ fun LxMinePage(
                             }
                         }
                         is LxMusicViewModel.MinePage.RecommendPlaylists -> {
-                            minePlaylistItems(mineState.pagePlaylists, viewModel::openMinePlaylist)
+                            minePlaylistItems(recommendState.pagePlaylists, viewModel::openMinePlaylist)
                         }
-                        is LxMusicViewModel.MinePage.SubArtists -> {
-                            mineArtistItems(mineState.pageArtists, viewModel::openArtistPage)
-                        }
-                        is LxMusicViewModel.MinePage.SubAlbums -> {
-                            mineAlbumItems(mineState.pageAlbums, viewModel::openAlbumPage)
-                        }
-                        is LxMusicViewModel.MinePage.Artist -> {
-                            if (mineState.artistTab == "albums") {
-                                mineAlbumItems(mineState.pageAlbums, viewModel::openAlbumPage)
-                                if (mineState.pageLoading) item(key = "mine_artist_loading") { MineLoadingRow() }
-                            } else {
-                                mineSongItems(
-                                    songs = mineState.pageSongs,
-                                    loading = mineState.pageLoading,
-                                    error = mineState.error,
-                                    stablePlayerState = stablePlayerState,
-                                    playLxSong = playLxSong,
-                                    queueName = mineState.pageTitle,
-                                    onSongMoreOptions = onSongMoreOptions,
-                                    isSelectionMode = isSelectionMode,
-                                    selectedSongIds = selectedSongIds,
-                                    onSongLongPress = onSongLongPress,
-                                    onSongSelectionToggle = onSongSelectionToggle,
-                                    getSelectionIndex = getSelectionIndex,
-                                )
-                                if (!mineState.pageLoading && mineState.pageSongs.isNotEmpty() &&
-                                    (mineState.artistSongsHasMore || mineState.artistLoadingMore)
-                                ) {
-                                    item(key = "mine_artist_load_more") {
-                                        LxLoadMoreButton(
-                                            loading = mineState.artistLoadingMore,
-                                            onClick = viewModel::loadMoreArtistSongs,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        else -> Unit
                     }
                 }
             }
         }
 
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .onGloballyPositioned { headerHeightPx = it.size.height }
-                .then(if (isArtistPage) Modifier.nestedScroll(consumeHorizontalScroll) else Modifier),
-        ) {
-            if (isHome) {
-                Column {
-                    MineProfileHeader(
-                        nickname = nickname,
-                        avatarUrl = avatarUrl,
-                        vipType = vipType,
-                        onLogout = onLogout,
-                    )
-                    if (isNeteaseSource) {
-                        MineHomeTabSwitcher(
-                            selected = homeTab,
-                            onSelect = { homeTab = it },
-                        )
-                    } else {
-                        Spacer(Modifier.height(10.dp))
-                    }
-                }
-            } else {
-                Column {
-                    if (isArtistPage) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 6.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Surface(
-                                onClick = { (subPageBackOverride ?: viewModel::backMinePage)() },
-                                shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(
-                                        Icons.AutoMirrored.Rounded.ArrowBack,
-                                        contentDescription = stringResource(R.string.lx_desc_back),
-                                        modifier = Modifier.size(18.dp),
-                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    )
-                                    Spacer(Modifier.width(2.dp))
-                                    Text(
-                                        text = stringResource(R.string.lx_text_back),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        fontWeight = FontWeight.Medium,
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.width(10.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = mineState.pageTitle,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    if (showArtistFollow && mineState.artistFollowed != null) {
-                                        Spacer(Modifier.width(8.dp))
-                                        ArtistFollowButton(
-                                            followed = mineState.artistFollowed == true,
-                                            busy = mineState.artistFollowBusy,
-                                            onClick = viewModel::toggleArtistFollow,
-                                        )
-                                    }
-                                }
-                                mineState.artistInfo?.briefDesc?.takeIf { it.isNotBlank() }?.let { desc ->
-                                    Spacer(Modifier.height(2.dp))
-                                    var expanded by remember { mutableStateOf(false) }
-                                    Text(
-                                        text = desc,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = if (expanded) Int.MAX_VALUE else 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null,
-                                        ) { expanded = !expanded },
-                                    )
-                                }
-                            }
-                            mineState.artistInfo?.pic?.takeIf { it.isNotBlank() }?.let { pic ->
-                                Spacer(Modifier.width(8.dp))
-                                SmartImage(
-                                    model = pic,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .padding(end = 4.dp)
-                                        .size(48.dp)
-                                        .clip(CircleShape),
-                                )
-                            }
+        if (!isHome) {
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .onGloballyPositioned { headerHeightPx = it.size.height },
+            ) {
+                MineSubHeader(
+                    title = recommendState.pageTitle,
+                    showPlayAll = false,
+                    onBack = { (subPageBackOverride ?: viewModel::backMinePage)() },
+                    onPlayAll = {
+                        if (showSongActions) {
+                            playAllPlaylist(recommendState.pageSongs, recommendState.pageTitle)
                         }
-                    } else {
-                        MineSubHeader(
-                            title = mineState.pageTitle,
-                            showPlayAll = false,
-                            onBack = { (subPageBackOverride ?: viewModel::backMinePage)() },
-                            onPlayAll = {
-                                if (showSongActions) {
-                                    playAllPlaylist(mineState.pageSongs, mineState.pageTitle)
-                                }
-                            },
-                            titleExpand = true,
-                            followButton = null,
-                            actions = folderActions,
-                        )
-                    }
-                    if (isArtistPage) {
-                        androidx.compose.foundation.lazy.LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                        ) {
-                            item {
-                                ArtistTabChip(stringResource(R.string.lx_tab_hot_songs), mineState.artistTab == "songs") {
-                                    viewModel.selectArtistTab("songs")
-                                }
-                            }
-                            item {
-                                ArtistTabChip(stringResource(R.string.lx_tab_all_albums), mineState.artistTab == "albums") {
-                                    viewModel.selectArtistTab("albums")
-                                }
-                            }
-                        }
-                    }
-                }
+                    },
+                    titleExpand = true,
+                    followButton = null,
+                    actions = folderActions,
+                )
             }
         }
 
@@ -553,29 +345,6 @@ fun LxMinePage(
                 .padding(end = 20.dp, bottom = bottomPadding + 14.dp),
         )
 
-        if (isArtistPage && mineState.artistTab == "songs" && mineState.pageSongs.isNotEmpty()) {
-            val perIds = remember(mineState.pageSongs) {
-                mineState.pageSongs.map {
-                    com.gurio.gusic.data.lxmusic.LxSongMapper
-                        .matchIds(it.source, it.songmid, it.hash)
-                }
-            }
-            val curIds = stablePlayerState.currentSong
-                ?.let { com.gurio.gusic.data.lxmusic.LxSongMapper.matchIds(it) }
-                ?: emptySet()
-            LxLocateCurrentSongFab(
-                listState = subListState,
-                currentSongId = null,
-                songIds = perIds.map { it.first() },
-                leadingItems = 0,
-                perSongMatchIds = perIds,
-                currentMatchIds = curIds,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 20.dp, bottom = bottomPadding + 74.dp),
-            )
-        }
-
         if (showSongActions) {
             Column(
                 modifier = Modifier
@@ -585,7 +354,7 @@ fun LxMinePage(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 FilledTonalIconButton(
-                    onClick = { shuffleAllPlaylist(mineState.pageSongs, mineState.pageTitle) },
+                    onClick = { shuffleAllPlaylist(recommendState.pageSongs, recommendState.pageTitle) },
                     shape = CircleShape,
                     colors = IconButtonDefaults.filledTonalIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
@@ -596,7 +365,7 @@ fun LxMinePage(
                     Icon(Icons.Rounded.Shuffle, contentDescription = stringResource(R.string.lx_desc_shuffle), modifier = Modifier.size(22.dp))
                 }
                 FilledIconButton(
-                    onClick = { playAllPlaylist(mineState.pageSongs, mineState.pageTitle) },
+                    onClick = { playAllPlaylist(recommendState.pageSongs, recommendState.pageTitle) },
                     shape = CircleShape,
                     modifier = Modifier.size(48.dp),
                 ) {
@@ -610,7 +379,7 @@ fun LxMinePage(
             selectedCount = selectedSongIds.size,
             onSelectAll = {
                 multiSelectionState.selectAll(
-                    mineState.pageSongs.map {
+                    recommendState.pageSongs.map {
                         com.gurio.gusic.data.lxmusic.LxSongMapper.toSong(it)
                     }
                 )
@@ -625,8 +394,12 @@ fun LxMinePage(
 }
 
 
+/**
+ * 平台资料条：原“我的”页头部（头像/昵称/VIP 标签/退出）的最小保留。
+ * “我的”页签下线后，它是应用内唯一的登出入口，常驻显示在发现页模块行上方。
+ */
 @Composable
-private fun MineProfileHeader(
+internal fun LxProfileStrip(
     nickname: String?,
     avatarUrl: String?,
     vipType: Int,
@@ -635,7 +408,7 @@ private fun MineProfileHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (!avatarUrl.isNullOrBlank()) {
@@ -644,13 +417,13 @@ private fun MineProfileHeader(
                 contentDescription = null,
                 targetSize = SmartImageListTargetSize,
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(34.dp)
                     .clip(CircleShape),
             )
         } else {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(34.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.secondaryContainer),
                 contentAlignment = Alignment.Center,
@@ -659,19 +432,21 @@ private fun MineProfileHeader(
                     Icons.Rounded.Person,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = nickname ?: stringResource(R.string.lx_default_nickname),
-                style = MaterialTheme.typography.titleMedium,
+                text = nickname?.takeIf { it.isNotBlank() }
+                    ?: stringResource(R.string.lx_default_nickname),
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            // VIP 标签仅网易音源有取值（13=SVIP、11=VIP），其他平台不展示
             val vipLabel = when (vipType) {
                 13 -> stringResource(R.string.lx_text_netease_svip)
                 11 -> stringResource(R.string.lx_text_netease_vip)
@@ -688,7 +463,7 @@ private fun MineProfileHeader(
         }
         IconButton(onClick = onLogout) {
             Icon(
-                Icons.Rounded.Logout,
+                Icons.AutoMirrored.Rounded.Logout,
                 contentDescription = stringResource(R.string.lx_desc_logout),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -829,83 +604,6 @@ internal fun ArtistTabChip(label: String, selected: Boolean, onClick: () -> Unit
 }
 
 
-private const val MINE_TAB_RECOMMEND = "recommend"
-private const val MINE_TAB_FAVORITE = "favorite"
-
-private val MineTabLeftShape = RoundedCornerShape(
-    topStart = 26.dp, bottomStart = 26.dp,
-    topEnd = 8.dp, bottomEnd = 8.dp,
-)
-
-private val MineTabRightShape = RoundedCornerShape(
-    topStart = 8.dp, bottomStart = 8.dp,
-    topEnd = 26.dp, bottomEnd = 26.dp,
-)
-
-@Composable
-private fun MineHomeTabSwitcher(
-    selected: String,
-    onSelect: (String) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        MineTabSegment(
-            text = stringResource(R.string.lx_tab_recommend),
-            icon = Icons.Rounded.AutoAwesome,
-            selected = selected == MINE_TAB_RECOMMEND,
-            shape = MineTabLeftShape,
-            onClick = { onSelect(MINE_TAB_RECOMMEND) },
-        )
-        MineTabSegment(
-            text = stringResource(R.string.lx_tab_favorite),
-            icon = Icons.Rounded.Favorite,
-            selected = selected == MINE_TAB_FAVORITE,
-            shape = MineTabRightShape,
-            onClick = { onSelect(MINE_TAB_FAVORITE) },
-        )
-    }
-}
-
-@Composable
-private fun MineTabSegment(
-    text: String,
-    icon: ImageVector,
-    selected: Boolean,
-    shape: RoundedCornerShape,
-    onClick: () -> Unit,
-) {
-    FilledTonalButton(
-        onClick = onClick,
-        shape = shape,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) MaterialTheme.colorScheme.tertiaryContainer
-            else MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = if (selected) MaterialTheme.colorScheme.onTertiaryContainer
-            else MaterialTheme.colorScheme.onSecondaryContainer,
-        ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 6.dp),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 0.dp),
-        modifier = Modifier.height(34.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-    }
-}
-
-
 private fun LazyListScope.mineRecommendSection(
     state: LxMusicViewModel.MineState,
     viewModel: LxMusicViewModel,
@@ -961,82 +659,6 @@ private fun LazyListScope.mineRecommendSection(
     }
     if (state.loadingHome) {
         item(key = "mine_rec_loading") { MineLoadingRow() }
-    }
-}
-
-private fun LazyListScope.mineFavoriteSection(
-    state: LxMusicViewModel.MineState,
-    viewModel: LxMusicViewModel,
-    currentSource: String,
-) {
-    // 歌手/专辑写本轮仅按能力矩阵放行：kg 歌手入口平台写死隐藏；kw/tx 专辑与 kw 歌手写未实现，入口保持隐藏
-    val showArtistEntry = currentSource != LxSources.KUGOU
-        && (currentSource != LxSources.KUWO || viewModel.writeEnabledFor(LxSources.KUWO, LxWriteOp.ARTIST_FOLLOW))
-        && currentSource != LxSources.TENCENT
-    val showAlbumEntry = currentSource != LxSources.KUGOU
-        && (currentSource != LxSources.KUWO || viewModel.writeEnabledFor(LxSources.KUWO, LxWriteOp.ALBUM_COLLECT))
-        && (currentSource != LxSources.TENCENT || viewModel.writeEnabledFor(LxSources.TENCENT, LxWriteOp.ALBUM_COLLECT))
-    val liked = state.myPlaylists.firstOrNull { it.specialType == 5 }
-    if (liked != null) {
-        item(key = "mine_entry_liked") {
-            MineEntryRow(
-                title = liked.name,
-                subtitle = liked.trackCount?.let { stringResource(R.string.lx_text_track_count_format, it) } ?: stringResource(R.string.lx_subtitle_liked_music_default),
-                coverUrl = liked.pic,
-                fallbackIcon = Icons.Rounded.Favorite,
-                onClick = viewModel::openLikedPlaylist,
-            )
-        }
-    }
-    if (showArtistEntry) {
-        item(key = "mine_entry_artists") {
-            MineEntryRow(
-                title = stringResource(R.string.lx_title_sub_artists),
-                subtitle = if (state.subArtists.isNotEmpty()) stringResource(R.string.lx_subtitle_sub_artists_count, state.subArtists.size) else stringResource(R.string.lx_subtitle_sub_artists_default),
-                coverUrl = null,
-                fallbackIcon = Icons.Rounded.Person,
-                showChevron = true,
-                onClick = viewModel::openSubArtistsPage,
-            )
-        }
-    }
-    if (showAlbumEntry) {
-        item(key = "mine_entry_albums") {
-            MineEntryRow(
-                title = stringResource(R.string.lx_title_sub_albums),
-                subtitle = if (state.subAlbums.isNotEmpty()) stringResource(R.string.lx_subtitle_sub_albums_count, state.subAlbums.size) else stringResource(R.string.lx_subtitle_sub_albums_default),
-                coverUrl = null,
-                fallbackIcon = Icons.Rounded.Album,
-                showChevron = true,
-                onClick = viewModel::openSubAlbumsPage,
-            )
-        }
-    }
-    item(key = "mine_fav_divider") {
-        Spacer(Modifier.height(6.dp))
-    }
-    state.myPlaylists
-        .filter { it.specialType != 5 }
-        .forEachIndexed { index, playlist ->
-            item(key = "mine_my_pl_${playlist.id}") {
-                val trackCountFormat = stringResource(R.string.lx_text_track_count_format)
-                MineEntryRow(
-                    title = playlist.name,
-                    subtitle = buildString {
-                        playlist.trackCount?.let { append(trackCountFormat.format(it)) }
-                        if (!playlist.creator.isNullOrBlank()) {
-                            if (isNotEmpty()) append(" · ")
-                            append(playlist.creator)
-                        }
-                    },
-                    coverUrl = playlist.pic,
-                    fallbackIcon = Icons.Rounded.QueueMusic,
-                    onClick = { viewModel.openMinePlaylist(playlist) },
-                )
-            }
-        }
-    if (state.loadingHome) {
-        item(key = "mine_fav_loading") { MineLoadingRow() }
     }
 }
 

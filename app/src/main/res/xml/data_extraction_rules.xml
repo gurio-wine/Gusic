@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="sharedpref" path="listenbrainz_prefs.xml"/>
-        <exclude domain="sharedpref" path="listenbrainz_prefs_plain.xml"/>
 
         <exclude domain="sharedpref" path="tencent_prefs.xml"/>
         <exclude domain="sharedpref" path="netease_prefs.xml"/>
@@ -20,8 +18,6 @@
         <exclude domain="sharedpref" path="crash_handler_prefs.xml"/>
     </cloud-backup>
     <device-transfer>
-        <exclude domain="sharedpref" path="listenbrainz_prefs.xml"/>
-        <exclude domain="sharedpref" path="listenbrainz_prefs_plain.xml"/>
 
         <exclude domain="sharedpref" path="tencent_prefs.xml"/>
         <exclude domain="sharedpref" path="netease_prefs.xml"/>

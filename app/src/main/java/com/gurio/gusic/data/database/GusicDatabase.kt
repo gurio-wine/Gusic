@@ -19,11 +19,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LyricsEntity::class,
         PlaylistEntity::class,
         PlaylistSongEntity::class,
-        ListenBrainzPendingListenEntity::class,
         OfflineTrackEntity::class,
         LibraryItemIdentityEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 abstract class GusicDatabase : RoomDatabase() {
@@ -35,7 +34,6 @@ abstract class GusicDatabase : RoomDatabase() {
     abstract fun favoritesDao(): FavoritesDao
     abstract fun lyricsDao(): LyricsDao
     abstract fun localPlaylistDao(): LocalPlaylistDao
-    abstract fun listenBrainzDao(): ListenBrainzDao
     abstract fun offlineTrackDao(): OfflineTrackDao
     abstract fun libraryItemIdentityDao(): LibraryItemIdentityDao
 

@@ -6,6 +6,7 @@
     <string name="library_tab_playlists">Playlists</string>
     <string name="library_tab_folders">Folders</string>
     <string name="library_tab_liked">Liked</string>
+    <string name="library_tab_collections">Collections</string>
 
     <string name="library_error_loading_songs">Error loading songs</string>
     <string name="library_error_loading_albums">Error loading albums</string>

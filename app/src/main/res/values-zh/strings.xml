@@ -10,27 +10,6 @@
 <string name="error">錯誤</string>
 <string name="ok">確定</string>
 <string name="cancel">取消</string>
-<string name="accounts_listenbrainz_title">ListenBrainz</string>
-<string name="accounts_listenbrainz_token_dialog_title">連接 ListenBrainz</string>
-<string name="accounts_listenbrainz_token_dialog_body">粘貼你的用戶令牌，即可向 ListenBrainz 提交播放記錄。你可以在 listenbrainz.org 的設置頁面找到令牌。</string>
-<string name="accounts_listenbrainz_token_hint">用戶令牌</string>
-<string name="accounts_listenbrainz_connect">連接</string>
-<string name="accounts_listenbrainz_connect_failed">連接失敗，請檢查令牌與伺服器地址後重試。</string>
-<string name="accounts_listenbrainz_server_hint">伺服器地址（選填）</string>
-<string name="accounts_listenbrainz_server_supporting">留空則使用 listenbrainz.org。可對接兼容該API的自建服務，例如 Maloja。</string>
-<string name="accounts_listenbrainz_invalid_url">請輸入有效的伺服器地址，例如 https://maloja.example.com/apis/listenbrainz</string>
-<string name="accounts_listenbrainz_custom_server">正在向 %1$s 提交播放記錄</string>
-<string name="accounts_listenbrainz_get_token">打開 listenbrainz.org</string>
-<string name="accounts_listenbrainz_needs_reauth">令牌已失效，請重新連接以恢復播放記錄提交，排隊記錄將會保留。</string>
-<string name="accounts_listenbrainz_reconnect">重新連接</string>
-<string name="accounts_listenbrainz_scrobble_local">提交本地文件播放記錄</string>
-<string name="accounts_listenbrainz_toggle_hint">如果你的服務端已經向ListenBrainz上報記錄，請在此關閉，避免重複上報。</string>
-<string name="accounts_listenbrainz_stat_listens">總播放記錄</string>
-<string name="accounts_listenbrainz_stat_queued">排隊中</string>
-<string name="accounts_listenbrainz_now_playing_label">正在上報播放狀態</string>
-<string name="accounts_listenbrainz_now_playing_format">%1$s — %2$s</string>
-<string name="accounts_listenbrainz_now_playing_idle">當前無正在播放曲目</string>
-<string name="accounts_available_services">可用服務</string>
 <string name="import_file">導入</string>
 <string name="search">搜索</string>
 
@@ -345,7 +324,6 @@
 <string name="lx_desc_script_management">音源腳本管理</string>
 <string name="lx_account_chip_not_logged_in">未登入</string>
 <string name="lx_desc_settings">設定</string>
-<string name="lx_tab_mine">我的</string>
 <string name="lx_tab_board">排行榜</string>
 <string name="lx_tab_playlist">歌單</string>
 <string name="lx_tab_search">搜尋</string>

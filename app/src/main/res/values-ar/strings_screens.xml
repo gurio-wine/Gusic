@@ -16,7 +16,6 @@
     <string name="about_upstream_credits_title">تقدير المساهمات في المشروع الأصلي</string>
     <string name="about_upstream_credits_subtitle">مؤلفو ومشرفو PixelPlayer الأصليون، تقديراً لعملهم في المشروع الأصلي.</string>
     <string name="about_version_format">الإصدار v%1$s</string>
-    <string name="accounts_unable_open_screen">تعذر فتح هذه الشاشة في الوقت الحالي.</string>
     <string name="action_copy">نسخ</string>
     <string name="action_reset">إعادة تعيين</string>
     <string name="action_share">مشاركة</string>

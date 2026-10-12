@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_collections_platform_unavailable">該平台暫不支持查看關注歌手與收藏專輯</string>
+    <string name="library_collections_not_logged_in">登入後即可查看關注歌手與收藏專輯</string>
+</resources>
