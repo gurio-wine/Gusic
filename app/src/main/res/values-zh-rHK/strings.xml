@@ -280,9 +280,7 @@
 <string name="lx_action_login">登入</string>
 <string name="lx_msg_sms_tip">未註冊酷狗的手機號將自動註冊</string>
 <string name="lx_msg_kw_sms_tip">驗證碼登入走酷我官方用戶端通道；未註冊的手機號將自動建立酷我帳號，並簽發讀取自建大歌單所需的原生會話。</string>
-<string name="lx_msg_kw_login_chooser">選擇登入方式。推薦簡訊登入，以便讀取自建歌單。</string>
 <string name="lx_action_sms_login">簡訊登入</string>
-<string name="lx_action_scan_login">掃碼登入</string>
 <string name="lx_title_daily_recommend">每日推薦</string>
 <string name="lx_title_heartbeat_mode">心動模式</string>
 <string name="lx_title_liked_roaming">根據你喜愛的歌曲推薦</string>

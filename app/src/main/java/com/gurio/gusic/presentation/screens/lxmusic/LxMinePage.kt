@@ -34,7 +34,6 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Radio
-import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -104,7 +103,6 @@ fun LxRecommendPage(
     playerViewModel: PlayerViewModel,
     playLxSong: (LxSong, List<LxSong>, String) -> Unit,
     playAllPlaylist: (List<LxSong>, String) -> Unit,
-    shuffleAllPlaylist: (List<LxSong>, String) -> Unit,
     bottomBarHeightDp: Dp,
     onScrollingChange: (Boolean) -> Unit = {},
     subPageBackOverride: (() -> Unit)? = null,
@@ -343,35 +341,6 @@ fun LxRecommendPage(
                 .align(Alignment.BottomEnd)
                 .padding(end = 20.dp, bottom = bottomPadding + 14.dp),
         )
-
-        if (showSongActions) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 20.dp, bottom = bottomPadding + 14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                FilledTonalIconButton(
-                    onClick = { shuffleAllPlaylist(recommendState.pageSongs, recommendState.pageTitle) },
-                    shape = CircleShape,
-                    colors = IconButtonDefaults.filledTonalIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                    ),
-                    modifier = Modifier.size(48.dp),
-                ) {
-                    Icon(Icons.Rounded.Shuffle, contentDescription = stringResource(R.string.lx_desc_shuffle), modifier = Modifier.size(22.dp))
-                }
-                FilledIconButton(
-                    onClick = { playAllPlaylist(recommendState.pageSongs, recommendState.pageTitle) },
-                    shape = CircleShape,
-                    modifier = Modifier.size(48.dp),
-                ) {
-                    Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(R.string.lx_desc_play_all), modifier = Modifier.size(26.dp))
-                }
-            }
-        }
 
         LxFloatingSelectionRow(
             visible = isSelectionMode,

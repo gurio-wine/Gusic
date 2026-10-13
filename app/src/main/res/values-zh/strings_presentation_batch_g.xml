@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.006：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101306_whats_new">
+        <item>酷我登入改為僅簡訊驗證碼方式，同時簽發讀取自建大歌單所需的原生工作階段</item>
+        <item>修復酷我歌單秒內顯示載入失敗：載入請求此前根本沒有發出，所以看不到載入過程，現在會真正走網路載入</item>
+    </string-array>
+    <!-- Gusic 26.10.13.006：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101306_changes">
+        <item>探索頁切回網易不再整頁重新整理，各平台首頁按來源快取、即切即顯</item>
+        <item>網易未登入時不再顯示登入引導，直接隱藏推薦區</item>
+        <item>移除歌單、排行榜、推薦頁底部懸浮的隨機播放與一鍵播放按鈕</item>
+    </string-array>
     <!-- Gusic 26.10.13.005：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101305_whats_new">
         <item>酷我登入新增簡訊驗證碼方式：登入彈窗內可選簡訊或掃碼，簡訊走官方用戶端通道，簽發讀取自建歌單所需的原生會話，解決歌單歌曲載入失敗</item>

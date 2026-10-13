@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.006：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101306_whats_new">
+        <item>酷我登录改为仅短信验证码方式，同时签发读取自建大歌单所需的原生会话</item>
+        <item>修复酷我歌单秒内显示加载失败：加载请求此前根本没有发出，所以看不到加载过程，现在会真正走网络加载</item>
+    </string-array>
+    <!-- Gusic 26.10.13.006：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101306_changes">
+        <item>发现页切回网易不再整页刷新，各平台首页按源缓存、即切即显</item>
+        <item>网易未登录时不再显示登录引导，直接隐藏推荐区</item>
+        <item>移除歌单、排行榜、推荐页底部悬浮的随机播放与一键播放按钮</item>
+    </string-array>
     <!-- Gusic 26.10.13.005：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101305_whats_new">
         <item>酷我登录新增短信验证码方式：登录弹窗内可选短信或扫码，短信走官方客户端通道，签发读取自建歌单所需的原生会话，解决歌单歌曲加载失败</item>

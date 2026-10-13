@@ -718,6 +718,24 @@ class LxMusicViewModel @Inject constructor(
     val sourceBoardPreviewsCache: StateFlow<Map<String, Map<String, List<LxSong>>>> =
         _sourceBoardPreviewsCache.asStateFlow()
 
+    /** “我的/推荐”首页数据快照（跨源共享的 mineState 按源留档） */
+    private data class MineHomeSnapshot(
+        val recommendPlaylists: List<LxPlaylist>,
+        val myPlaylists: List<LxPlaylist>,
+        val subArtists: List<LxArtist>,
+        val subAlbums: List<LxAlbum>,
+    )
+
+    /**
+     * 每源首页缓存：切源会 resetMineNavigation 清空共享 mineState，若不回填，
+     * 每次切回网易都会重新拉取整个推荐首页（发现页网易推荐段“闪一下刷新”的根因）。
+     */
+    private val _sourceMineHomeCache = MutableStateFlow<Map<String, MineHomeSnapshot>>(emptyMap())
+
+    private fun publishMineHomeCache(source: String, snapshot: MineHomeSnapshot) {
+        _sourceMineHomeCache.value = _sourceMineHomeCache.value + (source to snapshot)
+    }
+
     fun selectSource(source: String) {
         if (source == _selectedSource.value) return
         currentLoadJob?.cancel()
@@ -734,6 +752,17 @@ class LxMusicViewModel @Inject constructor(
             perSourceModule[oldSource] = st.module
         }
         resetMineNavigation()
+        // 按源回填首页缓存：命中时 homeLoaded=true，后续 ensureMineHome 不再发请求
+        _sourceMineHomeCache.value[source]?.let { snap ->
+            _mineState.value = _mineState.value.copy(
+                homeLoaded = true,
+                homeSource = source,
+                recommendPlaylists = snap.recommendPlaylists,
+                myPlaylists = snap.myPlaylists,
+                subArtists = snap.subArtists,
+                subAlbums = snap.subAlbums,
+            )
+        }
         val restoredModule = when (val remembered = perSourceModule[source]) {
             // “推荐”仅网易提供；其他音源没有独立模块，恢复到排行榜
             "recommend" -> if (source == LxSources.NETEASE) "recommend" else "board"
@@ -1394,6 +1423,8 @@ class LxMusicViewModel @Inject constructor(
     data class MineState(
         val loadingHome: Boolean = false,
         val homeLoaded: Boolean = false,
+        // 首页数据归属源：mineState 跨源共享，渲染推荐段前据此判断（防止滑到相邻网易页时渲染他源数据）
+        val homeSource: String? = null,
         // myPlaylists/subArtists/subAlbums 仍被收藏态判定（collectStateOf）与搜索关注态消费，保留
         val recommendPlaylists: List<LxPlaylist> = emptyList(),
         val myPlaylists: List<LxPlaylist> = emptyList(),
@@ -1491,10 +1522,12 @@ class LxMusicViewModel @Inject constructor(
                 }
                 is NeteaseOfficialApi.ProfileResult.CookieInvalid -> {
                     neteaseCookieStore.clear()
+                    _sourceMineHomeCache.value = _sourceMineHomeCache.value - LxSources.NETEASE
                     onResult(false, context.getString(R.string.lx_msg_login_invalid))
                 }
                 else -> {
                     neteaseCookieStore.clear()
+                    _sourceMineHomeCache.value = _sourceMineHomeCache.value - LxSources.NETEASE
                     onResult(false, context.getString(R.string.lx_msg_network_retrying))
                 }
             }
@@ -1504,6 +1537,7 @@ class LxMusicViewModel @Inject constructor(
     fun logoutNetease() {
         clearNeteaseWebViewSession()
         clearNeteaseCookie()
+        _sourceMineHomeCache.value = _sourceMineHomeCache.value - LxSources.NETEASE
         resetMineNavigation()
         _mineState.value = MineState()
         _searchState.value = SearchState()
@@ -1642,23 +1676,11 @@ class LxMusicViewModel @Inject constructor(
         }
     }
 
-    fun validateAndLoginKuwo(rawCookie: String, onResult: (ok: Boolean, error: String?) -> Unit) =
-        validateAndLoginPlatform(
-            rawCookie = rawCookie,
-            source = LxSources.KUWO,
-            hasMarker = { Regex("userid=\\d+").containsMatchIn(it) && it.contains("sid=") },
-            saveCookie = kuwoCookieStore::setCookie,
-            saveProfile = kuwoCookieStore::setProfile,
-            fetchProfile = { repository.fetchKwProfile() },
-            fetchLikedIds = { repository.fetchKwLikedSongIds() },
-            updateLikedIds = repository::setKwLikedSongIds,
-            onResult = onResult,
-        )
-
     fun logoutTencent() {
         clearAllWebViewSession()
         tencentCookieStore.clear()
         repository.setTxLikedSongIds(emptySet())
+        _sourceMineHomeCache.value = _sourceMineHomeCache.value - LxSources.TENCENT
         resetMineNavigation()
         _mineState.value = MineState()
         _searchState.value = SearchState()
@@ -1670,6 +1692,7 @@ class LxMusicViewModel @Inject constructor(
         kugouCookieStore.clear()
         repository.clearKgCloudCache()
         repository.setKgLikedSongIds(emptySet())
+        _sourceMineHomeCache.value = _sourceMineHomeCache.value - LxSources.KUGOU
         resetMineNavigation()
         _mineState.value = MineState()
         _searchState.value = SearchState()
@@ -1681,6 +1704,7 @@ class LxMusicViewModel @Inject constructor(
         kuwoCookieStore.clear()
         repository.clearKwLikedListCache()
         repository.setKwLikedSongIds(emptySet())
+        _sourceMineHomeCache.value = _sourceMineHomeCache.value - LxSources.KUWO
         resetMineNavigation()
         _mineState.value = MineState()
         _searchState.value = SearchState()
@@ -1752,12 +1776,23 @@ class LxMusicViewModel @Inject constructor(
         }
         mineJob?.cancel()
         mineJob = viewModelScope.launch {
-            _mineState.value = _mineState.value.copy(loadingHome = true, error = null)
-            when (source) {
-                LxSources.TENCENT -> loadPlatformMineHome(LxSources.TENCENT)
-                LxSources.KUGOU -> loadPlatformMineHome(LxSources.KUGOU)
-                LxSources.KUWO -> loadPlatformMineHome(LxSources.KUWO)
-                else -> loadNeteaseMineHome()
+            _mineState.value = _mineState.value.copy(
+                loadingHome = true,
+                homeSource = source,
+                error = null,
+            )
+            try {
+                when (source) {
+                    LxSources.TENCENT -> loadPlatformMineHome(LxSources.TENCENT)
+                    LxSources.KUGOU -> loadPlatformMineHome(LxSources.KUGOU)
+                    LxSources.KUWO -> loadPlatformMineHome(LxSources.KUWO)
+                    else -> loadNeteaseMineHome()
+                }
+            } finally {
+                // 加载被取消（切源/打开子页）时兜底复位，避免 loadingHome 卡 true 阻塞后续 ensureMineHome
+                if (_mineState.value.loadingHome) {
+                    _mineState.value = _mineState.value.copy(loadingHome = false)
+                }
             }
         }
     }
@@ -1772,25 +1807,50 @@ class LxMusicViewModel @Inject constructor(
         }
         coroutineScope {
             val recommendDeferred = async {
-                runCatching { repository.fetchNeteaseRecommendPlaylists() }.getOrDefault(emptyList())
+                runCatching { repository.fetchNeteaseRecommendPlaylists() }
             }
             val playlistsDeferred = async {
-                val u = uid ?: return@async emptyList()
-                runCatching { repository.fetchNeteaseMyPlaylists(u.toString()) }.getOrDefault(emptyList())
+                val u = uid ?: return@async Result.success(emptyList<LxPlaylist>())
+                runCatching { repository.fetchNeteaseMyPlaylists(u.toString()) }
             }
             val artistsDeferred = async {
-                runCatching { repository.fetchNeteaseSubArtists() }.getOrDefault(emptyList())
+                runCatching { repository.fetchNeteaseSubArtists() }
             }
             val albumsDeferred = async {
-                runCatching { repository.fetchNeteaseSubAlbums() }.getOrDefault(emptyList())
+                runCatching { repository.fetchNeteaseSubAlbums() }
             }
-            val recommend = recommendDeferred.await()
-            val playlists = playlistsDeferred.await()
-            val artists = artistsDeferred.await()
-            val albums = albumsDeferred.await()
+            val recommendRes = recommendDeferred.await()
+            val playlistsRes = playlistsDeferred.await()
+            val artistsRes = artistsDeferred.await()
+            val albumsRes = albumsDeferred.await()
+            if (listOf(recommendRes, playlistsRes, artistsRes, albumsRes).all { it.isFailure }) {
+                // 全部请求失败：不写缓存、不置 homeLoaded，保留切源/ensureMineHome/下拉刷新的重试机会
+                if (_selectedSource.value == LxSources.NETEASE) {
+                    _mineState.value = _mineState.value.copy(
+                        loadingHome = false,
+                        homeLoaded = false,
+                        homeSource = null,
+                        error = context.getString(R.string.lx_error_load_failed_retry),
+                    )
+                }
+                return@coroutineScope
+            }
+            val recommend = recommendRes.getOrDefault(emptyList())
+            val playlists = playlistsRes.getOrDefault(emptyList())
+            val artists = artistsRes.getOrDefault(emptyList())
+            val albums = albumsRes.getOrDefault(emptyList())
+            publishMineHomeCache(
+                LxSources.NETEASE,
+                MineHomeSnapshot(recommend, playlists, artists, albums),
+            )
+            if (_selectedSource.value != LxSources.NETEASE) {
+                // 用户已切走：快照已入缓存供切回时回填，不覆盖当前源状态
+                return@coroutineScope
+            }
             var newState = _mineState.value.copy(
                 loadingHome = false,
                 homeLoaded = true,
+                homeSource = LxSources.NETEASE,
                 recommendPlaylists = recommend,
                 myPlaylists = playlists,
                 subArtists = artists,
@@ -1825,14 +1885,15 @@ class LxMusicViewModel @Inject constructor(
                 LxSources.KUWO -> kuwoCookieStore.setProfile(nick, avatar)
             }
         }
+        var likedOk = true
         if (source == LxSources.KUGOU && kugouCookieStore.hasAppLogin()) {
-            runCatching { repository.setKgLikedSongIds(repository.fetchKgLikedSongIds()) }
+            likedOk = runCatching { repository.setKgLikedSongIds(repository.fetchKgLikedSongIds()) }.isSuccess
         }
         if (source == LxSources.KUWO) {
-            runCatching { repository.setKwLikedSongIds(repository.fetchKwLikedSongIds()) }
+            likedOk = runCatching { repository.setKwLikedSongIds(repository.fetchKwLikedSongIds()) }.isSuccess
         }
         if (source == LxSources.TENCENT && tencentCookieStore.hasCookie()) {
-            runCatching { repository.setTxLikedSongIds(repository.fetchTxLikedSongIds()) }
+            likedOk = runCatching { repository.setTxLikedSongIds(repository.fetchTxLikedSongIds()) }.isSuccess
         }
         val likedIds = when (source) {
             LxSources.TENCENT -> repository.txLikedSongIds.value
@@ -1845,14 +1906,27 @@ class LxMusicViewModel @Inject constructor(
         } else {
             likedIds.size
         }
-        val cloudPlaylists = when (source) {
-            LxSources.KUGOU -> runCatching { repository.fetchKgUserPlaylists() }.getOrDefault(emptyList())
-            LxSources.KUWO -> runCatching { repository.fetchKwUserPlaylists() }.getOrDefault(emptyList())
+        val cloudPlaylistsRes = when (source) {
+            LxSources.KUGOU -> runCatching { repository.fetchKgUserPlaylists() }
+            LxSources.KUWO -> runCatching { repository.fetchKwUserPlaylists() }
             // 打开歌单时按 "tx_pl_" 前缀分流到用户歌单接口，缺失前缀会全部落进红心分支
-            LxSources.TENCENT -> runCatching { repository.fetchTxUserPlaylists() }.getOrDefault(emptyList())
-                .map { it.copy(id = "tx_pl_${it.id}") }
-            else -> emptyList()
+            LxSources.TENCENT -> runCatching { repository.fetchTxUserPlaylists() }
+                .map { list -> list.map { it.copy(id = "tx_pl_${it.id}") } }
+            else -> Result.success(emptyList<LxPlaylist>())
         }
+        if (!likedOk && cloudPlaylistsRes.isFailure) {
+            // 主数据全部拉取失败：不写缓存、不置 homeLoaded，保留重试机会
+            if (_selectedSource.value == source) {
+                _mineState.value = _mineState.value.copy(
+                    loadingHome = false,
+                    homeLoaded = false,
+                    homeSource = null,
+                    error = context.getString(R.string.lx_error_load_failed_retry),
+                )
+            }
+            return
+        }
+        val cloudPlaylists = cloudPlaylistsRes.getOrElse { emptyList() }
         val likedPlaylist = LxPlaylist(
             id = "${source}_liked",
             name = context.getString(R.string.lx_subtitle_liked_music_default),
@@ -1861,9 +1935,18 @@ class LxMusicViewModel @Inject constructor(
             trackCount = likedCount,
             specialType = 5,
         )
+        publishMineHomeCache(
+            source,
+            MineHomeSnapshot(emptyList(), listOf(likedPlaylist) + cloudPlaylists, emptyList(), emptyList()),
+        )
+        if (_selectedSource.value != source) {
+            // 用户已切走：快照已入缓存供切回时回填，不覆盖当前源状态
+            return
+        }
         _mineState.value = _mineState.value.copy(
             loadingHome = false,
             homeLoaded = true,
+            homeSource = source,
             recommendPlaylists = emptyList(),
             myPlaylists = listOf(likedPlaylist) + cloudPlaylists,
             subArtists = emptyList(),

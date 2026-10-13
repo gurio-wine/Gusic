@@ -286,9 +286,7 @@
 <string name="lx_action_login">登录</string>
 <string name="lx_msg_sms_tip">未注册酷狗的手机号将自动注册</string>
 <string name="lx_msg_kw_sms_tip">验证码登录走酷我官方客户端通道；未注册的手机号将自动创建酷我账号，并签发读取自建大歌单所需的原生会话。</string>
-<string name="lx_msg_kw_login_chooser">选择登录方式。推荐短信登录，以便读取自建歌单。</string>
 <string name="lx_action_sms_login">短信登录</string>
-<string name="lx_action_scan_login">扫码登录</string>
 <string name="lx_title_daily_recommend">每日推荐</string>
 <string name="lx_title_heartbeat_mode">心动模式</string>
 <string name="lx_title_liked_roaming">根据你喜爱的歌曲推荐</string>

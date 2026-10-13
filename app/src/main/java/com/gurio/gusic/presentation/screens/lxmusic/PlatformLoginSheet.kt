@@ -26,9 +26,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Cloud
-import androidx.compose.material.icons.rounded.QrCodeScanner
-import androidx.compose.material.icons.rounded.Smartphone
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -406,63 +403,6 @@ fun KugouSmsLoginDialog(
             }
         }
     }
-}
-
-@Composable
-fun KuwoLoginDialog(
-    onDismiss: () -> Unit,
-    onValidate: (cookie: String, callback: (ok: Boolean, error: String?) -> Unit) -> Unit,
-) = PlatformLoginDialog(
-    loginUrl = "https://www.kuwo.cn/",
-    hostMatch = "kuwo.cn",
-    loginMarkers = listOf("userid=", "sid="),
-    loginPagePath = "",
-    titleRes = R.string.lx_title_kuwo_login,
-    onDismiss = onDismiss,
-    onValidate = onValidate,
-    userAgentOverride = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/124.0.0 Safari/537.36",
-    detectByMarkers = true,
-    autoClickSelector = ".reg_text",
-    // 补采裸域与客户端域：vip1.kuwo.cn 写入的 websid 等会话 cookie 是 host-only 不跨子域，
-    // 漏采会导致原生歌单协议（pl3_getlist）无会话可用
-    extraCookieUrls = listOf("https://kuwo.cn/", "https://i.kuwo.cn/", "https://vip1.kuwo.cn/"),
-)
-
-/** 酷我登录方式选择：扫码（web cookie）或短信验证码（原生会话，自建 64 位歌单需它）。 */
-@Composable
-fun KuwoLoginChooserDialog(
-    onDismiss: () -> Unit,
-    onScanLogin: () -> Unit,
-    onSmsLogin: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.lx_title_kuwo_login)) },
-        text = { Text(stringResource(R.string.lx_msg_kw_login_chooser)) },
-        confirmButton = {
-            TextButton(onClick = onSmsLogin) {
-                Icon(
-                    Icons.Rounded.Smartphone,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.size(6.dp))
-                Text(stringResource(R.string.lx_action_sms_login))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onScanLogin) {
-                Icon(
-                    Icons.Rounded.QrCodeScanner,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.size(6.dp))
-                Text(stringResource(R.string.lx_action_scan_login))
-            }
-        },
-    )
 }
 
 /** 酷我短信验证码登录（走酷我官方客户端原生通道，签发 pl3_getlist 可用的原生会话）。 */

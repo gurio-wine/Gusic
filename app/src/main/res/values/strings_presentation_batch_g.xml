@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.006：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101306_whats_new">
+        <item>Kuwo login is now SMS verification only, and it signs the native session that reads your own playlists</item>
+        <item>Fixed Kuwo playlists failing instantly: the load request was never sent out, so you never saw a loading state — it now actually loads over the network</item>
+    </string-array>
+    <!-- Gusic 26.10.13.006：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101306_changes">
+        <item>Switching back to the Netease page no longer flashes a full refresh; each platform home is cached per source and shown instantly</item>
+        <item>Netease recommendations are now simply hidden when not logged in, instead of showing a login prompt</item>
+        <item>Removed the floating shuffle and play-all buttons from playlist, charts and recommendation pages</item>
+    </string-array>
     <!-- Gusic 26.10.13.005：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101305_whats_new">
         <item>Kuwo login now offers SMS verification: pick SMS or QR code in the login dialog — the SMS path signs the native session that reads your own playlists, fixing tracks failing to load</item>

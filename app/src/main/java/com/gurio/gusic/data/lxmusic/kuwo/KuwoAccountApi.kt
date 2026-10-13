@@ -290,6 +290,9 @@ internal class KuwoAccountApi(
      * web 端无此接口，实测该服务无需 Secret、https 证书有效，附登录 Cookie 覆盖私有歌单）。
      * 单请求全量返回；跳过 type=="MYFAVORITE" 的“我喜欢”系统歌单
      * （其歌曲由 [fetchLikedSongs] 单独承载）；未登录返回 null。
+     * id 带 kw_pl_ 前缀返回：消费方按该前缀把点击分流到 [fetchUserPlaylistSongs]
+     * （原生协议）——裸 pid 会被路由误当网易 id 或直接判 null（秒失败无网络请求，
+     * 曾表现为“歌单一进去就加载失败且没有加载过程”），对齐 kg_cloud_/tx_pl_ 约定。
      */
     suspend fun fetchUserPlaylists(): List<LxPlaylist>? = withContext(Dispatchers.IO) {
         val cookie = cookieStore.getCookie()?.takeIf(String::isNotBlank) ?: return@withContext null
@@ -300,7 +303,7 @@ internal class KuwoAccountApi(
             if (obj.strOf("type") == "MYFAVORITE") return@mapNotNull null
             val id = obj.strOf("id") ?: return@mapNotNull null
             LxPlaylist(
-                id = id,
+                id = "kw_pl_$id",
                 name = obj.strOf("title") ?: "",
                 // pic 为 http 明文 CDN 链接，统一升级 https
                 pic = obj.strOf("pic")?.takeIf(String::isNotBlank)?.replaceFirst("http://", "https://"),

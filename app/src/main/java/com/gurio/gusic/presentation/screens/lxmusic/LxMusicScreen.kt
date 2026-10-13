@@ -521,7 +521,8 @@ fun LxMusicScreen(
                             when (headerSource) {
                                 LxSources.TENCENT -> clearAllWebViewSession { showTxWebLoginDialog = true }
                                 LxSources.KUGOU -> clearAllWebViewSession { showKgLoginDialog = true }
-                                LxSources.KUWO -> clearAllWebViewSession { showKwLoginDialog = true }
+                                // 酷我只剩短信登录，不经过 WebView，无需清会话
+                                LxSources.KUWO -> showKwLoginDialog = true
                                 else -> clearNeteaseWebViewSession { showLoginDialog = true }
                             }
                         },
@@ -592,7 +593,7 @@ fun LxMusicScreen(
                         // 歌单详情模式（含搜索直开）：隐藏模块行与 pager
                         Box(modifier = Modifier.fillMaxSize()) {
                             LxPlaylistPage(browseState, viewModel, playerViewModel, playLxSong,
-                                playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
+                                bottomBarHeightDp,
                                 onSongMoreOptions = { lxInfoSong = it },
                                 isSelectionMode = isSelectionMode,
                                 selectedSongIds = selectedSongIds,
@@ -640,7 +641,6 @@ fun LxMusicScreen(
                                 playerViewModel = playerViewModel,
                                 playLxSong = playLxSong,
                                 playAllPlaylist = playAllPlaylist,
-                                shuffleAllPlaylist = shuffleAllPlaylist,
                                 bottomBarHeightDp = bottomBarHeightDp,
                                 onSongMoreOptions = { lxInfoSong = it },
                                 isSelectionMode = isSelectionMode,
@@ -655,7 +655,7 @@ fun LxMusicScreen(
                             )
                         } else if (browseState.selectedBoard != null) {
                             LxBoardPage(browseState, viewModel, playerViewModel, playLxSong,
-                                playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
+                                bottomBarHeightDp,
                                 onSongMoreOptions = { lxInfoSong = it },
                                 isSelectionMode = isSelectionMode,
                                 selectedSongIds = selectedSongIds,
@@ -705,35 +705,13 @@ fun LxMusicScreen(
                                         ),
                                         verticalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {
-                                        // 网易页推荐段恒渲染（登录态按网易自身判断，不依赖当前源）：
-                                        // 推荐内容在上、榜单卡在下，滑动过程中即呈现推荐区顶部，
-                                        // 不再先露榜单再让推荐段插入
-                                        if (pageSource == LxSources.NETEASE) {
-                                            if (neteaseLoggedIn) {
-                                                mineRecommendSection(mineState, viewModel)
-                                            } else {
-                                                // 未登录：占位提示并提供登录入口（复用现有登录弹窗）
-                                                item(key = "mine_not_logged_in") {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .heightIn(min = 220.dp),
-                                                        contentAlignment = Alignment.Center,
-                                                    ) {
-                                                        LxMineNotLoggedInPlaceholder(
-                                                            platformLabel = platformName(pageSource),
-                                                            onLogin = {
-                                                                when (pageSource) {
-                                                                    LxSources.TENCENT -> clearAllWebViewSession { showTxWebLoginDialog = true }
-                                                                    LxSources.KUGOU -> clearAllWebViewSession { showKgLoginDialog = true }
-                                                                    LxSources.KUWO -> clearAllWebViewSession { showKwLoginDialog = true }
-                                                                    else -> clearNeteaseWebViewSession { showLoginDialog = true }
-                                                                }
-                                                            },
-                                                        )
-                                                    }
-                                                }
-                                            }
+                                        // 网易页推荐段：登录且首页数据确属网易时才渲染（未登录不显示推荐，
+                                        // 也没有登录占位）；mineState 跨源共享，中途滑向网易页时
+                                        // 可能暂属他源，此时只显示榜单，settle 后由缓存即时回填
+                                        if (pageSource == LxSources.NETEASE && neteaseLoggedIn &&
+                                            mineState.homeSource == LxSources.NETEASE
+                                        ) {
+                                            mineRecommendSection(mineState, viewModel)
                                         }
                                         boardMenuItems(
                                             boards = pageBoards,
@@ -1191,45 +1169,6 @@ private fun LxBrowsePagerIndicator(
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha)),
             )
-        }
-    }
-}
-
-// “我的”页未登录占位：提示当前平台未登录，并提供登录入口（复用现有平台登录弹窗）
-@Composable
-private fun LxMineNotLoggedInPlaceholder(
-    platformLabel: String,
-    onLogin: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Rounded.Person,
-                contentDescription = null,
-                modifier = Modifier.size(56.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.presentation_batch_g_lx_mine_not_logged_in_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = platformLabel,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            )
-            Spacer(Modifier.height(20.dp))
-            FilledTonalButton(
-                onClick = onLogin,
-                shape = RoundedCornerShape(20.dp),
-            ) {
-                Text(text = stringResource(R.string.presentation_batch_g_lx_mine_login))
-            }
         }
     }
 }
@@ -1711,8 +1650,6 @@ private fun LxBoardPage(
     viewModel: LxMusicViewModel,
     playerViewModel: PlayerViewModel,
     playLxSong: (com.gurio.gusic.data.lxmusic.LxSong, List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
-    playAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
-    shuffleAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     bottomBarHeightDp: Dp,
     onScrollingChange: (Boolean) -> Unit = {},
     onSongMoreOptions: (com.gurio.gusic.data.lxmusic.LxSong) -> Unit = {},
@@ -1905,34 +1842,6 @@ private fun LxBoardPage(
             modifier = Modifier.align(Alignment.BottomEnd)
                 .padding(end = 20.dp, bottom = bottomBarHeightDp + MiniPlayerHeight + 14.dp),
         )
-        if (browseState.boardSongs.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 20.dp, bottom = bottomBarHeightDp + MiniPlayerHeight + 14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                FilledTonalIconButton(
-                    onClick = { shuffleAllPlaylist(browseState.boardSongs, browseState.selectedBoard?.name ?: boardQueueFallback) },
-                    shape = CircleShape,
-                    colors = IconButtonDefaults.filledTonalIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                    ),
-                    modifier = Modifier.size(48.dp),
-                ) {
-                    Icon(Icons.Rounded.Shuffle, contentDescription = stringResource(R.string.lx_desc_shuffle), modifier = Modifier.size(22.dp))
-                }
-                FilledIconButton(
-                    onClick = { playAllPlaylist(browseState.boardSongs, browseState.selectedBoard?.name ?: boardQueueFallback) },
-                    shape = CircleShape,
-                    modifier = Modifier.size(48.dp),
-                ) {
-                    Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(R.string.lx_desc_play_all), modifier = Modifier.size(26.dp))
-                }
-            }
-        }
         LxFloatingSelectionRow(
             visible = isSelectionMode,
             selectedCount = selectedSongIds.size,
@@ -1955,8 +1864,6 @@ private fun LxPlaylistPage(
     viewModel: LxMusicViewModel,
     playerViewModel: PlayerViewModel,
     playLxSong: (com.gurio.gusic.data.lxmusic.LxSong, List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
-    playAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
-    shuffleAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     bottomBarHeightDp: Dp,
     onScrollingChange: (Boolean) -> Unit = {},
     onSongMoreOptions: (com.gurio.gusic.data.lxmusic.LxSong) -> Unit = {},
@@ -2327,23 +2234,6 @@ private fun LxPlaylistPage(
             modifier = Modifier.align(Alignment.BottomEnd)
                 .padding(end = 20.dp, bottom = bottomBarHeightDp + MiniPlayerHeight + 14.dp),
         )
-        if (browseState.selectedPlaylist != null && browseState.playlistSongs.isNotEmpty()) {
-            LxBottomPlayActions(
-                onShuffle = {
-                    shuffleAllPlaylist(
-                        browseState.playlistSongs, browseState.selectedPlaylist.name
-                    )
-                },
-                onPlayAll = {
-                    playAllPlaylist(
-                        browseState.playlistSongs, browseState.selectedPlaylist.name
-                    )
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 20.dp, bottom = bottomBarHeightDp + MiniPlayerHeight + 14.dp),
-            )
-        }
         if (showNeteaseUidDialog) {
             NeteaseUserPlaylistDialog(
                 onDismiss = { showNeteaseUidDialog = false },
