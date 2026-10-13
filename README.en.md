@@ -17,13 +17,13 @@
 </p>
 
 <p align="center">
-  An independently maintained Android music player by Gurio Wine, focused on local playback, self-hosted libraries, and offline use,
+  An independently maintained Android music player by Gurio Wine, focused on local playback and offline use,
   with optional lx-music-mobile-compatible online music sources (自定义音源) and playlist import/export.
 </p>
 
 > **Note:** Gusic is an independent project. It is **not** an official version of PixelPlayerOSS, lx-music-mobile, lx-lxwalnut-music-mobile, or any music platform, and it is not endorsed by their original authors.
 
-<p align="center">This software implements lx source import and playback online features solely for personal use. A built-in fallback source — hidden and not user-modifiable — provides online playback while no user source is enabled; user sources take effect only after being imported and enabled. This software does not host, store, or own any copyrighted audio content.</p>
+<p align="center">This software implements lx source import and playback online features solely for personal use. The app ships a built-in source slot (builders may place their own default source into it) that provides online playback while no user source is enabled; user sources take effect only after being imported and enabled. This software does not host, store, or own any copyrighted audio content.</p>
 
 ## Screenshots
 
@@ -36,9 +36,9 @@
 
 ## Introduction
 
-Gusic is independently maintained by Gurio Wine. It focuses on local playback, self-hosted music libraries, and offline use, with optional user-imported sources compatible with lx-music-mobile and `.lxmc` playlist import/export.
+Gusic is independently maintained by Gurio Wine. It focuses on local playback and offline use, with optional user-imported sources compatible with lx-music-mobile and `.lxmc` playlist import/export.
 
-Local playback, self-hosted libraries, and offline use work by default. A hidden built-in **fallback source** (not shown in the source list, cannot be disabled or modified) handles online search/playback while no user source is enabled; you can also import and enable your own source scripts (or sign in to a supported platform), which then take over online requests.
+Local playback and offline use work by default. The app provides a **built-in source slot** (not shown in the source list; builders may place a default source into it) that handles online search/playback while no user source is enabled, if a source has been placed there; you can also import and enable your own source scripts (or sign in to a supported platform), which then take over online requests.
 
 Repository: [github.com/gurio-wine/Gusic](https://github.com/gurio-wine/Gusic)
 
@@ -54,7 +54,6 @@ Gurio Wine maintains Gusic’s current code, features, and releases; historical 
 | --- | --- |
 | Playback | Media3 playback engine, FFmpeg support, gapless playback, crossfade, custom transitions, queue controls, shuffle, repeat, sleep timer, external file playback |
 | Library | Local scanning for MP3, FLAC, AAC, OGG, WAV, M4A, albums, artists, genres, folders, favorites, playlists, stats, metadata editing |
-| Self-hosted | Navidrome/Subsonic and Jellyfin login, sync, streaming, artwork, and app-private offline downloads |
 | Lyrics | Embedded lyrics, local `.lrc` files, lyrics import/editing, optional LRCLIB lookup |
 | Artwork | Local artwork, album-art palette extraction, optional Deezer artist image lookup |
 | Metadata | On-demand MusicBrainz matching for recording, release, and artist identifiers |
@@ -65,7 +64,7 @@ Gurio Wine maintains Gusic’s current code, features, and releases; historical 
 
 | Area | Highlights |
 | --- | --- |
-| Online sources | Hidden built-in fallback source (not shown, not modifiable); user sources are lx-music-mobile-compatible scripts (音源脚本) imported from a `.js` file or URL, managed from the in-app "LX Music" tab |
+| Online sources | Built-in source slot (builders may place a default source into it); user sources are lx-music-mobile-compatible scripts (音源脚本) imported from a `.js` file or URL, managed from the in-app "LX Music" tab |
 | Script engine | Sandboxed QuickJS runtime (`user-api-preload.js` bridge) with per-script isolation and the lx-music `lx_setup` API |
 | Platforms | Built-in web browsing paths for major platforms; source scripts can declare additional sources |
 | Quality | Per-platform quality selection (master, atmos, 24-bit FLAC, FLAC, 320 kbps, 128 kbps) with automatic fallback/downgrade |
@@ -78,9 +77,9 @@ Gurio Wine maintains Gusic’s current code, features, and releases; historical 
 The "LX Music" tab lets you search and play music from online platforms through **source scripts**. A source script is a plain JavaScript file that implements the lx-music-mobile source API (`lx_setup`).
 
 - Scripts run in an isolated QuickJS instance so one slow or failing script does not affect the others.
-- You can enable multiple sources; the preferred script is tried first, then enabled backup scripts, then the built-in fallback source — the best available quality wins.
+- You can enable multiple sources; the preferred script is tried first, then enabled backup scripts, then the built-in source (if one has been placed) — the best available quality wins.
 - You can import scripts from a local `.js` file or from a URL, enable/disable them, and delete them (long-press a script).
-- The built-in fallback source is separate from user sources: it never appears in the list above, cannot be disabled, deleted, or modified, and only serves online search/playback while no user source is enabled.
+- The built-in source is separate from user sources: it never appears in the list above and only serves online search/playback while no user source is enabled.
 
 > **Security:** Some scripts require you to sign in. Only use scripts you trust.
 
@@ -88,16 +87,13 @@ The "LX Music" tab lets you search and play music from online platforms through 
 
 | Service | Purpose | Default |
 | --- | --- | --- |
-| Navidrome/Subsonic | Self-hosted library sync, streaming, and offline downloads | User login required |
-| Jellyfin | Self-hosted library sync, streaming, and offline downloads | User login required |
-| LX Music sources | Online search/playback via the built-in fallback source and imported user source scripts | Built-in fallback active by default (hidden, not modifiable); user scripts require manual import |
+| LX Music sources | Online search/playback via the built-in source (if placed) and imported user source scripts | Built-in source serves while no user source is enabled; user scripts require manual import |
 | Various platforms | Official web service | Off until used |
 | MusicBrainz | On-demand metadata matching and identifier enrichment | Only when requested |
 | LRCLIB | Search online lyrics when local or embedded lyrics are missing | ON |
 | Deezer | Fetch missing artist artwork and cache it locally | OFF |
-| ListenBrainz | Optional scrobbling (incl. self-hosted Maloja-compatible servers) | Off |
 
-LRCLIB and Deezer are partially enabled by default and can be toggled later from `Settings > Music Management > Optional online services`.
+LRCLIB and Deezer are partially enabled by default and can be toggled later from their respective switches in Settings.
 
 ## Download
 
@@ -107,7 +103,7 @@ Releases are published on GitHub:
 https://github.com/gurio-wine/Gusic/releases
 ```
 
-To install a release, download the APK for your device and install it: `arm64-v8a` fits most modern devices, and `armeabi-v7a` is for older 32-bit ones.
+To install a release, download the `arm64-v8a` APK and install it; it fits most modern Android devices.
 
 ## Project Origin & Attribution
 
