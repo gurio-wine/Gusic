@@ -796,7 +796,8 @@ class LxMusicViewModel @Inject constructor(
         dismissSearchAlbumOverlay()
 
         when (restoredModule) {
-            "board", "playlist" -> startModuleLoad(restoredModule, source, force = true)
+            // 有缓存回填时不再强制刷新（早退+补预览走 repository 缓存），仍可下拉手动刷新
+            "board" -> startModuleLoad("board", source, force = _browseState.value.boards.isEmpty())
             // 恢复“推荐”（网易混合列表）：推荐与榜单数据都要加载（boards 已在则内部早退）
             "recommend" -> {
                 ensureMineHome()

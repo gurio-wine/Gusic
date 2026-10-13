@@ -346,12 +346,13 @@ internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExt
     override suspend fun kwFetchUserPlaylists(): List<LxPlaylist>? = kuwoApi.fetchUserPlaylists()
     override suspend fun kwFetchFollowedArtists(): List<LxArtist>? = unavailable.kwFetchFollowedArtists()
     override suspend fun kwFetchLikedAlbums(): List<LxAlbum>? = unavailable.kwFetchLikedAlbums()
-    // 酷我喜欢=pl.svc 歌单列表里的 MYFAVORITE 系统歌单（getlistbyuid+getlistinfo）；写操作仍不可用
+    // 酷我喜欢=pl.svc 歌单列表里的 MYFAVORITE 系统歌单（getlistbyuid+pl3_getlist）；写操作仍不可用
     override suspend fun kwFetchLikedSongIds(): Set<String>? =
         kuwoApi.fetchLikedSongs()?.map { it.songmid }?.toSet()
     override suspend fun kwFetchLikedSongs(): List<LxSong>? = kuwoApi.fetchLikedSongs()
+    // 用户歌单（自建/收藏/我喜欢）走客户端协议 pl3_getlist + mobilist 回退（64 位 pid）
     override suspend fun kwFetchUserPlaylistSongs(playlistId: String): List<LxSong>? =
-        kuwoApi.fetchPlaylistSongs(playlistId)
+        kuwoApi.fetchUserPlaylistSongs(playlistId)
 
     /**
      * kg 用户云歌单：跳过“我喜欢”默认歌单（其内容已由“我喜欢”平台入口单独展示，避免重复条目——
@@ -435,7 +436,7 @@ internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExt
     override suspend fun txQrPoll(type: LxTxQrType, session: String): LxTxQrPoll =
         unavailable.txQrPoll(type, session)
 
-    // kw 歌单详情（歌单广场与用户歌单共用）：pl.svc getlistinfo，带登录态覆盖自建私有歌单
+    // kw 歌单广场详情：web 公开歌单族（getlistinfo，32 位 pid）；用户歌单走 kwFetchUserPlaylistSongs
     override suspend fun kwFetchPlaylistSquareSongs(playlistId: String): List<LxSong>? =
         kuwoApi.fetchPlaylistSongs(playlistId)
     override suspend fun kwResolvePlayUrl(songmid: String): PlatformResult? =

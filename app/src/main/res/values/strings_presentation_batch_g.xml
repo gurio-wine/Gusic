@@ -628,6 +628,19 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>The profile strip above Top charts is gone</item>
         <item>Chinese labels now say 歌手 where they used to say 艺术家</item>
     </string-array>
+    <!-- Gusic 26.10.13.003：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101303_whats_new">
+        <item>Discover adds long-and-short indicator bars under the search bar, marking the platform you are on</item>
+        <item>Fixed Kuwo user playlists failing to load their tracks — now read via the Kuwo app protocol</item>
+        <item>Tap the platform name in the header to reorder platforms</item>
+    </string-array>
+    <!-- Gusic 26.10.13.003：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101303_changes">
+        <item>The platform tab row drops its reorder button; the header entry replaces it</item>
+        <item>Revisiting an already-loaded platform skips the charts refresh and reuses cached data</item>
+        <item>The account nickname in the header is capped narrower so it crowds the layout less</item>
+        <item>Charts content now sits further below the search bar</item>
+    </string-array>
     <!-- Gusic 26.10.13.002：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101302_whats_new">
         <item>Discover now swipes left and right to switch platforms, and the header text shows the current platform name</item>

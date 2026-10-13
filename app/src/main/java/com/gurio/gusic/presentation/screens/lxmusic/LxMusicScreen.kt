@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -83,9 +84,8 @@ import com.gurio.gusic.presentation.components.subcomps.SelectionCountPill
 import com.gurio.gusic.data.lxmusic.LxQualities
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.MyLocation
@@ -407,22 +407,37 @@ fun LxMusicScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = buildAnnotatedString {
-                            withStyle(SpanStyle(fontSize = 40.sp)) {
-                                append(brandTitle)
-                                append(' ')
-                            }
-                            withStyle(SpanStyle(fontSize = 18.sp)) {
-                                // 顶栏动态文本显示当前平台名（随左右滑/顶部 tab 切换）
-                                append(platformName(selectedSource))
-                            }
-                        },
-                        fontFamily = RoundedSans,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 1.sp,
-                    )
+                    // 顶栏平台名可点击：打开平台排序/隐藏面板（原 tab 行编辑按钮已移除）
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showPlatformOrderSheet = true }
+                            .padding(horizontal = 4.dp),
+                    ) {
+                        Text(
+                            text = buildAnnotatedString {
+                                withStyle(SpanStyle(fontSize = 40.sp)) {
+                                    append(brandTitle)
+                                    append(' ')
+                                }
+                                withStyle(SpanStyle(fontSize = 18.sp)) {
+                                    // 顶栏动态文本显示当前平台名（随左右滑/顶部 tab 切换）
+                                    append(platformName(selectedSource))
+                                }
+                            },
+                            fontFamily = RoundedSans,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            letterSpacing = 1.sp,
+                        )
+                        Icon(
+                            Icons.Rounded.ArrowDropDown,
+                            contentDescription = stringResource(R.string.lx_platform_order_title),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 },
                 actions = {
                     val chipNickname: String?
@@ -499,13 +514,18 @@ fun LxMusicScreen(
                     if (src != viewModel.selectedSource.value) viewModel.selectSource(src)
                 }
             }
-            // 外部切源（偏好恢复/平台重排）时让 pager 跟随到对应页
+            // 外部切源（偏好恢复/平台重排）时让 pager 跟随到对应页；pager 正在滑动时
+            // 等滑动结束再对齐——直接跳过的话，本次滑动 settle 回原页后 settledPage 流
+            // 不会再发射，pager 会停在旧页直到用户再次交互
             LaunchedEffect(selectedSource, orderedSearchTabs) {
                 val idx = orderedSearchTabs.indexOfFirst { it.first == selectedSource }
-                if (idx >= 0 && browsePagerState.settledPage != idx &&
-                    !browsePagerState.isScrollInProgress
-                ) {
-                    browsePagerState.animateScrollToPage(idx)
+                if (idx >= 0) {
+                    if (browsePagerState.isScrollInProgress) {
+                        snapshotFlow { browsePagerState.isScrollInProgress }.first { !it }
+                    }
+                    if (browsePagerState.settledPage != idx && !browsePagerState.isScrollInProgress) {
+                        browsePagerState.animateScrollToPage(idx)
+                    }
                 }
             }
             val sourceSelectedIndex = orderedSearchTabs.indexOfFirst { it.first == selectedSource }
@@ -530,16 +550,6 @@ fun LxMusicScreen(
                         index = index,
                         selectedIndex = sourceSelectedIndex,
                         onClick = { scope.launch { browsePagerState.animateScrollToPage(index) } },
-                    )
-                }
-                item(key = "__reorder__") {
-                    LxSourceTab(
-                        label = "",
-                        icon = Icons.Rounded.Edit,
-                        selected = false,
-                        index = orderedSearchTabs.size,
-                        selectedIndex = sourceSelectedIndex,
-                        onClick = { showPlatformOrderSheet = true },
                     )
                 }
             }
@@ -568,6 +578,18 @@ fun LxMusicScreen(
                         onLeadingBack = { viewModel.back() },
                         enableInnerBox = false,
                     )
+                    // 指示条只在浏览根 pager 可见时显示（榜单详情/网易推荐子页不含 pager）
+                    if (!playlistDetailActive && !searchActive &&
+                        browseState.selectedBoard == null &&
+                        !(recommendTabAvailable && mineState.page !is LxMusicViewModel.MinePage.Home)
+                    ) {
+                        // 浏览态：页面指示条（与媒体库页同款长短线条），同时拉开榜单内容与搜索框的间距
+                        LxBrowsePagerIndicator(
+                            currentIndex = browsePagerState.currentPage,
+                            pageCount = orderedSearchTabs.size,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                        )
+                    }
                     if (playlistDetailActive) {
                         // 歌单详情模式（含搜索直开）：隐藏模块行与 pager
                         Box(modifier = Modifier.fillMaxSize()) {
@@ -673,7 +695,7 @@ fun LxMusicScreen(
                                         contentPadding = PaddingValues(
                                             start = 12.dp,
                                             end = 12.dp,
-                                            top = 4.dp,
+                                            top = 10.dp,
                                             bottom = bottomBarHeightDp + MiniPlayerHeight + ListExtraBottomGap,
                                         ),
                                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1117,6 +1139,42 @@ private val lxDialogConfirmShape = RoundedCornerShape(
     topEnd = 26.dp, bottomEnd = 26.dp,
 )
 
+/** 浏览根 pager 的页面指示条：选中长条、未选中短条（与媒体库页 CompactLibraryPagerIndicator 同款样式）。 */
+@Composable
+private fun LxBrowsePagerIndicator(
+    currentIndex: Int,
+    pageCount: Int,
+    modifier: Modifier = Modifier,
+) {
+    if (pageCount <= 1) return
+    val safeIndex = ((currentIndex % pageCount) + pageCount) % pageCount
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(pageCount) { index ->
+            val selected = index == safeIndex
+            val width by animateDpAsState(
+                targetValue = if (selected) 22.dp else 10.dp,
+                label = "LxBrowsePagerIndicatorWidth",
+            )
+            val alpha by animateFloatAsState(
+                targetValue = if (selected) 1f else 0.35f,
+                label = "LxBrowsePagerIndicatorAlpha",
+            )
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 3.dp)
+                    .height(4.dp)
+                    .width(width)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha)),
+            )
+        }
+    }
+}
+
 @Composable
 private fun LxSourceTab(
     label: String,
@@ -1278,7 +1336,7 @@ private fun LxAccountChip(
             },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.widthIn(max = 120.dp),
+            modifier = Modifier.widthIn(max = 80.dp),
         )
         if (loggedIn && !avatarUrl.isNullOrBlank()) {
             SmartImage(

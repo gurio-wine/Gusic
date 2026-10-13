@@ -628,6 +628,19 @@
         <item>移除排行榜上方的使用者資訊條與登出按鈕</item>
         <item>「藝術家」統一改稱「歌手」</item>
     </string-array>
+    <!-- Gusic 26.10.13.003：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101303_whats_new">
+        <item>發現頁搜尋框下方新增長短線條頁面指示，標示目前所在平台</item>
+        <item>修復酷我用戶歌單點進去仍載入失敗的問題，改走酷我用戶端協定讀取</item>
+        <item>點擊頂欄平台名稱即可開啟平台順序調整面板</item>
+    </string-array>
+    <!-- Gusic 26.10.13.003：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101303_changes">
+        <item>平台分頁行移除原重排編輯按鈕，統一由頂欄入口進入</item>
+        <item>再次進入已載入的平台時不再強制重新整理排行榜，直接使用快取</item>
+        <item>頂部帳號暱稱寬度上限收窄，減少對頂欄的擠壓</item>
+        <item>排行榜內容與搜尋框的間距加大</item>
+    </string-array>
     <!-- Gusic 26.10.13.002：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101302_whats_new">
         <item>發現頁支援左右滑動切換音源平台，頂部動態文字顯示當前平台名</item>

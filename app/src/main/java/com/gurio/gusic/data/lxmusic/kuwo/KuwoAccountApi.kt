@@ -33,6 +33,7 @@ internal class KuwoAccountApi(
         private const val USER_INFO_URL = "https://www.kuwo.cn/api/www/user/userInfo"
         private const val PLA_SVC_PAGE_SIZE = 100
         private const val FAVORITE_MAX_PAGES = 20
+        private const val PLA3_MAX_PAGES = 100
         private const val USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
@@ -257,8 +258,9 @@ internal class KuwoAccountApi(
     /**
      * 拉取“我喜欢”歌曲。酷我体系的“我喜欢”就是歌单列表里 type=="MYFAVORITE"
      * 的系统歌单（web 端 favorite/musicList 接口已不存在）：先 getlistbyuid 找到
-     * 其 pid，再用同族 getlistinfo 分页拉歌。账号从未喜欢过（无 MYFAVORITE 条目）
-     * 返回空列表；未登录/请求失败返回 null，与“成功但为空”区分。
+     * 其 pid，再走客户端协议 pl3_getlist 分页拉歌（见 [fetchUserPlaylistSongs]）。
+     * 账号从未喜欢过（无 MYFAVORITE 条目）返回空列表；
+     * 未登录/请求失败返回 null，与“成功但为空”区分。
      */
     suspend fun fetchLikedSongs(): List<LxSong>? = withContext(Dispatchers.IO) {
         val cookie = cookieStore.getCookie()?.takeIf(String::isNotBlank) ?: return@withContext null
@@ -269,7 +271,7 @@ internal class KuwoAccountApi(
             .firstOrNull { it.strOf("type") == "MYFAVORITE" }
             ?.strOf("id")
             ?: return@withContext emptyList()
-        fetchPlsSongs(favoriteId, cookie, cookies)
+        fetchUserPlaylistSongs(favoriteId)
     }
 
     /**
@@ -299,15 +301,174 @@ internal class KuwoAccountApi(
     }
 
     /**
-     * 拉取歌单内歌曲：pl.svc op=getlistinfo（listen1 / lx-music-desktop 的标准
-     * 公开歌单接口，与 getlistbyuid 同族，无需 Secret；pn 0-based，歌曲数组在顶层
-     * musiclist）。带登录 loginUid/loginSid 覆盖自建私有歌单，匿名（歌单广场）也可用；
-     * 失败返回 null，与“成功但为空”区分。
+     * 拉取歌单内歌曲（web 公开歌单族，歌单广场用）：pl.svc op=getlistinfo，
+     * listen1/lx-music-desktop 的标准匿名公开歌单接口；pid 为 web 体系 32 位 id。
+     * 客户端体系（plat=ar）的 64 位自建歌单 pid 会被该接口按 32 位截断而寻址错误，
+     * 用户歌单须走 [fetchUserPlaylistSongs]。失败返回 null，与“成功但为空”区分。
      */
     suspend fun fetchPlaylistSongs(playlistId: String): List<LxSong>? = withContext(Dispatchers.IO) {
         val cookie = cookieStore.getCookie().orEmpty()
         val cookies = parseCookieMap(cookie)
         fetchPlsSongs(playlistId, cookie, cookies)
+    }
+
+    /**
+     * 拉取登录用户歌单内歌曲（自建/收藏/我喜欢，pid 来自 getlistbyuid，为客户端
+     * 体系 64 位 id）。主路 pl3_getlist（官方 Android 客户端协议，TuneWeave 逆向
+     * 同款：sig=0 全量、分页由响应 pagenum 驱动、歌曲数组在 info.musiclist），
+     * 失败时回退 mobilist.kuwo.cn/list.s（收藏歌单族）。未登录/两路皆失败返回 null。
+     */
+    suspend fun fetchUserPlaylistSongs(playlistId: String): List<LxSong>? = withContext(Dispatchers.IO) {
+        val cookie = cookieStore.getCookie()?.takeIf(String::isNotBlank) ?: return@withContext null
+        val cookies = parseCookieMap(cookie)
+        val uid = cookies["userid"]?.takeIf(String::isNotBlank) ?: return@withContext null
+        val sid = cookies["sid"].orEmpty()
+        fetchOwnedPlsSongs(playlistId, uid, sid, cookie)
+            ?: fetchCollectedPlsSongs(playlistId, uid, sid, cookie)
+    }
+
+    /** pl3_getlist：自建歌单与“我喜欢”的内容读取（鉴权走 query uid/sid + Cookie 头双保险）。 */
+    private suspend fun fetchOwnedPlsSongs(
+        playlistId: String,
+        uid: String,
+        sid: String,
+        cookie: String,
+    ): List<LxSong>? = withContext(Dispatchers.IO) {
+        val songs = mutableListOf<LxSong>()
+        var pagenum = -1
+        var pn = 0
+        while (pn < PLA3_MAX_PAGES && (pagenum < 0 || pn < pagenum)) {
+            val request = Request.Builder()
+                .url("https://nplserver.kuwo.cn/pl.svc".toHttpUrl().newBuilder()
+                    .addQueryParameter("op", "pl3_getlist")
+                    .addQueryParameter("pid", playlistId)
+                    // sig=0 表示本地无缓存：服务端必回全量内容（songchange=1）
+                    .addQueryParameter("sig", "0")
+                    .addQueryParameter("uid", uid)
+                    .addQueryParameter("sid", sid)
+                    .addQueryParameter("encode", "utf8")
+                    .addQueryParameter("plat", "ar")
+                    .addQueryParameter("prod", "kwplayer_ar_12.2.2.0")
+                    .addQueryParameter("loginUid", uid)
+                    .addQueryParameter("loginSid", sid)
+                    .addQueryParameter("pn", pn.toString())
+                    .build())
+                .header("User-Agent", USER_AGENT)
+                .header("Accept", "application/json")
+                .header("Cookie", cookie)
+                .header("Referer", "https://www.kuwo.cn/")
+                .get()
+                .build()
+            val root = runCatching {
+                okHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        Timber.w("$TAG: pl3_getlist http %s pn=%s pid=%s", response.code, pn, playlistId)
+                        return@use null
+                    }
+                    runCatching { JsonParser.parseString(response.body?.string().orEmpty()) }
+                        .getOrNull() as? JsonObject
+                }
+            }.getOrElse { e ->
+                Timber.w(e, "$TAG: pl3_getlist request failed pn=%s pid=%s", pn, playlistId)
+                null
+            } ?: return@withContext null
+            val errcode = root.intOf("errcode") ?: 0
+            if (root.strOf("result") != "ok" || errcode != 0) {
+                Timber.w("$TAG: pl3_getlist result=%s errcode=%s reason=%s pid=%s",
+                    root.strOf("result"), errcode, root.strOf("reason"), playlistId)
+                return@withContext null
+            }
+            if (pagenum < 0) pagenum = root.intOf("pagenum") ?: 1
+            val info = root.get("info") as? JsonObject
+            val arr = info?.get("musiclist") as? JsonArray ?: JsonArray()
+            songs += arr.mapNotNull { el -> kwLikedSongOf(el as? JsonObject) }
+            if (arr.size() == 0) break
+            pn++
+        }
+        if (pn >= PLA3_MAX_PAGES && pagenum > PLA3_MAX_PAGES) {
+            Timber.w("$TAG: pl3_getlist truncated at %s pages, pagenum=%s pid=%s",
+                PLA3_MAX_PAGES, pagenum, playlistId)
+        }
+        songs.toList()
+    }
+
+    /** mobilist.kuwo.cn/list.s：收藏（他人）歌单族的内容读取，作为 pl3_getlist 的回退路。 */
+    private suspend fun fetchCollectedPlsSongs(
+        playlistId: String,
+        uid: String,
+        sid: String,
+        cookie: String,
+    ): List<LxSong>? = withContext(Dispatchers.IO) {
+        val songs = mutableListOf<LxSong>()
+        var total = -1
+        var pn = 0
+        while ((total < 0 || songs.size < total) && pn < PLA3_MAX_PAGES) {
+            val request = Request.Builder()
+                .url("https://mobilist.kuwo.cn/list.s".toHttpUrl().newBuilder()
+                    .addQueryParameter("type", "songlist")
+                    .addQueryParameter("id", playlistId)
+                    .addQueryParameter("vipsec", "1")
+                    .addQueryParameter("kubb", "2")
+                    .addQueryParameter("fs", "1")
+                    .addQueryParameter("showtype", "1")
+                    .addQueryParameter("sorttype", "0")
+                    .addQueryParameter("apiv", "0")
+                    .addQueryParameter("pn", pn.toString())
+                    .addQueryParameter("rn", PLA_SVC_PAGE_SIZE.toString())
+                    .addQueryParameter("digest", "8")
+                    .addQueryParameter("hasmv", "1")
+                    .addQueryParameter("hasinner", "1")
+                    .addQueryParameter("hasad", "1")
+                    .addQueryParameter("hsy", "1")
+                    .addQueryParameter("isnew", "2")
+                    .addQueryParameter("newcate", "1")
+                    .addQueryParameter("supportfan", "1")
+                    .addQueryParameter("isg", "1")
+                    .addQueryParameter("aioper", "0")
+                    .addQueryParameter("loginUid", uid)
+                    .addQueryParameter("loginSid", sid)
+                    .addQueryParameter("prod", "kwplayer_ar_12.2.2.0")
+                    .build())
+                .header("User-Agent", USER_AGENT)
+                .header("Cookie", cookie)
+                .header("Referer", "https://www.kuwo.cn/")
+                .get()
+                .build()
+            val root = runCatching {
+                okHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        Timber.w("$TAG: mobilist list.s http %s pn=%s pid=%s", response.code, pn, playlistId)
+                        return@use null
+                    }
+                    runCatching { JsonParser.parseString(response.body?.string().orEmpty()) }
+                        .getOrNull() as? JsonObject
+                }
+            }.getOrElse { e ->
+                Timber.w(e, "$TAG: mobilist list.s request failed pn=%s pid=%s", pn, playlistId)
+                null
+            } ?: return@withContext null
+            if (root.strOf("code") != "0" || root.strOf("msg") != "ok") {
+                Timber.w("$TAG: mobilist list.s code=%s msg=%s pid=%s",
+                    root.strOf("code"), root.strOf("msg"), playlistId)
+                return@withContext null
+            }
+            val data = root.get("data") as? JsonObject ?: return@withContext null
+            if (total < 0) total = data.intOf("total") ?: 0
+            val arr = data.get("musiclist") as? JsonArray ?: JsonArray()
+            songs += arr.mapNotNull { raw ->
+                val obj = raw as? JsonObject ?: return@mapNotNull null
+                // digest!=15 为非纯音乐条目（广告/有声等），跳过
+                val digest = obj.intOf("digest")
+                if (digest != null && digest != 15) null else kwLikedSongOf(obj)
+            }
+            if (arr.size() < PLA_SVC_PAGE_SIZE) break
+            pn++
+        }
+        if (pn >= PLA3_MAX_PAGES && total > songs.size) {
+            Timber.w("$TAG: mobilist list.s truncated at %s pages, got=%s total=%s pid=%s",
+                PLA3_MAX_PAGES, songs.size, total, playlistId)
+        }
+        songs.toList()
     }
 
     private suspend fun fetchPlsSongs(
@@ -375,10 +536,10 @@ internal class KuwoAccountApi(
         songs.toList()
     }
 
-    /** pl.svc musiclist 条目 → LxSong；主键 id（getlistinfo 族），web 族为 rid/songid；名称类字段带 URL 编码/HTML 实体需解码。duration 返回秒，与 LxSong.interval 约定一致。 */
+    /** pl.svc/mobilist 条目 → LxSong；pl3_getlist 族主键 id，mobilist/getlistinfo 族 rid/songid；名称类字段带 URL 编码/HTML 实体需解码。duration 返回秒，与 LxSong.interval 约定一致。 */
     private fun kwLikedSongOf(o: JsonObject?): LxSong? {
         o ?: return null
-        val rid = o.strOf("rid") ?: o.strOf("songid") ?: o.strOf("songId") ?: o.strOf("id")
+        val rid = o.strOf("id") ?: o.strOf("rid") ?: o.strOf("songid") ?: o.strOf("songId")
             ?: return null
         return LxSong(
             source = "kw",
@@ -387,7 +548,7 @@ internal class KuwoAccountApi(
             singer = decodePlsText(o.strOf("artist") ?: o.strOf("artistName")) ?: "",
             albumName = decodePlsText(o.strOf("album") ?: o.strOf("albumName")) ?: "",
             interval = o.longOf("duration") ?: 0L,
-            pic = o.strOf("pic")?.takeIf { it.isNotBlank() },
+            pic = (o.strOf("pic") ?: o.strOf("albumpic") ?: o.strOf("img"))?.takeIf { it.isNotBlank() },
         )
     }
 
