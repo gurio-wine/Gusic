@@ -1251,6 +1251,17 @@ class PlayerViewModel @Inject constructor(
                 }
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
+            if (command.customAction == MusicNotificationProvider.CUSTOM_COMMAND_REQUEST_EXIT_HEARTBEAT) {
+                // 通知/小组件的循环按钮在心动态被点击：复原队列在 VM 这边，执行后
+                // leaveHeartbeatMode 会把状态和顺序循环回传给 service 刷新图标
+                viewModelScope.launch {
+                    if (isHeartbeatMode.value) {
+                        leaveHeartbeatMode()
+                        setRepeatMode(Player.REPEAT_MODE_ALL)
+                    }
+                }
+                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
             return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
         }
     }
@@ -3579,6 +3590,17 @@ class PlayerViewModel @Inject constructor(
         )
     }
 
+    private fun syncHeartbeatStateWithSession(enabled: Boolean) {
+        val controller = mediaController ?: return
+        val args = Bundle().apply {
+            putBoolean(MusicNotificationProvider.EXTRA_HEARTBEAT_ENABLED, enabled)
+        }
+        controller.sendCustomCommand(
+            SessionCommand(MusicNotificationProvider.CUSTOM_COMMAND_SET_HEARTBEAT_STATE, Bundle()),
+            args
+        )
+    }
+
     fun toggleShuffle(currentSongOverride: Song? = null) {
         cancelPendingFullQueuePlayback()
         val currentQueue = _playerUiState.value.currentPlaybackQueue.toList()
@@ -4860,6 +4882,7 @@ class PlayerViewModel @Inject constructor(
         )
         clearQueueExceptCurrent()
         _isHeartbeatMode.value = true
+        syncHeartbeatStateWithSession(true)
         heartbeatJob = viewModelScope.launch {
             // runCatching 会吞掉取消异常，每个网络调用后都必须重查 isActive
             val likedId = runCatching { lxMusicRepository.fetchNeteaseLikedPlaylistId() }.getOrNull()
@@ -4876,6 +4899,9 @@ class PlayerViewModel @Inject constructor(
             if (!isActive) return@launch
             val seedPool = HeartbeatQueuePlanner.buildSeedPool(snapshot, s1.lxMusicSongMid, likedCandidates)
             heartbeatData?.pendingSeeds?.addAll(seedPool.shuffled())
+            // 种子池（A 网易子集 + 补足的"我喜欢"候选）全集：推荐批里混进这些歌会让
+            // 种子提前占位，轮到它们做种子时被去重跳过，队列节奏变成大段纯推荐
+            val seedPoolIds = seedPool.map { it.id }.toHashSet()
             val addedIds = HashSet<String>().apply { add(s1.id) }
             // 队列上限用本地计数判断：controller 的 timeline 是异步生效的，
             // 网络先返回时会读到清空前的大数导致误判已满
@@ -4900,7 +4926,10 @@ class PlayerViewModel @Inject constructor(
                 if (!isActive) return@launch
                 val batchSongs = batch.map(LxSongMapper::toSong)
                     .filter { it.id != seed.id && it.id !in addedIds }
+                    .filter { it.id !in seedPoolIds }
                     .distinctBy { it.id }
+                    // 服务端不遵守 count 参数（整页返回），本地裁到本批请求数量
+                    .take(count)
                 val toAdd = buildList {
                     // 返回不含种子（或本批 count=0 未请求）时先把种子插进队列
                     if (seed.id !in addedIds) add(seed)
@@ -4950,6 +4979,7 @@ class PlayerViewModel @Inject constructor(
         }
         heartbeatData = null
         _isHeartbeatMode.value = false
+        syncHeartbeatStateWithSession(false)
     }
 
     /** 心动模式被外部播放操作打断（点播新歌/整体换队列）：丢弃复原记录，不再恢复原队列。 */
@@ -4959,6 +4989,7 @@ class PlayerViewModel @Inject constructor(
         heartbeatJob = null
         heartbeatData = null
         _isHeartbeatMode.value = false
+        syncHeartbeatStateWithSession(false)
     }
 
     /** 进入失败/无法规划时的兜底：按 A 原样恢复，保持 s2 继续播放（增量，不打断当前项）。 */
@@ -4973,6 +5004,7 @@ class PlayerViewModel @Inject constructor(
         )
         heartbeatData = null
         _isHeartbeatMode.value = false
+        syncHeartbeatStateWithSession(false)
     }
 
     /**

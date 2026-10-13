@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.011：修复 -->
+    <string-array name="presentation_batch_g_changelog_v26101311_changes">
+        <item>心动队列上限这次真正管住了：服务端不遵守每批数量参数、整页返回，现在在本地把每批裁剪到请求的 0-5 首，队列会在 150 附近几首内停下，不再冲到 200</item>
+        <item>心动推荐不再提前混入你自己歌单或“我喜欢”里的歌，种子严格按打乱顺序插入，队列恢复“种子隔几首插一次”的节奏</item>
+        <item>播放通知的循环模式按钮在心动模式下显示心形图标，点击退出心动回到顺序播放</item>
+    </string-array>
     <!-- Gusic 26.10.13.010：修复 -->
     <string-array name="presentation_batch_g_changelog_v26101310_changes">
         <item>心动每批推荐数量恢复为 0-5 首随机：此前数量参数的格式不被服务端识别，单批可能返回几十首，打乱了队列上限和种子节奏</item>

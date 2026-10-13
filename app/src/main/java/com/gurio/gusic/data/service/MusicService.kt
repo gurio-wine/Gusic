@@ -232,6 +232,11 @@ class MusicService : MediaSessionService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var keepPlayingInBackground = true
     private var isManualShuffleEnabled = false
+
+    // 心动模式状态由播放 VM 同步（enter/leave/abandon/失败恢复时回发），
+    // 仅用于通知/小组件的循环模式按钮图标与点击行为
+    @Volatile
+    private var isHeartbeatMode = false
     private var persistentShuffleEnabled = false
     private var previousMainThreadExceptionHandler: Thread.UncaughtExceptionHandler? = null
     private val playbackTimerController by lazy {
@@ -590,6 +595,8 @@ class MusicService : MediaSessionService() {
                         MusicNotificationProvider.CUSTOM_COMMAND_SET_SHUFFLE_STATE,
                         MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_REPEAT_MODE,
                         MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_PLAY_MODE,
+                        MusicNotificationProvider.CUSTOM_COMMAND_SET_HEARTBEAT_STATE,
+                        MusicNotificationProvider.CUSTOM_COMMAND_REQUEST_EXIT_HEARTBEAT,
                         MusicNotificationProvider.CUSTOM_COMMAND_COUNTED_PLAY,
                         MusicNotificationProvider.CUSTOM_COMMAND_CANCEL_COUNTED_PLAY,
                         MusicNotificationProvider.CUSTOM_COMMAND_SET_SLEEP_TIMER_DURATION,
@@ -688,22 +695,48 @@ class MusicService : MediaSessionService() {
                         requestWidgetFullUpdate(force = true)
                     }
                     MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_PLAY_MODE -> {
-                        // 与播放页一致的三档循环：列表循环 → 单曲循环 → 随机循环。
-                        // 状态纯本地、不会失败，同步改完立即强制刷新，通知图标即时切换
+                        // 与播放页一致的四档循环：顺序 → 随机 → 单曲 → 心动。
+                        // 心动只能从播放页进入；通知上点击心动态是退出（复原队列在播放 VM，
+                        // 广播请求它执行，VM 退出后回发状态并设顺序循环，届时刷新图标）
                         val player = session.player
                         when {
+                            isHeartbeatMode -> {
+                                session.broadcastCustomCommand(
+                                    SessionCommand(
+                                        MusicNotificationProvider.CUSTOM_COMMAND_REQUEST_EXIT_HEARTBEAT,
+                                        Bundle.EMPTY
+                                    ),
+                                    Bundle.EMPTY
+                                )
+                                return@onCustomCommand Futures.immediateFuture(
+                                    SessionResult(SessionResult.RESULT_SUCCESS)
+                                )
+                            }
                             player.shuffleModeEnabled || isManualShuffleEnabled -> {
                                 updateManualShuffleState(session, enabled = false, broadcast = true)
-                                player.repeatMode = Player.REPEAT_MODE_ALL
+                                player.repeatMode = Player.REPEAT_MODE_ONE
                             }
                             player.repeatMode == Player.REPEAT_MODE_ONE -> {
                                 player.repeatMode = Player.REPEAT_MODE_ALL
+                            }
+                            else -> {
+                                player.repeatMode = Player.REPEAT_MODE_ALL
                                 updateManualShuffleState(session, enabled = true, broadcast = true)
                             }
-                            else -> player.repeatMode = Player.REPEAT_MODE_ONE
                         }
                         refreshMediaSessionUi(session, force = true)
                         requestWidgetFullUpdate(force = true)
+                    }
+                    MusicNotificationProvider.CUSTOM_COMMAND_SET_HEARTBEAT_STATE -> {
+                        val enabled = args.getBoolean(
+                            MusicNotificationProvider.EXTRA_HEARTBEAT_ENABLED,
+                            false
+                        )
+                        if (isHeartbeatMode != enabled) {
+                            isHeartbeatMode = enabled
+                            refreshMediaSessionUi(session, force = true)
+                            requestWidgetFullUpdate(force = true)
+                        }
                     }
                     MusicNotificationProvider.CUSTOM_COMMAND_LIKE -> {
                         val songId = session.player.currentMediaItem?.mediaId
@@ -2446,9 +2479,10 @@ class MusicService : MediaSessionService() {
         val songId = player.currentMediaItem?.mediaId
         val isFavorite = isSongFavorite(songId)
 
-        // 三档播放模式：列表循环 → 单曲循环 → 随机循环
+        // 四档播放模式：顺序 → 随机 → 单曲 → 心动（与播放页一致）
         val shuffleOn = player.shuffleModeEnabled || isManualShuffleEnabled
         val playModeIcon = when {
+            isHeartbeatMode -> CommandButton.ICON_HEART_FILLED
             shuffleOn -> CommandButton.ICON_SHUFFLE_ON
             player.repeatMode == Player.REPEAT_MODE_ONE -> CommandButton.ICON_REPEAT_ONE
             else -> CommandButton.ICON_REPEAT_ALL
@@ -2458,7 +2492,12 @@ class MusicService : MediaSessionService() {
         // 常开 seek-to-previous 命令，单曲循环下也不会被 ExoPlayer 撤掉）；
         // 收藏排进 OVERFLOW，渲染在下一首之后。
         val playModeButton = CommandButton.Builder(playModeIcon)
-            .setDisplayName(getString(R.string.presentation_batch_e_cd_toggle_repeat))
+            .setDisplayName(
+                getString(
+                    if (isHeartbeatMode) R.string.presentation_batch_h_cd_heartbeat_mode
+                    else R.string.presentation_batch_e_cd_toggle_repeat
+                )
+            )
             .setSessionCommand(SessionCommand(MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_PLAY_MODE, Bundle.EMPTY))
             .setSlots(CommandButton.SLOT_BACK)
             .build()

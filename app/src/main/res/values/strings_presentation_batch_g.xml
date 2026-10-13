@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.011：修复 -->
+    <string-array name="presentation_batch_g_changelog_v26101311_changes">
+        <item>Heartbeat queue cap now actually holds: the server ignores the per-batch count request and returns full pages, so batches are trimmed locally to the requested 0-5 tracks — the queue now stops within a few tracks of 150 instead of running to 200</item>
+        <item>Heartbeat recommendations no longer pull in tracks from your own playlist or Liked Songs ahead of their turn, so seeds land in their shuffled order and the queue keeps the seed-then-a-few-picks rhythm</item>
+        <item>The notification repeat-mode button now shows a heart icon while Heartbeat mode is active, and tapping it exits back to order playback</item>
+    </string-array>
     <!-- Gusic 26.10.13.010：修复 -->
     <string-array name="presentation_batch_g_changelog_v26101310_changes">
         <item>Heartbeat batches now honor the requested 0-5 track size: the count was sent in a form the server ignored, so a single batch could return dozens of tracks and throw off the queue cap and the seed pacing</item>
