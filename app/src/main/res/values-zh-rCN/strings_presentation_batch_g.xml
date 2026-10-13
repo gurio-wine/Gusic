@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.005：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101305_whats_new">
+        <item>酷我登录新增短信验证码方式：登录弹窗内可选短信或扫码，短信走官方客户端通道，签发读取自建歌单所需的原生会话，解决歌单歌曲加载失败</item>
+        <item>发现页平台左右滑动改为无限循环，滑到边缘可继续滑动换台</item>
+        <item>发现页顶栏改为跟手切换：滑动过程中平台名与账号信息即随目标页更新，无需等页面停稳</item>
+    </string-array>
+    <!-- Gusic 26.10.13.005：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101305_changes">
+        <item>网易页不再落在排行榜：未登录显示登录引导，登录后直接展示推荐内容</item>
+        <item>酷我原生协议改为注册设备身份并按官方客户端构造请求，64 位自建歌单按原生会话读取</item>
+    </string-array>
     <string name="presentation_batch_g_stats_range_today">今日</string>
     <string name="presentation_batch_g_stats_range_week_to_date">本周至今</string>
     <string name="presentation_batch_g_stats_range_month_to_date">本月至今</string>

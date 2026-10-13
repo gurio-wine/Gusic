@@ -2049,6 +2049,11 @@ class LxMusicRepository @Inject constructor(
     suspend fun kgLoginBySmsCode(mobile: String, code: String): Boolean =
         accountExtension.kgLoginBySmsCode(mobile, code)
 
+    suspend fun kwSendSmsCode(mobile: String): Boolean = accountExtension.kwSendSmsCode(mobile)
+
+    suspend fun kwLoginBySmsCode(mobile: String, code: String): Boolean =
+        accountExtension.kwLoginBySmsCode(mobile, code)
+
     suspend fun fetchKgProfile(): Pair<String?, String?> =
         accountExtension.kgFetchProfile() ?: (null to null)
 

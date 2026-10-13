@@ -319,6 +319,10 @@
     <string name="lx_action_get_code">Get code</string>
     <string name="lx_action_login">Log in</string>
     <string name="lx_msg_sms_tip">If the number is not registered, a new account will be created automatically</string>
+    <string name="lx_msg_kw_sms_tip">SMS login uses Kuwo&#8217;s official client channel; an unregistered number will automatically create a Kuwo account. This also signs the native session needed to read your own large playlists.</string>
+    <string name="lx_msg_kw_login_chooser">Choose a login method. SMS login is recommended for reading your own playlists.</string>
+    <string name="lx_action_sms_login">Log in with SMS</string>
+    <string name="lx_action_scan_login">Scan QR code</string>
     <string name="lx_title_daily_recommend">Daily Recommendations</string>
     <string name="lx_title_heartbeat_mode">Heartbeat Mode</string>
     <string name="lx_title_liked_roaming">Roaming Based on Liked Songs</string>

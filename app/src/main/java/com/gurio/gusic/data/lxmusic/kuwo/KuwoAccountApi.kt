@@ -6,12 +6,16 @@ import com.google.gson.JsonParser
 import com.gurio.gusic.data.lxmusic.LxPlaylist
 import com.gurio.gusic.data.lxmusic.LxSong
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import timber.log.Timber
 import java.net.URLDecoder
+import java.net.URLEncoder
+import java.util.UUID
 
 /**
  * 酷我账号资料读取：基于 WebView 登录后保存在 [KuwoCookieStore] 的 Cookie。
@@ -36,6 +40,12 @@ internal class KuwoAccountApi(
         private const val PLA3_MAX_PAGES = 100
         private const val USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+
+        /** 原生通道上报的设备名（dev/devicetype 参数），任意外显名均可 */
+        private const val NATIVE_DEV_NAME = "Gusic"
+        private const val DEVICE_REGISTER_URL = "https://wapi.kuwo.cn/openapi/v1/app/userInitData/selectFavour"
+        private const val SMS_SEND_URL = "https://i.kuwo.cn/US_NEW/kuwo/send_sms"
+        private const val SMS_LOGIN_URL = "https://i.kuwo.cn/US_NEW/kuwo/login_sms"
 
         /** Secret 头对应的 cookie 名（由 www.kuwo.cn 首页 Set-Cookie 下发，domain=.kuwo.cn）。 */
         internal const val SECRET_COOKIE_NAME = "Hm_Iuvt_cdb524f42f23cer9b268564v7y735ewrq2324"
@@ -316,21 +326,25 @@ internal class KuwoAccountApi(
     /**
      * 拉取登录用户歌单内歌曲（自建/收藏/我喜欢，pid 来自 getlistbyuid）。
      * web/mobilist 族端点全部按 32 位寻址：超 2^32 的 pid 会被取模截断、静默命中
-     * 他人歌单（实测），因此 64 位 pid 只能走原生协议 pl3_getlist（需 uid+sid 会话，
-     * sid 缺失时尝试 websid）；32 位 pid 优先 web 族（匿名即可读公开/老歌单）。
+     * 他人歌单（实测），因此 64 位 pid 只能走原生协议 pl3_getlist；原生会话
+     * （验证码登录签发的 uid/sid）优先，缺失时回退 web cookie 的 sid/websid。
+     * 32 位 pid 优先 web 族（匿名即可读公开/老歌单）。
      * 未登录/无可用会话/两路皆失败返回 null。
      */
     suspend fun fetchUserPlaylistSongs(playlistId: String): List<LxSong>? = withContext(Dispatchers.IO) {
-        val cookie = cookieStore.getCookie()?.takeIf(String::isNotBlank) ?: return@withContext null
+        val native = cookieStore.getNativeCredentials()
+        val cookie = cookieStore.getCookie()
         val cookies = parseCookieMap(cookie)
-        val uid = cookies["userid"]?.takeIf(String::isNotBlank) ?: return@withContext null
-        // sid 缺失时用 websid（vip1 客户端域写入的会话）；原生协议没有会话必被拒
-        val sid = cookies["sid"]?.takeIf(String::isNotBlank)
+        val uid = native?.uid ?: cookies["userid"]?.takeIf(String::isNotBlank)
+            ?: return@withContext null
+        // 原生 sid 优先：web 扫码 cookie 的 sid 不被原生协议接受（实测 errcode=1000）
+        val sid = native?.sid
+            ?: cookies["sid"]?.takeIf(String::isNotBlank)
             ?: cookies["websid"]?.takeIf(String::isNotBlank)
         val widePid = (playlistId.toLongOrNull() ?: 0L) > 0xFFFFFFFFL
         when {
             // 32 位 pid：web 族成熟可靠；空结果（含全被 digest 过滤）时若有会话再试原生
-            !widePid -> fetchCollectedPlsSongs(playlistId, uid, sid.orEmpty(), cookie)
+            !widePid -> fetchCollectedPlsSongs(playlistId, uid, sid.orEmpty(), cookie.orEmpty())
                 ?.takeIf { it.isNotEmpty() }
                 ?: sid?.let { fetchOwnedPlsSongs(playlistId, uid, it) }
             // 64 位 pid：只走原生协议，无会话直接失败（宁缺勿错——web 族会拿错歌单）
@@ -341,19 +355,17 @@ internal class KuwoAccountApi(
 
     /**
      * pl3_getlist：自建歌单与“我喜欢”的内容读取（原生协议，64 位 pid 寻址）。
-     * 按 TuneWeave 逆向构造：query 带 library 基参，Cookie 为原生风格字段而非
-     * web cookie（原生会话不认 web cookie）；dev_id/QIMEI36 无真实设备信息，
-     * 由 uid 派生稳定伪随机值，保证同一账号请求间一致。
+     * 按 TuneWeave 逆向的官方客户端构造：query 携带设备注册签发的 appuid（devid）
+     * 与 device_user（user/imei），复数 Cookies 头携带 loginUid/loginSid/appUid——
+     * 四元组与登录会话/设备注册不一致时服务端拒绝（errcode=1000）。
      */
     private suspend fun fetchOwnedPlsSongs(
         playlistId: String,
         uid: String,
         sid: String,
     ): List<LxSong>? = withContext(Dispatchers.IO) {
-        val deviceId = buildNativeDeviceId(uid)
-        val nativeCookie = "user=kw$uid, ct=11, cv=12220, chid=newpcguanwangmobile, " +
-            "QIMEI36=${buildNativeQimei36(uid)}, tmeAppID=kwplayer, " +
-            "loginUid=$uid, loginSid=$sid, appUid=$deviceId, rom=android"
+        val device = ensureDeviceIdentity() ?: return@withContext null
+        val nativeCookie = "loginUid=$uid,loginSid=$sid,appUid=${device.appUid}"
         val songs = mutableListOf<LxSong>()
         var pagenum = -1
         var pn = 0
@@ -366,20 +378,30 @@ internal class KuwoAccountApi(
                     .addQueryParameter("sig", "0")
                     .addQueryParameter("uid", uid)
                     .addQueryParameter("sid", sid)
-                    .addQueryParameter("dev_id", deviceId)
-                    .addQueryParameter("user", "kw$uid")
-                    .addQueryParameter("encode", "utf8")
+                    .addQueryParameter("encode", "utf-8")
                     .addQueryParameter("plat", "ar")
+                    .addQueryParameter("devid", device.appUid)
+                    .addQueryParameter("user", device.deviceUser)
                     .addQueryParameter("prod", "kwplayer_ar_12.2.2.0")
-                    .addQueryParameter("source", "kwplayer")
+                    .addQueryParameter("source", KuwoNativeCrypto.CLIENT_SOURCE)
                     .addQueryParameter("corp", "kuwo")
-                    .addQueryParameter("loginUid", uid)
-                    .addQueryParameter("loginSid", sid)
+                    .addQueryParameter("locationid", "1")
+                    .addQueryParameter("approval", "false")
+                    .addQueryParameter("city", "")
+                    .addQueryParameter("province", "")
+                    .addQueryParameter("imei", device.deviceUser)
+                    .addQueryParameter("ttime", System.currentTimeMillis().toString())
+                    .addQueryParameter("devicetype", NATIVE_DEV_NAME)
+                    .addQueryParameter("allpay", "0")
+                    .addQueryParameter("notrace", "1")
+                    .addQueryParameter("oaid", "")
+                    .addQueryParameter("vipMode", "0")
                     .addQueryParameter("pn", pn.toString())
                     .build())
                 .header("User-Agent", USER_AGENT)
                 .header("Accept", "application/json")
-                .header("Cookie", nativeCookie)
+                // 原生协议用复数 Cookies 头（客户端上行身份字段，非浏览器 cookie 语义）
+                .header("Cookies", nativeCookie)
                 .get()
                 .build()
             val root = runCatching {
@@ -576,26 +598,210 @@ internal class KuwoAccountApi(
         )
     }
 
-    /** 原生协议设备参数无真实来源：由 uid 派生稳定伪随机值，保证同一账号请求间一致。 */
-    private fun buildNativeDeviceId(uid: String): String {
-        var seed = uid.hashCode().toLong() and 0xFFFFFFFFL
-        return buildString {
-            repeat(16) {
-                seed = (seed * 1103515245L + 12345L) and 0xFFFFFFFFL
-                append('0' + ((seed ushr 16) % 10L).toInt())
-            }
+    // ------------------------------------------------------------------
+    // 原生通道：设备注册 + 短信验证码登录（魔改 DES 封包，见 [KuwoNativeCrypto]）
+    // ------------------------------------------------------------------
+
+    /** send_sms 成功后服务端回传的时间戳，login_sms 需原样回传 */
+    @Volatile
+    private var lastSmsServerTm: String? = null
+
+    /** 发送短信验证码；成功返回 true（server_tm 留存供登录回传）。 */
+    suspend fun sendSmsCode(mobile: String): Boolean = withContext(Dispatchers.IO) {
+        val device = ensureDeviceIdentity() ?: return@withContext false
+        val tm = System.currentTimeMillis().toString()
+        val form = listOf(
+            "mobile" to mobile,
+            "type" to "4",
+            "tm" to tm,
+            "secret" to KuwoNativeCrypto.smsSecret(mobile, tm),
+            "src" to KuwoNativeCrypto.CLIENT_SOURCE,
+            "version" to KuwoNativeCrypto.CLIENT_VERSION,
+            "dev_id" to device.appUid,
+            "user" to device.deviceUser,
+            "dev_name" to NATIVE_DEV_NAME,
+            "devType" to "SDK",
+            "from" to "android",
+            "devResolution" to "0*0",
+        ).joinToString("&") { (k, v) -> "$k=${urlEncodeNative(v)}" }
+        val root = nativeSealedRequest(
+            SMS_SEND_URL,
+            form,
+            nativeMetadataCookie(device, loginUid = "0", loginSid = "0"),
+        ) ?: return@withContext false
+        if (root.strOf("result") != "succ") {
+            Timber.w("$TAG: send_sms result=%s msg=%s enum=%s",
+                root.strOf("result"), root.strOf("msg"), root.strOf("enum"))
+            return@withContext false
+        }
+        lastSmsServerTm = root.strOf("server_tm") ?: root.strOf("tm") ?: tm
+        true
+    }
+
+    /**
+     * 验证码登录。成功后持久化原生凭证（uid/sid）、合成 web cookie 并写入昵称，
+     * 使 UI 登录态与 web 族接口立即可用；原生凭证供 pl3_getlist 读取 64 位自建歌单。
+     */
+    suspend fun loginBySmsCode(mobile: String, code: String): Boolean = withContext(Dispatchers.IO) {
+        val device = ensureDeviceIdentity()
+        if (device != null) {
+            val ok = tryLoginSms(mobile, code, device)
+            // 验证码一次一用：无论成败都消费掉留存的 server_tm，避免换号/跨次复用过期值
+            lastSmsServerTm = null
+            ok
+        } else {
+            false
         }
     }
 
-    private fun buildNativeQimei36(uid: String): String {
-        var seed = (uid.hashCode().toLong() and 0xFFFFFFFFL) xor 0x9E3779B9L
-        return buildString {
-            repeat(36) {
-                seed = (seed * 1103515245L + 12345L) and 0xFFFFFFFFL
-                append("0123456789abcdef"[((seed ushr 16) % 16L).toInt()])
+    private fun tryLoginSms(
+        mobile: String,
+        code: String,
+        device: KuwoCookieStore.DeviceIdentity,
+    ): Boolean {
+        val tm = lastSmsServerTm ?: System.currentTimeMillis().toString()
+        val form = listOf(
+            "mobile" to mobile,
+            "code" to code,
+            "tm" to tm,
+            "src" to KuwoNativeCrypto.CLIENT_SOURCE,
+            "version" to KuwoNativeCrypto.CLIENT_VERSION,
+            "dev_id" to device.appUid,
+            "dev_name" to NATIVE_DEV_NAME,
+            "devType" to "SDK",
+            "from" to "android",
+            "devResolution" to "0*0",
+        ).joinToString("&") { (k, v) -> "$k=${urlEncodeNative(v)}" }
+        val root = nativeSealedRequest(
+            SMS_LOGIN_URL,
+            form,
+            nativeMetadataCookie(device, loginUid = "0", loginSid = "0"),
+        ) ?: return false
+        if (root.strOf("result") != "succ") {
+            Timber.w("$TAG: login_sms result=%s msg=%s enum=%s",
+                root.strOf("result"), root.strOf("msg"), root.strOf("enum"))
+            return false
+        }
+        val sid = root.strOf("sid")
+        if (sid.isNullOrBlank()) {
+            Timber.w("$TAG: login_sms succ without sid")
+            return false
+        }
+        // userInfo 可能是对象，也可能是内嵌 JSON 字符串
+        val userInfo = root.get("userInfo")?.let { el ->
+            (el as? JsonObject) ?: runCatching {
+                (el as? com.google.gson.JsonPrimitive)?.let { JsonParser.parseString(it.asString) as? JsonObject }
+            }.getOrNull()
+        }
+        val uid = userInfo?.strOf("uid") ?: root.strOf("uid")
+        if (uid.isNullOrBlank()) {
+            Timber.w("$TAG: login_sms succ without uid")
+            return false
+        }
+        cookieStore.saveNativeCredentials(uid, sid)
+        // 合成 web cookie：userid/sid 命中登录态判定，fetchProfile/getlistbyuid 可直接使用
+        cookieStore.setCookie("userid=$uid; sid=$sid; loginSid=$sid")
+        cookieStore.setProfile(userInfo?.strOf("nickName") ?: root.strOf("nickName"), null)
+        Timber.i("$TAG: kuwo sms login ok")
+        return true
+    }
+
+    /** 装机级设备身份：本地生成 device_user/android_id，经 wapi selectFavour 注册换取 appuid。
+     *  首次注册走网络，用互斥避免并发调用重复注册两台设备（四元组漂移会被服务端拒）。 */
+    private val deviceIdentityMutex = Mutex()
+
+    private suspend fun ensureDeviceIdentity(): KuwoCookieStore.DeviceIdentity? =
+        deviceIdentityMutex.withLock {
+            cookieStore.getDeviceIdentity()?.let { return it }
+            val deviceUser = UUID.randomUUID().toString().replace("-", "")
+            val androidId = UUID.randomUUID().toString().replace("-", "")
+            val appUid = registerDevice(deviceUser, androidId) ?: return null
+            val identity = KuwoCookieStore.DeviceIdentity(deviceUser, androidId, appUid)
+            cookieStore.saveDeviceIdentity(identity)
+            identity
+        }
+
+    /** 设备注册（wapi openapi，明文 token=base64(xor(plain,"yeelion "))）；返回 appuid。 */
+    private fun registerDevice(deviceUser: String, androidId: String): String? {
+        val plain = "&new_user=1&mac=$deviceUser&hd=$deviceUser&android_id=$androidId&oaid=" +
+            "&q36=${KuwoNativeCrypto.FALLBACK_QIMEI36}&vmac=&ver=kwplayer_ar_12.2.2.0" +
+            "&src=${urlEncodeNative(KuwoNativeCrypto.CLIENT_SOURCE)}&process=false" +
+            "&dev=${urlEncodeNative(NATIVE_DEV_NAME)}"
+        val request = Request.Builder()
+            .url(DEVICE_REGISTER_URL.toHttpUrl().newBuilder()
+                .addQueryParameter("len", plain.length.toString())
+                .addQueryParameter("token", KuwoNativeCrypto.deviceRegisterToken(plain))
+                .addQueryParameter("appuid", "0")
+                .build())
+            .header("Accept", "application/json")
+            .get()
+            .build()
+        val root = runCatching {
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Timber.w("$TAG: device register http %s", response.code)
+                    return@use null
+                }
+                runCatching { JsonParser.parseString(response.body?.string().orEmpty()) }
+                    .getOrNull() as? JsonObject
             }
+        }.getOrElse { e ->
+            Timber.w(e, "$TAG: device register request failed")
+            null
+        } ?: return null
+        val data = root.get("data") as? JsonObject
+        val appUid = data?.strOf("appuid") ?: data?.strOf("appUid")
+            ?: root.strOf("appuid") ?: root.strOf("appUid")
+        if (appUid.isNullOrBlank()) {
+            Timber.w("$TAG: device register missing appuid, code=%s msg=%s",
+                root.strOf("code"), root.strOf("msg"))
+            return null
+        }
+        return appUid
+    }
+
+    /** 原生封包通道：GET {url}?f=ar&q=seal(form&sx=key)，响应为 sx 加密的 base64，解密后解析 JSON。 */
+    private fun nativeSealedRequest(url: String, form: String, cookieHeader: String): JsonObject? {
+        val sx = KuwoNativeCrypto.responseKey()
+        val request = Request.Builder()
+            .url(url.toHttpUrl().newBuilder()
+                .addQueryParameter("f", "ar")
+                .addQueryParameter("q", KuwoNativeCrypto.sealQuery("$form&sx=$sx"))
+                .build())
+            .header("Accept", "application/json")
+            .header("Cookies", cookieHeader)
+            .get()
+            .build()
+        return runCatching {
+            okHttpClient.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    Timber.w("$TAG: native sealed http %s url=%s body=%.120s", response.code, url, body)
+                    return@use null
+                }
+                val plain = KuwoNativeCrypto.openResponse(body, sx)
+                if (plain == null) {
+                    Timber.w("$TAG: native sealed undecryptable url=%s body=%.120s", url, body)
+                    return@use null
+                }
+                runCatching { JsonParser.parseString(plain) as? JsonObject }.getOrNull()
+            }
+        }.getOrElse { e ->
+            Timber.w(e, "$TAG: native sealed request failed url=%s", url)
+            null
         }
     }
+
+    /** 原生通道元数据 Cookies 头（复数；客户端上行身份字段，非浏览器 cookie 语义）。 */
+    private fun nativeMetadataCookie(
+        device: KuwoCookieStore.DeviceIdentity,
+        loginUid: String,
+        loginSid: String,
+    ): String = "user=${device.deviceUser},ct=11,cv=12220,chid=newpcguanwangmobile," +
+        "QIMEI36=${KuwoNativeCrypto.FALLBACK_QIMEI36},tmeAppID=kwplayer," +
+        "loginUid=$loginUid,loginSid=$loginSid,appUid=${device.appUid},rom=android"
+
+    private fun urlEncodeNative(value: String): String = URLEncoder.encode(value, "UTF-8")
 
     /** pl.svc 歌名/歌手/专辑字段解码：多重 URL 编码 + 常见 HTML 实体（listen1 用 html_decode、lx 用 decodeName 的等价简化）。 */
     private fun decodePlsText(raw: String?): String? =

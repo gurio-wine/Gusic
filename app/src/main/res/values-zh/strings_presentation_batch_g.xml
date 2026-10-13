@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.005：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101305_whats_new">
+        <item>酷我登入新增簡訊驗證碼方式：登入彈窗內可選簡訊或掃碼，簡訊走官方用戶端通道，簽發讀取自建歌單所需的原生會話，解決歌單歌曲載入失敗</item>
+        <item>發現頁平台左右滑動改為無限循環，滑到邊緣可繼續滑動換台</item>
+        <item>發現頁頂欄改為跟手切換：滑動過程中平台名與帳號資訊即隨目標頁更新，無需等頁面停穩</item>
+    </string-array>
+    <!-- Gusic 26.10.13.005：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101305_changes">
+        <item>網易頁不再落在排行榜：未登入顯示登入引導，登入後直接展示推薦內容</item>
+        <item>酷我原生協議改為註冊裝置身分並按官方用戶端構造請求，64 位自建歌單按原生會話讀取</item>
+    </string-array>
     <string name="presentation_batch_g_stats_range_today">今日</string>
     <string name="presentation_batch_g_stats_range_week_to_date">本周至今</string>
     <string name="presentation_batch_g_stats_range_month_to_date">本月至今</string>

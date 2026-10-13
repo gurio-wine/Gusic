@@ -375,7 +375,6 @@ fun LxMusicScreen(
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
     val bottomBarHeightDp = resolveNavBarOccupiedHeight(systemNavBarInset, navBarCompactMode)
 
-    val mineAvailable = currentSourceLoggedIn
 
     val browseBackActive = (browseState.module == "recommend" &&
         mineState.page !is LxMusicViewModel.MinePage.Home) ||
@@ -398,6 +397,57 @@ fun LxMusicScreen(
     val headerContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
 
     val brandTitle = stringResource(R.string.tab_online)
+
+    // 发现页左右滑 pager（与媒体库页同款无限循环）：停稳后切音源；页码对音源列表
+    // 取模映射，首尾两个方向都能继续滑。声明在 Scaffold 之外：顶栏也要读 headerSource
+    val browsePagerState = rememberPagerState(
+        initialPage = lxInfinitePagerInitialPage(
+            orderedSearchTabs.size,
+            orderedSearchTabs.indexOfFirst { it.first == selectedSource }.takeIf { it >= 0 } ?: 0,
+        ),
+        pageCount = { Int.MAX_VALUE },
+    )
+    val browseTabsState = rememberUpdatedState(orderedSearchTabs)
+    // 头部跟手：拖动/抛掷期间 targetPage 即指向目标页，顶栏平台名与账号随之切换
+    // （数据加载仍等 settledPage，避免滑动中触发切源副作用）
+    val headerSource by remember(browsePagerState) {
+        derivedStateOf {
+            val tabs = browseTabsState.value
+            tabs.getOrNull(positiveMod(browsePagerState.targetPage, tabs.size))?.first
+                ?: selectedSource
+        }
+    }
+    // effect 只以 pagerState 为 key（不随 orderedSearchTabs 重启）：平台重排/登录态
+    // 隐藏导致列表变化时，重启会重放旧 settledPage 索引→映射到别的源而误切；
+    // tabs 通过 rememberUpdatedState 读最新值，翻页发射时取模映射即正确
+    LaunchedEffect(browsePagerState) {
+        snapshotFlow { browsePagerState.settledPage }.collect { page ->
+            val tabs = browseTabsState.value
+            val src = tabs.getOrNull(positiveMod(page, tabs.size))?.first ?: return@collect
+            if (src != viewModel.selectedSource.value) viewModel.selectSource(src)
+        }
+    }
+    // 外部切源（偏好恢复/平台重排）时让 pager 跟随到对应页；pager 正在滑动时
+    // 等滑动结束再对齐——直接跳过的话，本次滑动 settle 回原页后 settledPage 流
+    // 不会再发射，pager 会停在旧页直到用户再次交互
+    LaunchedEffect(selectedSource, orderedSearchTabs) {
+        val idx = orderedSearchTabs.indexOfFirst { it.first == selectedSource }
+        if (idx >= 0) {
+            if (browsePagerState.isScrollInProgress) {
+                snapshotFlow { browsePagerState.isScrollInProgress }.first { !it }
+                // 等待期间本次滑动已 settle 并可能触发 selectSource(实际落点)：
+                // 目标源已变化时放弃本次对齐，避免把 pager 拉回旧源造成来回切换
+                if (viewModel.selectedSource.value != selectedSource) return@LaunchedEffect
+            }
+            val cur = browsePagerState.settledPage
+            if (positiveMod(cur, orderedSearchTabs.size) != idx &&
+                !browsePagerState.isScrollInProgress
+            ) {
+                // 循环 pager：滚动到当前带内最近的等价页（不跨带长距离动画）
+                browsePagerState.animateScrollToPage(cur - positiveMod(cur, orderedSearchTabs.size) + idx)
+            }
+        }
+    }
 
     Scaffold(
         containerColor = headerContainerColor,
@@ -423,8 +473,8 @@ fun LxMusicScreen(
                                     append(' ')
                                 }
                                 withStyle(SpanStyle(fontSize = 18.sp)) {
-                                    // 顶栏动态文本显示当前平台名（随左右滑切换）
-                                    append(platformName(selectedSource))
+                                    // 顶栏动态文本跟随滑动目标页实时切换（跟手，不等停稳）
+                                    append(platformName(headerSource))
                                 }
                             },
                             fontFamily = RoundedSans,
@@ -437,32 +487,38 @@ fun LxMusicScreen(
                 actions = {
                     val chipNickname: String?
                     val chipAvatar: String?
-                    when (selectedSource) {
+                    val chipLoggedIn: Boolean
+                    // 账号信息跟随滑动目标页实时切换（与顶栏平台名同步，不等停稳）
+                    when (headerSource) {
                         LxSources.TENCENT -> {
                             chipNickname = tencentNickname
                             chipAvatar = tencentAvatar
+                            chipLoggedIn = tencentLoggedIn
                         }
                         LxSources.KUGOU -> {
                             chipNickname = kugouNickname
                             chipAvatar = kugouAvatar
+                            chipLoggedIn = kugouLoggedIn
                         }
                         LxSources.KUWO -> {
                             chipNickname = kuwoNickname
                             chipAvatar = kuwoAvatar
+                            chipLoggedIn = kuwoLoggedIn
                         }
                         else -> {
                             chipNickname = neteaseNickname
                             chipAvatar = neteaseAvatar
+                            chipLoggedIn = neteaseLoggedIn
                         }
                     }
                     LxAccountChip(
-                        loggedIn = currentSourceLoggedIn,
+                        loggedIn = chipLoggedIn,
                         nickname = chipNickname,
                         avatarUrl = chipAvatar,
-                        fallbackPlatformName = platformName(selectedSource),
+                        fallbackPlatformName = platformName(headerSource),
                         notLoggedInText = stringResource(R.string.lx_account_chip_not_logged_in),
                         onClick = {
-                            when (selectedSource) {
+                            when (headerSource) {
                                 LxSources.TENCENT -> clearAllWebViewSession { showTxWebLoginDialog = true }
                                 LxSources.KUGOU -> clearAllWebViewSession { showKgLoginDialog = true }
                                 LxSources.KUWO -> clearAllWebViewSession { showKwLoginDialog = true }
@@ -495,38 +551,6 @@ fun LxMusicScreen(
             val searchActive = browseState.module == "search"
             val playlistDetailActive = browseState.module == "playlist" ||
                 browseState.selectedPlaylist != null
-            // 发现页左右滑 pager（与媒体库页一致的交互）：停稳后切音源；顶部平台 tab 点击滚动 pager。
-            // 用 settledPageKey（=音源 id）而非索引映射：平台重排/登录态隐藏导致列表变化时，
-            // 旧索引会短暂指向别的源而误触发 selectSource，按 key 读取则不受影响
-            val browsePagerState = rememberPagerState(
-                initialPage = orderedSearchTabs.indexOfFirst { it.first == selectedSource }.takeIf { it >= 0 } ?: 0,
-                pageCount = { orderedSearchTabs.size },
-            )
-            val browseTabsState = rememberUpdatedState(orderedSearchTabs)
-            // effect 只以 pagerState 为 key（不随 orderedSearchTabs 重启）：平台重排/登录态
-            // 隐藏导致列表变化时，重启会重放旧 settledPage 索引→映射到别的源而误切；
-            // tabs 通过 rememberUpdatedState 读最新值，重排后 pager 按 key 重定位页码，
-            // 翻页发射时映射结果即正确
-            LaunchedEffect(browsePagerState) {
-                snapshotFlow { browsePagerState.settledPage }.collect { page ->
-                    val src = browseTabsState.value.getOrNull(page)?.first ?: return@collect
-                    if (src != viewModel.selectedSource.value) viewModel.selectSource(src)
-                }
-            }
-            // 外部切源（偏好恢复/平台重排）时让 pager 跟随到对应页；pager 正在滑动时
-            // 等滑动结束再对齐——直接跳过的话，本次滑动 settle 回原页后 settledPage 流
-            // 不会再发射，pager 会停在旧页直到用户再次交互
-            LaunchedEffect(selectedSource, orderedSearchTabs) {
-                val idx = orderedSearchTabs.indexOfFirst { it.first == selectedSource }
-                if (idx >= 0) {
-                    if (browsePagerState.isScrollInProgress) {
-                        snapshotFlow { browsePagerState.isScrollInProgress }.first { !it }
-                    }
-                    if (browsePagerState.settledPage != idx && !browsePagerState.isScrollInProgress) {
-                        browsePagerState.animateScrollToPage(idx)
-                    }
-                }
-            }
             // 头部页面指示条（与我的页同款）：属于头部区域（TopAppBar 下、内容面板上），
             // 不与搜索框/榜单内容同层。平台 tab 行已移除：切换靠左右滑，定位靠指示条，
             // 重排/隐藏入口在顶栏平台名
@@ -643,14 +667,21 @@ fun LxMusicScreen(
                                 multiSelectionState = multiSelectionState,
                                 onSelectionOptionsClick = { showMultiSelectionSheet = true })
                         } else {
-                            // 浏览根：左右滑 pager 切换音源（与媒体库页一致）。
+                            // 浏览根：左右滑 pager 切换音源（与媒体库页一致，无限循环）。
                             // 当前页用 browseState（含预览/加载态），非当前页用每源榜单缓存渲染
                             HorizontalPager(
                                 state = browsePagerState,
-                                key = { orderedSearchTabs.getOrNull(it)?.first ?: "page_$it" },
+                                key = { page ->
+                                    val tabs = orderedSearchTabs
+                                    val src = tabs.getOrNull(positiveMod(page, tabs.size))?.first
+                                    // 循环 pager 同一源多带并存，key 需带带数避免重复
+                                    if (src != null) "${src}_${page / tabs.size}" else "page_$page"
+                                },
                                 modifier = Modifier.fillMaxSize(),
                             ) { page ->
-                                val pageSource = orderedSearchTabs.getOrNull(page)?.first ?: selectedSource
+                                val pageSource = orderedSearchTabs.getOrNull(
+                                    positiveMod(page, orderedSearchTabs.size)
+                                )?.first ?: selectedSource
                                 val isCurrentSource = pageSource == selectedSource
                                 val pageBoards = if (isCurrentSource) browseState.boards
                                 else sourceBoardsCache[pageSource].orEmpty()
@@ -674,13 +705,14 @@ fun LxMusicScreen(
                                         ),
                                         verticalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {
-                                        // 推荐段/登录占位属于全局当前源数据，只在当前源页渲染；
-                                        // 网易推荐内容在上、榜单卡在下，其余音源仅榜单卡
-                                        if (pageSource == LxSources.NETEASE && isCurrentSource) {
-                                            if (mineAvailable) {
+                                        // 网易页推荐段恒渲染（登录态按网易自身判断，不依赖当前源）：
+                                        // 推荐内容在上、榜单卡在下，滑动过程中即呈现推荐区顶部，
+                                        // 不再先露榜单再让推荐段插入
+                                        if (pageSource == LxSources.NETEASE) {
+                                            if (neteaseLoggedIn) {
                                                 mineRecommendSection(mineState, viewModel)
                                             } else {
-                                                // 未登录：占位提示并提供登录入口（复用各平台现有登录弹窗）
+                                                // 未登录：占位提示并提供登录入口（复用现有登录弹窗）
                                                 item(key = "mine_not_logged_in") {
                                                     Box(
                                                         modifier = Modifier
@@ -689,9 +721,9 @@ fun LxMusicScreen(
                                                         contentAlignment = Alignment.Center,
                                                     ) {
                                                         LxMineNotLoggedInPlaceholder(
-                                                            platformLabel = platformName(selectedSource),
+                                                            platformLabel = platformName(pageSource),
                                                             onLogin = {
-                                                                when (selectedSource) {
+                                                                when (pageSource) {
                                                                     LxSources.TENCENT -> clearAllWebViewSession { showTxWebLoginDialog = true }
                                                                     LxSources.KUGOU -> clearAllWebViewSession { showKgLoginDialog = true }
                                                                     LxSources.KUWO -> clearAllWebViewSession { showKwLoginDialog = true }
@@ -1113,6 +1145,19 @@ private val lxDialogConfirmShape = RoundedCornerShape(
     topStart = 8.dp, bottomStart = 8.dp,
     topEnd = 26.dp, bottomEnd = 26.dp,
 )
+
+private fun positiveMod(value: Int, mod: Int): Int {
+    if (mod <= 0) return 0
+    return ((value % mod) + mod) % mod
+}
+
+/** 无限循环 pager 初始页：带内起点取 Int.MAX_VALUE 中点对齐，两个方向都有充足余量。 */
+private fun lxInfinitePagerInitialPage(tabCount: Int, selectedIndex: Int): Int {
+    if (tabCount <= 0) return 0
+    val midpoint = Int.MAX_VALUE / 2
+    val aligned = midpoint - positiveMod(midpoint, tabCount)
+    return aligned + positiveMod(selectedIndex, tabCount)
+}
 
 /** 浏览根 pager 的页面指示条：选中长条、未选中短条（与媒体库页 CompactLibraryPagerIndicator 同款样式）。 */
 @Composable

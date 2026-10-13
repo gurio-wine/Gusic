@@ -49,6 +49,10 @@ internal interface LxAccountExtension {
 
     suspend fun kgLoginBySmsCode(mobile: String, code: String): Boolean
 
+    suspend fun kwSendSmsCode(mobile: String): Boolean
+
+    suspend fun kwLoginBySmsCode(mobile: String, code: String): Boolean
+
     suspend fun kgApplySongLike(
         songmid: String,
         hash: String?,
@@ -159,6 +163,8 @@ internal object LxUnavailableAccountExtension : LxAccountExtension {
     override fun writeCapabilities(): Map<String, Set<LxWriteOp>> = emptyMap()
     override suspend fun kgSendSmsCode(mobile: String): Boolean = false
     override suspend fun kgLoginBySmsCode(mobile: String, code: String): Boolean = false
+    override suspend fun kwSendSmsCode(mobile: String): Boolean = false
+    override suspend fun kwLoginBySmsCode(mobile: String, code: String): Boolean = false
     override suspend fun kgApplySongLike(
         songmid: String,
         hash: String?,
@@ -254,6 +260,10 @@ internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExt
     override suspend fun kgSendSmsCode(mobile: String): Boolean = kugouApi.sendSmsCode(mobile).ok
     override suspend fun kgLoginBySmsCode(mobile: String, code: String): Boolean =
         kugouApi.loginBySmsCode(mobile, code)
+
+    override suspend fun kwSendSmsCode(mobile: String): Boolean = kuwoApi.sendSmsCode(mobile)
+    override suspend fun kwLoginBySmsCode(mobile: String, code: String): Boolean =
+        kuwoApi.loginBySmsCode(mobile, code)
 
     /**
      * kg 红心写：songmid/hash 双轨——本实现拉取的 kg 歌曲 songmid 即 hash，

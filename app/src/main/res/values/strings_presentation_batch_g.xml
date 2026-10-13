@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.005：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101305_whats_new">
+        <item>Kuwo login now offers SMS verification: pick SMS or QR code in the login dialog — the SMS path signs the native session that reads your own playlists, fixing tracks failing to load</item>
+        <item>Discover platform pages now loop when you swipe past the edge</item>
+        <item>The Discover header now follows your finger: platform name and account chip switch while swiping, no longer waiting for the page to settle</item>
+    </string-array>
+    <!-- Gusic 26.10.13.005：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101305_changes">
+        <item>The Netease page no longer lands on charts: it shows the login prompt first, and recommendations once logged in</item>
+        <item>Kuwo native requests now register a device identity and follow the official client construction for playlist reading</item>
+    </string-array>
     <string name="presentation_batch_g_stats_range_today">Today</string>
     <string name="presentation_batch_g_stats_range_week_to_date">Week to Date</string>
     <string name="presentation_batch_g_stats_range_month_to_date">Month to Date</string>

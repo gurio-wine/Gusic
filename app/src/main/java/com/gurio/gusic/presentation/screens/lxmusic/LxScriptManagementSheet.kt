@@ -887,14 +887,35 @@ fun LxLoginDialogsHost(
         )
     }
     if (showKuwo) {
-        KuwoLoginDialog(
-            onDismiss = onDismissKuwo,
-            onValidate = { cookie, callback ->
-                lxMusicViewModel.validateAndLoginKuwo(cookie) { ok, error ->
-                    callback(ok, error)
-                    if (ok) onDismissKuwo()
-                }
-            },
-        )
+        // null=方式选择，false=扫码（web cookie），true=短信（原生会话，自建大歌单需它）
+        var kwSmsMode by remember { mutableStateOf<Boolean?>(null) }
+        when (kwSmsMode) {
+            null -> KuwoLoginChooserDialog(
+                onDismiss = onDismissKuwo,
+                onScanLogin = { kwSmsMode = false },
+                onSmsLogin = { kwSmsMode = true },
+            )
+            false -> KuwoLoginDialog(
+                onDismiss = onDismissKuwo,
+                onValidate = { cookie, callback ->
+                    lxMusicViewModel.validateAndLoginKuwo(cookie) { ok, error ->
+                        callback(ok, error)
+                        if (ok) onDismissKuwo()
+                    }
+                },
+            )
+            else -> KuwoSmsLoginDialog(
+                onDismiss = onDismissKuwo,
+                onSendCode = { mobile, callback ->
+                    lxMusicViewModel.sendKuwoSmsCode(mobile) { ok, error -> callback(ok, error) }
+                },
+                onLogin = { mobile, code, callback ->
+                    lxMusicViewModel.loginKuwoBySms(mobile, code) { ok, error ->
+                        callback(ok, error)
+                        if (ok) onDismissKuwo()
+                    }
+                },
+            )
+        }
     }
 }

@@ -1601,6 +1601,47 @@ class LxMusicViewModel @Inject constructor(
         }
     }
 
+    fun sendKuwoSmsCode(mobile: String, onResult: (ok: Boolean, error: String?) -> Unit) {
+        if (!Regex("^1\\d{10}$").matches(mobile)) {
+            onResult(false, context.getString(R.string.lx_msg_invalid_mobile)); return
+        }
+        viewModelScope.launch {
+            val ok = runCatching { repository.kwSendSmsCode(mobile) }.getOrDefault(false)
+            if (!ok) {
+                // 服务端拒绝的具体文案已在 KuwoAccountApi 内记录；此处仅输出掩码号码用于关联诊断
+                Timber.w(
+                    "sendKuwoSmsCode failed for %s (accountWritesEnabled=%s)",
+                    mobile.take(3) + "****" + mobile.takeLast(2), accountWritesEnabled
+                )
+            }
+            onResult(ok, if (ok) null else context.getString(R.string.lx_msg_sms_send_failed))
+        }
+    }
+
+    fun loginKuwoBySms(mobile: String, code: String, onResult: (ok: Boolean, error: String?) -> Unit) {
+        if (!Regex("^1\\d{10}$").matches(mobile)) {
+            onResult(false, context.getString(R.string.lx_msg_invalid_mobile)); return
+        }
+        if (code.isBlank()) {
+            onResult(false, context.getString(R.string.lx_msg_invalid_code)); return
+        }
+        viewModelScope.launch {
+            val ok = runCatching { repository.kwLoginBySmsCode(mobile, code.trim()) }.getOrDefault(false)
+            if (!ok) {
+                onResult(false, context.getString(R.string.lx_msg_login_invalid)); return@launch
+            }
+            runCatching { repository.setKwLikedSongIds(repository.fetchKwLikedSongIds()) }
+            if (_selectedSource.value != LxSources.KUWO) {
+                _selectedSource.value = LxSources.KUWO
+                persistSelectedSource()
+            }
+            resetMineNavigation()
+            _browseState.value = _browseState.value.copy(module = "board", error = null)
+            loadMineHome(force = true)
+            onResult(true, null)
+        }
+    }
+
     fun validateAndLoginKuwo(rawCookie: String, onResult: (ok: Boolean, error: String?) -> Unit) =
         validateAndLoginPlatform(
             rawCookie = rawCookie,

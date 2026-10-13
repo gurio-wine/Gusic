@@ -26,8 +26,19 @@ class KuwoCookieStore @Inject constructor(
         private const val KEY_COOKIE_VALID = "kw_cookie_valid"
         private const val KEY_NICKNAME = "kw_nickname"
         private const val KEY_AVATAR_URL = "kw_avatar_url"
+        private const val KEY_DEVICE_USER = "kw_native_device_user"
+        private const val KEY_ANDROID_ID = "kw_native_android_id"
+        private const val KEY_APP_UID = "kw_native_app_uid"
+        private const val KEY_NATIVE_UID = "kw_native_uid"
+        private const val KEY_NATIVE_SID = "kw_native_sid"
         const val VIP_UNKNOWN = -1
     }
+
+    /** 原生 pl3 协议凭证（短信验证码登录签发），区别于 web cookie 里的 sid */
+    data class NativeCredentials(val uid: String, val sid: String)
+
+    /** 装机级设备身份：原生协议四元组的设备侧三元组，登出后保留复用 */
+    data class DeviceIdentity(val deviceUser: String, val androidId: String, val appUid: String)
 
     private val prefs: SharedPreferences = createCredentialPrefs()
 
@@ -61,6 +72,34 @@ class KuwoCookieStore @Inject constructor(
     fun getAvatarUrl(): String? = _avatarUrlFlow.value
 
     fun getAccountUpdatedAt(): Long = prefs.getLong(KEY_VIP_UPDATED_AT, 0L)
+
+    fun getDeviceIdentity(): DeviceIdentity? {
+        val deviceUser = prefs.getString(KEY_DEVICE_USER, null) ?: return null
+        val androidId = prefs.getString(KEY_ANDROID_ID, null) ?: return null
+        val appUid = prefs.getString(KEY_APP_UID, null) ?: return null
+        return DeviceIdentity(deviceUser, androidId, appUid)
+    }
+
+    fun saveDeviceIdentity(identity: DeviceIdentity) {
+        prefs.edit()
+            .putString(KEY_DEVICE_USER, identity.deviceUser)
+            .putString(KEY_ANDROID_ID, identity.androidId)
+            .putString(KEY_APP_UID, identity.appUid)
+            .apply()
+    }
+
+    fun getNativeCredentials(): NativeCredentials? {
+        val uid = prefs.getString(KEY_NATIVE_UID, null) ?: return null
+        val sid = prefs.getString(KEY_NATIVE_SID, null) ?: return null
+        return NativeCredentials(uid, sid)
+    }
+
+    fun saveNativeCredentials(uid: String, sid: String) {
+        prefs.edit()
+            .putString(KEY_NATIVE_UID, uid)
+            .putString(KEY_NATIVE_SID, sid)
+            .apply()
+    }
 
     fun setCookie(value: String) {
         val trimmed = value.trim()
@@ -113,6 +152,9 @@ class KuwoCookieStore @Inject constructor(
             .remove(KEY_COOKIE_VALID)
             .remove(KEY_NICKNAME)
             .remove(KEY_AVATAR_URL)
+            // 原生会话凭证随账号登出清除；设备三元组装机级，保留给下次登录复用
+            .remove(KEY_NATIVE_UID)
+            .remove(KEY_NATIVE_SID)
             .apply()
         _cookieFlow.value = null
         _vipTypeFlow.value = VIP_UNKNOWN

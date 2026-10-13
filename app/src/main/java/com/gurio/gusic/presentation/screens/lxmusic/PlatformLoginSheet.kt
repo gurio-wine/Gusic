@@ -26,6 +26,9 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.QrCodeScanner
+import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -425,6 +428,194 @@ fun KuwoLoginDialog(
     // 漏采会导致原生歌单协议（pl3_getlist）无会话可用
     extraCookieUrls = listOf("https://kuwo.cn/", "https://i.kuwo.cn/", "https://vip1.kuwo.cn/"),
 )
+
+/** 酷我登录方式选择：扫码（web cookie）或短信验证码（原生会话，自建 64 位歌单需它）。 */
+@Composable
+fun KuwoLoginChooserDialog(
+    onDismiss: () -> Unit,
+    onScanLogin: () -> Unit,
+    onSmsLogin: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.lx_title_kuwo_login)) },
+        text = { Text(stringResource(R.string.lx_msg_kw_login_chooser)) },
+        confirmButton = {
+            TextButton(onClick = onSmsLogin) {
+                Icon(
+                    Icons.Rounded.Smartphone,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.size(6.dp))
+                Text(stringResource(R.string.lx_action_sms_login))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onScanLogin) {
+                Icon(
+                    Icons.Rounded.QrCodeScanner,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.size(6.dp))
+                Text(stringResource(R.string.lx_action_scan_login))
+            }
+        },
+    )
+}
+
+/** 酷我短信验证码登录（走酷我官方客户端原生通道，签发 pl3_getlist 可用的原生会话）。 */
+@Composable
+fun KuwoSmsLoginDialog(
+    onDismiss: () -> Unit,
+    onSendCode: (mobile: String, callback: (ok: Boolean, error: String?) -> Unit) -> Unit,
+    onLogin: (mobile: String, code: String, callback: (ok: Boolean, error: String?) -> Unit) -> Unit,
+) {
+    val context = LocalContext.current
+    val loginSuccessMsg = stringResource(R.string.lx_msg_login_success)
+    var mobile by remember { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
+    var sending by remember { mutableStateOf(false) }
+    var logging by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var countdown by remember { mutableStateOf(0) }
+
+    LaunchedEffect(countdown) {
+        if (countdown > 0) { delay(1000L); countdown -= 1 }
+    }
+
+    val busy = sending || logging
+
+    Dialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface)
+                .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = { if (!busy) onDismiss() }) {
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.lx_desc_back))
+                }
+                Icon(
+                    Icons.Rounded.Cloud,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    text = stringResource(R.string.lx_title_kuwo_login),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Spacer(Modifier.size(24.dp))
+                Text(
+                    text = stringResource(R.string.lx_msg_kw_sms_tip),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = mobile,
+                    onValueChange = { v ->
+                        val digits = v.filter { it.isDigit() }
+                        if (digits.length <= 11) mobile = digits
+                        error = null
+                    },
+                    label = { Text(stringResource(R.string.lx_field_mobile)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedTextField(
+                        value = code,
+                        onValueChange = { v ->
+                            val digits = v.filter { it.isDigit() }
+                            if (digits.length <= 6) code = digits
+                            error = null
+                        },
+                        label = { Text(stringResource(R.string.lx_field_code)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        enabled = !busy,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        onClick = {
+                            error = null
+                            sending = true
+                            onSendCode(mobile) { ok, e ->
+                                sending = false
+                                if (ok) countdown = 60 else error = e
+                            }
+                        },
+                        enabled = !busy && countdown == 0 && mobile.length == 11,
+                    ) {
+                        Text(if (countdown > 0) "${countdown}s" else stringResource(R.string.lx_action_get_code))
+                    }
+                }
+                error?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                Button(
+                    onClick = {
+                        error = null
+                        logging = true
+                        onLogin(mobile, code) { ok, e ->
+                            if (ok) {
+                                Toast.makeText(context, loginSuccessMsg, Toast.LENGTH_SHORT).show()
+                            } else {
+                                logging = false
+                                error = e
+                            }
+                        }
+                    },
+                    enabled = !busy && mobile.length == 11 && code.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (logging) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    } else {
+                        Text(stringResource(R.string.lx_action_login))
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun TencentWebLoginDialog(
