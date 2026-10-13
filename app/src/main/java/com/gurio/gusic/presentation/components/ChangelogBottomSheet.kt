@@ -64,6 +64,13 @@ data class ChangelogVersion(
 @Composable
 private fun forkVersions(): List<ChangelogVersion> = listOf(
     ChangelogVersion(
+        version = "26.10.13.010",
+        date = "2026-10-13",
+        sections = listOf(
+            ChangelogSection(R.string.presentation_batch_g_changelog_sec_changes, R.array.presentation_batch_g_changelog_v26101310_changes)
+        )
+    ),
+    ChangelogVersion(
         version = "26.10.13.009",
         date = "2026-10-13",
         sections = listOf(

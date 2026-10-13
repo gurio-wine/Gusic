@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.010：修复 -->
+    <string-array name="presentation_batch_g_changelog_v26101310_changes">
+        <item>Heartbeat batches now honor the requested 0-5 track size: the count was sent in a form the server ignored, so a single batch could return dozens of tracks and throw off the queue cap and the seed pacing</item>
+        <item>Each Heartbeat batch now lands in the queue before the next one is generated, keeping the seed-then-recommendations structure in strict order</item>
+        <item>Heartbeat mode now plays through the queue in order — a finished track moves on to the next one instead of repeating</item>
+        <item>Entering or leaving Heartbeat mode no longer makes the album carousel flash: pages keep their identity across queue changes and the carousel no longer jumps between full-width and peek layouts</item>
+    </string-array>
     <!-- Gusic 26.10.13.009：修复 -->
     <string-array name="presentation_batch_g_changelog_v26101309_changes">
         <item>Fixed Heartbeat mode never actually replacing the queue: the shuffle-off reorder was racing the queue clear and restoring the old playlist</item>

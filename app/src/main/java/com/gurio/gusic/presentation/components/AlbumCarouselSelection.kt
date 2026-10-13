@@ -100,7 +100,9 @@ fun AlbumCarouselSection(
                               requestedTargetIndex == null
             
             if (isShiftOnly) {
-                carouselState.pagerState.scrollToPage(effectiveTargetIndex)
+                // 同歌仅队列位移（心动进出/队列编辑）：requestScrollToPage 在下一帧
+                // 直接渲染目标页，避免 scrollToPage 挂起间隙先画出一帧错误页面
+                carouselState.pagerState.requestScrollToPage(effectiveTargetIndex)
             } else {
                 if (requestedTargetIndex != null) {
                     ignoreNextSettledSelectionForPage = effectiveTargetIndex
@@ -127,9 +129,12 @@ fun AlbumCarouselSection(
                     ignoreNextSettledSelectionForPage = null
                     return@collect
                 }
-                if (settled != currentSongIndex) {
+                // 按歌 id 判定而不是裸 index：同一首歌仅队列位移（心动复原等）
+                // 不算换歌，否则会误触发震动和点播
+                val settledSong = queue.getOrNull(settled)
+                if (settledSong != null && settledSong.id != currentSong?.id) {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    queue.getOrNull(settled)?.let { onSongSelected(it, settled) }
+                    onSongSelected(settledSong, settled)
                 }
             }
     }
@@ -145,7 +150,9 @@ fun AlbumCarouselSection(
             itemSpacing = itemSpacing,
             itemCornerRadius = corner,
             suppressNoPeekSettleCorrection = requestedTargetIndex != null || programmaticScrollInProgress,
-            carouselStyle = if (carouselState.pagerState.pageCount == 1) CarouselStyle.NO_PEEK else carouselStyle,
+            // 不按 pageCount 强制单条全宽：心动模式进入瞬间队列会先缩成 1 首，
+            // 样式全宽↔两侧预览来回跳变是可见闪烁；keyline 布局本身能优雅处理单条
+            carouselStyle = carouselStyle,
             carouselWidth = availableWidth,
             itemKey = { index -> carouselItemKeys.getOrNull(index) ?: "queue_item_$index" },
             content = { index ->
@@ -192,9 +199,11 @@ private fun resolveCurrentQueueIndex(
 
 private fun buildQueueOccurrenceKeys(queue: ImmutableList<Song>): List<String> {
     val occurrencesBySongId = HashMap<String, Int>()
-    return queue.mapIndexed { index, song ->
+    return queue.map { song ->
         val occurrence = occurrencesBySongId.getOrDefault(song.id, 0)
         occurrencesBySongId[song.id] = occurrence + 1
-        "queue_carousel_${song.id}_${occurrence}_${song.albumArtUriString.orEmpty().hashCode()}_$index"
+        // key 不带 index 后缀：id+occurrence 已唯一；索引位移（心动进出、队列
+        // 增删）不再使全部页面销毁重建，封面不重载不闪
+        "queue_carousel_${song.id}_${occurrence}_${song.albumArtUriString.orEmpty().hashCode()}"
     }
 }

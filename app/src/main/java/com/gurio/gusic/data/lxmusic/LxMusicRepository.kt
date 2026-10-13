@@ -2321,7 +2321,9 @@ class LxMusicRepository @Inject constructor(
                 "songId" to seedSongId,
                 "type" to "fromPlayOne",
                 "startMusicId" to seedSongId,
-                "count" to count.toString(),
+                // 必须传数字：字符串形式的 count 不被服务端识别，
+                // 会整页返回导致单批几十首
+                "count" to count,
             ),
         ) ?: return emptyList()
         val ids = root.getAsJsonArray("data")?.mapNotNull { el ->

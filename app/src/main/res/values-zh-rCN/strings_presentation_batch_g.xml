@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.010：修复 -->
+    <string-array name="presentation_batch_g_changelog_v26101310_changes">
+        <item>心动每批推荐数量恢复为 0-5 首随机：此前数量参数的格式不被服务端识别，单批可能返回几十首，打乱了队列上限和种子节奏</item>
+        <item>每批心动歌曲先落位再生成下一批，严格保持“种子→本批推荐→下一种子”的顺序</item>
+        <item>心动模式改为顺序连播：一首播完自动接下一首，不再单曲循环重播</item>
+        <item>进入/离开心动模式时封面轮播不再闪烁：队列变化不再销毁重建封面页，也不再在全宽与两侧预览样式间跳变</item>
+    </string-array>
     <!-- Gusic 26.10.13.009：修复 -->
     <string-array name="presentation_batch_g_changelog_v26101309_changes">
         <item>修复心动模式实际没有生效：关闭随机播放的队列重排与清空队列相互竞争，把旧播放列表又塞了回去</item>

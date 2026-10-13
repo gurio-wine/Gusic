@@ -4848,6 +4848,8 @@ class PlayerViewModel @Inject constructor(
         // 心动队列顺序（种子+批次）有语义，关随机标志；不能用 toggleShuffle——
         // 它是异步队列重排，会和下面的清空操作竞争把整个队列塞回来
         playbackStateHolder.disableShuffleFlagOnly()
+        // 进入必经单曲档，切回顺序播放，否则心动态播完一首会单曲循环
+        setRepeatMode(Player.REPEAT_MODE_ALL)
         // 复原记录同步建好（种子池稍后在协程里填充），避免网络空窗期离开时无处复原
         heartbeatData = HeartbeatData(
             snapshot = snapshot,
@@ -4908,6 +4910,15 @@ class PlayerViewModel @Inject constructor(
                     mediaController?.addMediaItems(toAdd.map { buildPlaybackMediaItem(it) })
                     queuedTotal += toAdd.size
                     toAdd.forEach { addedIds += it.id }
+                    // 等本批真正落位再生成下一批：addMediaItems 在服务端是异步解析的，
+                    // 连续提交的多批完成顺序不保证，会变成"谁先解析完谁先入队"，
+                    // 打乱"种子→本批推荐→下一种子"的结构
+                    val expectedCount = queuedTotal
+                    withTimeoutOrNull(2_000L) {
+                        while ((mediaController?.mediaItemCount ?: 0) < expectedCount) {
+                            delay(50)
+                        }
+                    }
                 }
                 firstBatch = false
             }
