@@ -634,8 +634,9 @@ internal fun FullPlayerContent(
         )
     }
 
-    // 四档播放模式：列表循环 → 单曲循环 → 随机循环 → 心动模式，循环切换。
-    // 心动档仅在网易登录且当前播的是网易歌时可达（不可达时保持原三档循环）。
+    // 四档播放模式：顺序循环 → 随机循环 → 单曲循环 → 心动模式，循环切换。
+    // 从随机档进不来心动：进入心动前必经单曲档，快照到的队列一定是原序。
+    // 心动档仅在网易登录且当前播的是网易歌时可达（不可达时跳过回顺序档）。
     val neteaseLoggedIn by lxMusicViewModel.neteaseLoggedIn.collectAsStateWithLifecycle()
     val heartbeatAvailable = song.lxMusicSource == LxSources.NETEASE && neteaseLoggedIn
     val onCyclePlayMode = {
@@ -645,18 +646,20 @@ internal fun FullPlayerContent(
                 playerViewModel.setRepeatMode(Player.REPEAT_MODE_ALL)
             }
             isShuffleEnabledProvider() -> {
+                onShuffleToggle()
+                playerViewModel.setRepeatMode(Player.REPEAT_MODE_ONE)
+            }
+            repeatModeProvider() == Player.REPEAT_MODE_ONE -> {
                 if (heartbeatAvailable) {
                     playerViewModel.enterHeartbeatMode()
                 } else {
-                    onShuffleToggle()
                     playerViewModel.setRepeatMode(Player.REPEAT_MODE_ALL)
                 }
             }
-            repeatModeProvider() == Player.REPEAT_MODE_ONE -> {
+            else -> {
                 playerViewModel.setRepeatMode(Player.REPEAT_MODE_ALL)
                 onShuffleToggle()
             }
-            else -> playerViewModel.setRepeatMode(Player.REPEAT_MODE_ONE)
         }
     }
 

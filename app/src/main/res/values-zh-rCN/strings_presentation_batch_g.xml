@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.009：修复 -->
+    <string-array name="presentation_batch_g_changelog_v26101309_changes">
+        <item>修复心动模式实际没有生效：关闭随机播放的队列重排与清空队列相互竞争，把旧播放列表又塞了回去</item>
+        <item>进入/离开心动模式不再整体重建播放队列，当前歌不会重新加载，播放、进度、歌词全程连续不卡顿</item>
+        <item>循环模式顺序调整为 顺序 → 随机 → 单曲 → 心动，保证进入心动前队列是原始顺序，退出复原也是原序</item>
+    </string-array>
     <!-- Gusic 26.10.13.008：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101308_whats_new">
         <item>播放页新增心动循环模式（网易歌曲专属）：不中断当前播放，以当前歌单和“我喜欢”为种子持续生成相似歌曲队列，最多累计 150 首</item>

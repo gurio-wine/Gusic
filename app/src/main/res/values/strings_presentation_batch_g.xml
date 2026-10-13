@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.009：修复 -->
+    <string-array name="presentation_batch_g_changelog_v26101309_changes">
+        <item>Fixed Heartbeat mode never actually replacing the queue: the shuffle-off reorder was racing the queue clear and restoring the old playlist</item>
+        <item>Entering and leaving Heartbeat mode no longer rebuilds the playback queue — the current track is no longer re-prepared, so playback, progress and lyrics continue seamlessly</item>
+        <item>Repeat-mode cycle is now Order, Shuffle, One, Heartbeat, so Heartbeat is always entered from a non-shuffled queue and restoring keeps the original order</item>
+    </string-array>
     <!-- Gusic 26.10.13.008：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101308_whats_new">
         <item>The player adds a Heartbeat repeat mode for Netease tracks: it keeps the current song playing, then keeps growing a queue of similar picks seeded from your playlist and Liked Songs, up to 150 tracks</item>

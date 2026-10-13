@@ -117,7 +117,7 @@ class HeartbeatQueuePlannerTest {
     // ---------- planRestoreLayout ----------
 
     @Test
-    fun `s2 in original set restores snapshot order with s2 original index`() {
+    fun `s2 in original set restores snapshot order around s2`() {
         val snapshot = listOf(song("a"), song("b"), song("c"), song("d"))
         val originalIds = setOf("a", "b", "c", "d")
         val currentQueue = listOf(song("a"), song("x1"), song("c"), song("x2"))
@@ -128,17 +128,16 @@ class HeartbeatQueuePlannerTest {
             s2 = song("c"),
         )
         assertNotNull(result)
-        val (layout, index) = result!!
-        assertEquals(snapshot, layout)
-        assertEquals(2, index)
-        assertEquals("c", layout[index].id)
+        val (before, after) = result!!
+        assertEquals(listOf("a", "b"), before.map { it.id })
+        assertEquals(listOf("d"), after.map { it.id })
     }
 
     @Test
     fun `s2 not in original set anchors to nearest original song above`() {
         val snapshot = listOf(song("a"), song("b"), song("c"), song("d"))
         val originalIds = setOf("a", "b", "c", "d")
-        // 队列中 s2=x 上方最近的原歌是 b（a 之上没有其它原歌干扰）
+        // 队列中 s2=x 上方最近的原歌是 b；复原布局 = [a,b] + x(当前项) + [c,d]
         val currentQueue = listOf(song("a"), song("b"), song("y1"), song("x"), song("c"))
         val result = HeartbeatQueuePlanner.planRestoreLayout(
             snapshot = snapshot,
@@ -147,9 +146,9 @@ class HeartbeatQueuePlannerTest {
             s2 = song("x"),
         )
         assertNotNull(result)
-        val (layout, index) = result!!
-        assertEquals(listOf("a", "b", "x", "c", "d"), layout.map { it.id })
-        assertEquals(2, index)
+        val (before, after) = result!!
+        assertEquals(listOf("a", "b"), before.map { it.id })
+        assertEquals(listOf("c", "d"), after.map { it.id })
     }
 
     @Test

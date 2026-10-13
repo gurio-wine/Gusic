@@ -863,6 +863,21 @@ class PlaybackStateHolder @Inject constructor(
             }
     }
 
+    /**
+     * 仅关闭随机标志，不重排队列（toggleShuffle 关闭时会按原序恢复整个队列，
+     * 与“清空队列保留当前歌”类操作并发会把队列又塞回来）。
+     * queueStateHolder 的原序记录保留，之后正常开随机仍按它打乱。
+     */
+    fun disableShuffleFlagOnly() {
+        if (!_stablePlayerState.value.isShuffleEnabled) return
+        _stablePlayerState.update { it.copy(isShuffleEnabled = false) }
+        scope?.launch {
+            if (userPreferencesRepository.persistentShuffleEnabledFlow.first()) {
+                userPreferencesRepository.setShuffleOn(false)
+            }
+        }
+    }
+
     fun onCleared() {
         stopProgressUpdates()
         shuffleToggleJob?.cancel()

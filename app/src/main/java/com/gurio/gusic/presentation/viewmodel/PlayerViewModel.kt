@@ -2787,6 +2787,15 @@ class PlayerViewModel @Inject constructor(
         }
         if (currentSongId == mediaItem.mediaId && currentIndex == expectedIndex) return
 
+        // 同一首歌只是队列位置变了（心动进出、队列增删/拖动等增量操作）：
+        // 不新开播放 occurrence、不重置歌词，只回写索引，避免歌词无谓重载
+        if (currentSongId == mediaItem.mediaId) {
+            playbackStateHolder.updateStablePlayerState {
+                it.copy(currentMediaItemIndex = expectedIndex)
+            }
+            return
+        }
+
         playbackStateHolder.onPlaybackOccurrenceTransition(mediaItem.mediaId)
         preparePlaybackAudioMetadataForMedia(mediaItem.mediaId)
         transitionSchedulerJob?.cancel()
@@ -4836,10 +4845,9 @@ class PlayerViewModel @Inject constructor(
         if (s1.lxMusicSongMid.isNullOrBlank()) return
         val snapshot = _playerUiState.value.currentPlaybackQueue.toList()
         if (snapshot.none { it.id == s1.id }) return
-        // 心动队列顺序（种子+批次）有语义，关随机
-        if (playbackStateHolder.stablePlayerState.value.isShuffleEnabled) {
-            toggleShuffle()
-        }
+        // 心动队列顺序（种子+批次）有语义，关随机标志；不能用 toggleShuffle——
+        // 它是异步队列重排，会和下面的清空操作竞争把整个队列塞回来
+        playbackStateHolder.disableShuffleFlagOnly()
         // 复原记录同步建好（种子池稍后在协程里填充），避免网络空窗期离开时无处复原
         heartbeatData = HeartbeatData(
             snapshot = snapshot,
@@ -4867,10 +4875,12 @@ class PlayerViewModel @Inject constructor(
             val seedPool = HeartbeatQueuePlanner.buildSeedPool(snapshot, s1.lxMusicSongMid, likedCandidates)
             heartbeatData?.pendingSeeds?.addAll(seedPool.shuffled())
             val addedIds = HashSet<String>().apply { add(s1.id) }
+            // 队列上限用本地计数判断：controller 的 timeline 是异步生效的，
+            // 网络先返回时会读到清空前的大数导致误判已满
+            var queuedTotal = 1
             var firstBatch = true
             while (isActive) {
-                val total = mediaController?.mediaItemCount ?: break
-                if (total >= HeartbeatQueuePlanner.QUEUE_LIMIT) break
+                if (queuedTotal >= HeartbeatQueuePlanner.QUEUE_LIMIT) break
                 // 第一批种子是正在播放的 s1（已在队列中）；之后依次消耗歌单 D
                 val seed: Song = if (firstBatch) s1
                     else heartbeatData?.pendingSeeds?.removeFirstOrNull() ?: break
@@ -4896,6 +4906,7 @@ class PlayerViewModel @Inject constructor(
                 }
                 if (toAdd.isNotEmpty()) {
                     mediaController?.addMediaItems(toAdd.map { buildPlaybackMediaItem(it) })
+                    queuedTotal += toAdd.size
                     toAdd.forEach { addedIds += it.id }
                 }
                 firstBatch = false
@@ -4906,6 +4917,7 @@ class PlayerViewModel @Inject constructor(
     /**
      * 离开心动模式（切到其它循环模式，不暂停播放）：按歌单 A 复原队列。
      * s2∈C 时 s2 回到 A 原位；否则以 s3（s2 上方最近的 C 中歌曲）为锚，s2 紧插在 A 中 s3 之后。
+     * 全程增量增删，不替换当前项，避免重新 prepare 造成的卡顿。
      */
     fun leaveHeartbeatMode() {
         if (!_isHeartbeatMode.value) return
@@ -4919,12 +4931,8 @@ class PlayerViewModel @Inject constructor(
                 data.snapshot, data.originalNeteaseIds, currentQueue, s2,
             )
             if (planned != null) {
-                val (layout, s2Index) = planned
-                mediaController?.setMediaItems(
-                    layout.map { buildPlaybackMediaItem(it) },
-                    s2Index,
-                    mediaController?.currentPosition ?: 0L,
-                )
+                val (before, after) = planned
+                applyQueueAroundCurrent(before, after)
             } else {
                 restoreHeartbeatSnapshot(data.snapshot, s2)
             }
@@ -4942,21 +4950,41 @@ class PlayerViewModel @Inject constructor(
         _isHeartbeatMode.value = false
     }
 
-    /** 进入失败/无法规划时的兜底：按 A 原样恢复，保持 s2 继续播放。 */
+    /** 进入失败/无法规划时的兜底：按 A 原样恢复，保持 s2 继续播放（增量，不打断当前项）。 */
     private fun restoreHeartbeatSnapshot(snapshot: List<Song>, keepPlaying: Song) {
-        val controller = mediaController ?: return
-        val position = controller.currentPosition
         val base = snapshot.ifEmpty { listOf(keepPlaying) }
         // 兜底歌不在快照里时插到最前，保证继续播放的是当前这首
         val finalItems = if (base.none { it.id == keepPlaying.id }) listOf(keepPlaying) + base else base
         val index = finalItems.indexOfFirst { it.id == keepPlaying.id }.coerceAtLeast(0)
-        controller.setMediaItems(
-            finalItems.map { buildPlaybackMediaItem(it) },
-            index,
-            position,
+        applyQueueAroundCurrent(
+            finalItems.subList(0, index).toList(),
+            finalItems.subList(index + 1, finalItems.size).toList(),
         )
         heartbeatData = null
         _isHeartbeatMode.value = false
+    }
+
+    /**
+     * 保留当前播放项不动，把队列其余部分替换为 before + 当前项 + after。
+     * 只用倒序删除 + 头插 + 尾加的增量操作，当前 mediaItem 不被替换，
+     * 播放器不会重新 prepare 当前歌（不卡顿、不重载歌词、进度连续）。
+     */
+    private fun applyQueueAroundCurrent(before: List<Song>, after: List<Song>) {
+        val controller = mediaController ?: return
+        val currentIndex = controller.currentMediaItemIndex
+        if (currentIndex == C.INDEX_UNSET) return
+        for (index in (0 until controller.mediaItemCount)
+            .filter { it != currentIndex }
+            .sortedDescending()
+        ) {
+            controller.removeMediaItem(index)
+        }
+        if (before.isNotEmpty()) {
+            controller.addMediaItems(0, before.map { buildPlaybackMediaItem(it) })
+        }
+        if (after.isNotEmpty()) {
+            controller.addMediaItems(after.map { buildPlaybackMediaItem(it) })
+        }
     }
 
 

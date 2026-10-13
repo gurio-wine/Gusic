@@ -38,9 +38,10 @@ internal object HeartbeatQueuePlanner {
     }
 
     /**
-     * 离开心动模式时的复原布局，返回(目标队列, 当前歌 s2 在目标队列中的位置)：
-     * - s2 ∈ C（原歌单网易子集）：按 A 原顺序恢复，s2 回到原位。
-     * - s2 ∉ C：以 s3（当前队列中 s2 上方最近的 C 中歌曲）为锚，s2 紧插在 A 中 s3 之后，
+     * 离开心动模式时的复原布局，返回(当前歌 s2 之前要排的歌, 之后要排的歌)：
+     * 当前项本身由调用方保留不动（增量增删队列，避免整体替换造成播放中断）。
+     * - s2 ∈ C（原歌单网易子集）：按 A 原顺序恢复，s2 两侧是它在 A 中的前后邻居。
+     * - s2 ∉ C：以 s3（当前队列中 s2 上方最近的 C 中歌曲）为锚，s2 紧跟在 A 中 s3 之后，
      *   其余歌按原序分布在 (s3, s2) 整体前后。队列头部必有进入时的 s1（∈C），s3 必存在。
      * 返回 null 表示无法规划（s2 不在 A、s2 不在当前队列等异常），调用方走兜底恢复。
      */
@@ -49,11 +50,12 @@ internal object HeartbeatQueuePlanner {
         originalNeteaseIds: Set<String>,
         currentQueue: List<Song>,
         s2: Song,
-    ): Pair<List<Song>, Int>? {
+    ): Pair<List<Song>, List<Song>>? {
         if (s2.id in originalNeteaseIds) {
             val index = snapshot.indexOfFirst { it.id == s2.id }
             if (index < 0) return null
-            return snapshot to index
+            return snapshot.subList(0, index).toList() to
+                snapshot.subList(index + 1, snapshot.size).toList()
         }
         val s2Index = currentQueue.indexOfFirst { it.id == s2.id }
         if (s2Index < 0) return null
@@ -61,8 +63,8 @@ internal object HeartbeatQueuePlanner {
             .firstNotNullOfOrNull { j -> currentQueue[j].id.takeIf { it in originalNeteaseIds } }
         val anchorIndexInA = snapshot.indexOfFirst { it.id == s3Id }
         if (anchorIndexInA < 0) return null
-        val layout = snapshot.toMutableList()
-        layout.add(anchorIndexInA + 1, s2)
-        return layout to (anchorIndexInA + 1)
+        // 复原队列 = A[0..anchor] 段 + s2(当前项) + A[anchor+1..end) 段（s2 不在 A 内）
+        return snapshot.subList(0, anchorIndexInA + 1).toList() to
+            snapshot.subList(anchorIndexInA + 1, snapshot.size).toList()
     }
 }
