@@ -151,6 +151,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.first
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.launch
 import kotlinx.collections.immutable.toImmutableList
 import kotlin.math.abs
@@ -175,10 +179,6 @@ import com.gurio.gusic.ui.theme.RoundedSans
 import com.gurio.gusic.utils.formatSongCount
 import com.gurio.gusic.utils.shapes.RoundedStarShape
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
-
-private object LxMoodHolder {
-    var word: String? = null
-}
 
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -401,20 +401,6 @@ fun LxMusicScreen(
     val headerContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
 
     val brandTitle = stringResource(R.string.tab_online)
-    val moodWord = remember {
-        LxMoodHolder.word ?: run {
-            val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-            val arrayRes = when (hour) {
-                in 0..5 -> R.array.lx_mood_0_6
-                in 6..8 -> R.array.lx_mood_6_9
-                in 9..10 -> R.array.lx_mood_9_11
-                in 11..14 -> R.array.lx_mood_11_15
-                in 15..19 -> R.array.lx_mood_15_20
-                else -> R.array.lx_mood_20_24
-            }
-            context.resources.getStringArray(arrayRes).random().also { LxMoodHolder.word = it }
-        }
-    }
 
     Scaffold(
         containerColor = headerContainerColor,
@@ -428,7 +414,8 @@ fun LxMusicScreen(
                                 append(' ')
                             }
                             withStyle(SpanStyle(fontSize = 18.sp)) {
-                                append(moodWord)
+                                // 顶栏动态文本显示当前平台名（随左右滑/顶部 tab 切换）
+                                append(platformName(selectedSource))
                             }
                         },
                         fontFamily = RoundedSans,
@@ -493,6 +480,34 @@ fun LxMusicScreen(
                 .padding(top = innerPadding.calculateTopPadding())
                 .fillMaxSize(),
         ) {
+            val sourceBoardsCache by viewModel.sourceBoardsCache.collectAsStateWithLifecycle()
+            // 发现页左右滑 pager（与媒体库页一致的交互）：停稳后切音源；顶部平台 tab 点击滚动 pager。
+            // 用 settledPageKey（=音源 id）而非索引映射：平台重排/登录态隐藏导致列表变化时，
+            // 旧索引会短暂指向别的源而误触发 selectSource，按 key 读取则不受影响
+            val browsePagerState = rememberPagerState(
+                initialPage = orderedSearchTabs.indexOfFirst { it.first == selectedSource }.takeIf { it >= 0 } ?: 0,
+                pageCount = { orderedSearchTabs.size },
+            )
+            val browseTabsState = rememberUpdatedState(orderedSearchTabs)
+            // effect 只以 pagerState 为 key（不随 orderedSearchTabs 重启）：平台重排/登录态
+            // 隐藏导致列表变化时，重启会重放旧 settledPage 索引→映射到别的源而误切；
+            // tabs 通过 rememberUpdatedState 读最新值，重排后 pager 按 key 重定位页码，
+            // 翻页发射时映射结果即正确
+            LaunchedEffect(browsePagerState) {
+                snapshotFlow { browsePagerState.settledPage }.collect { page ->
+                    val src = browseTabsState.value.getOrNull(page)?.first ?: return@collect
+                    if (src != viewModel.selectedSource.value) viewModel.selectSource(src)
+                }
+            }
+            // 外部切源（偏好恢复/平台重排）时让 pager 跟随到对应页
+            LaunchedEffect(selectedSource, orderedSearchTabs) {
+                val idx = orderedSearchTabs.indexOfFirst { it.first == selectedSource }
+                if (idx >= 0 && browsePagerState.settledPage != idx &&
+                    !browsePagerState.isScrollInProgress
+                ) {
+                    browsePagerState.animateScrollToPage(idx)
+                }
+            }
             val sourceSelectedIndex = orderedSearchTabs.indexOfFirst { it.first == selectedSource }
             val sourceTabsListState = rememberLazyListState()
             LaunchedEffect(sourceSelectedIndex) {
@@ -514,7 +529,7 @@ fun LxMusicScreen(
                         selected = src == selectedSource,
                         index = index,
                         selectedIndex = sourceSelectedIndex,
-                        onClick = { viewModel.selectSource(src) },
+                        onClick = { scope.launch { browsePagerState.animateScrollToPage(index) } },
                     )
                 }
                 item(key = "__reorder__") {
@@ -580,8 +595,8 @@ fun LxMusicScreen(
                                     .padding(top = 10.dp, bottom = 6.dp),
                             )
                             Box(modifier = Modifier.fillMaxSize()) {
-                                LxSearchPage(browseState, searchState, viewModel, playerViewModel, playSearchSong,
-                                    playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
+                                LxSearchPage(searchState, viewModel, playerViewModel, playSearchSong,
+                                    bottomBarHeightDp,
                                     onSongMoreOptions = { lxInfoSong = it },
                                     isSelectionMode = isSelectionMode,
                                     selectedSongIds = selectedSongIds,
@@ -632,56 +647,83 @@ fun LxMusicScreen(
                                 multiSelectionState = multiSelectionState,
                                 onSelectionOptionsClick = { showMultiSelectionSheet = true })
                         } else {
-                            // 混合列表：网易登录时推荐入口在上、榜单卡在下；其余音源仅榜单卡
-                            val browseRefreshing = browseState.loadingBoardPreviews ||
-                                (recommendTabAvailable && mineState.loadingHome)
-                            PullToRefreshBox(
-                                isRefreshing = browseRefreshing,
-                                onRefresh = { viewModel.refreshBrowse() },
+                            // 浏览根：左右滑 pager 切换音源（与媒体库页一致）。
+                            // 当前页用 browseState（含预览/加载态），非当前页用每源榜单缓存渲染
+                            HorizontalPager(
+                                state = browsePagerState,
+                                key = { orderedSearchTabs.getOrNull(it)?.first ?: "page_$it" },
                                 modifier = Modifier.fillMaxSize(),
-                            ) {
-                                LazyColumn(
+                            ) { page ->
+                                val pageSource = orderedSearchTabs.getOrNull(page)?.first ?: selectedSource
+                                val isCurrentSource = pageSource == selectedSource
+                                val pageBoards = if (isCurrentSource) browseState.boards
+                                else sourceBoardsCache[pageSource].orEmpty()
+                                val pageRefreshing = isCurrentSource && (
+                                    browseState.loadingBoardPreviews ||
+                                        (pageSource == LxSources.NETEASE && mineState.loadingHome)
+                                    )
+                                PullToRefreshBox(
+                                    isRefreshing = pageRefreshing,
+                                    onRefresh = { if (isCurrentSource) viewModel.refreshBrowse() },
+                                    enabled = isCurrentSource,
                                     modifier = Modifier.fillMaxSize(),
-                                    contentPadding = PaddingValues(
-                                        start = 12.dp,
-                                        end = 12.dp,
-                                        top = 4.dp,
-                                        bottom = bottomBarHeightDp + MiniPlayerHeight + ListExtraBottomGap,
-                                    ),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
-                                    if (recommendTabAvailable) {
-                                        if (mineAvailable) {
-                                            mineRecommendSection(mineState, viewModel)
-                                        } else {
-                                            // 未登录：占位提示并提供登录入口（复用各平台现有登录弹窗）
-                                            item(key = "mine_not_logged_in") {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .heightIn(min = 220.dp),
-                                                    contentAlignment = Alignment.Center,
-                                                ) {
-                                                    LxMineNotLoggedInPlaceholder(
-                                                        platformLabel = platformName(selectedSource),
-                                                        onLogin = {
-                                                            when (selectedSource) {
-                                                                LxSources.TENCENT -> clearAllWebViewSession { showTxWebLoginDialog = true }
-                                                                LxSources.KUGOU -> clearAllWebViewSession { showKgLoginDialog = true }
-                                                                LxSources.KUWO -> clearAllWebViewSession { showKwLoginDialog = true }
-                                                                else -> clearNeteaseWebViewSession { showLoginDialog = true }
-                                                            }
-                                                        },
-                                                    )
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(
+                                            start = 12.dp,
+                                            end = 12.dp,
+                                            top = 4.dp,
+                                            bottom = bottomBarHeightDp + MiniPlayerHeight + ListExtraBottomGap,
+                                        ),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        // 推荐段/登录占位属于全局当前源数据，只在当前源页渲染；
+                                        // 网易推荐内容在上、榜单卡在下，其余音源仅榜单卡
+                                        if (pageSource == LxSources.NETEASE && isCurrentSource) {
+                                            if (mineAvailable) {
+                                                mineRecommendSection(mineState, viewModel)
+                                            } else {
+                                                // 未登录：占位提示并提供登录入口（复用各平台现有登录弹窗）
+                                                item(key = "mine_not_logged_in") {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .heightIn(min = 220.dp),
+                                                        contentAlignment = Alignment.Center,
+                                                    ) {
+                                                        LxMineNotLoggedInPlaceholder(
+                                                            platformLabel = platformName(selectedSource),
+                                                            onLogin = {
+                                                                when (selectedSource) {
+                                                                    LxSources.TENCENT -> clearAllWebViewSession { showTxWebLoginDialog = true }
+                                                                    LxSources.KUGOU -> clearAllWebViewSession { showKgLoginDialog = true }
+                                                                    LxSources.KUWO -> clearAllWebViewSession { showKwLoginDialog = true }
+                                                                    else -> clearNeteaseWebViewSession { showLoginDialog = true }
+                                                                }
+                                                            },
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
+                                        boardMenuItems(
+                                            boards = pageBoards,
+                                            previews = if (isCurrentSource) browseState.boardPreviews else emptyMap(),
+                                            loadingPreviews = isCurrentSource && browseState.loadingBoardPreviews,
+                                            source = pageSource,
+                                            onSelectBoard = { board ->
+                                                if (isCurrentSource) {
+                                                    viewModel.selectBoard(board)
+                                                } else {
+                                                    // 滑动中间态点击相邻页：仅切源——紧接着 selectBoard
+                                                    // 会取消切源刚启动的榜单加载，首次访问该源时会导致
+                                                    // 返回浏览根后空白；settle 后再点即进详情
+                                                    viewModel.selectSource(pageSource)
+                                                }
+                                            },
+                                        )
                                     }
-                                    boardMenuItems(
-                                        browseState = browseState,
-                                        source = selectedSource,
-                                        onSelectBoard = { viewModel.selectBoard(it) },
-                                    )
                                 }
                             }
                         }
@@ -2433,13 +2475,10 @@ private fun NeteaseUserPlaylistDialog(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun LxSearchPage(
-    browseState: LxMusicViewModel.BrowseState,
     searchState: LxMusicViewModel.SearchState,
     viewModel: LxMusicViewModel,
     playerViewModel: PlayerViewModel,
     playLxSong: (com.gurio.gusic.data.lxmusic.LxSong) -> Unit,
-    playAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
-    shuffleAllPlaylist: (List<com.gurio.gusic.data.lxmusic.LxSong>, String) -> Unit,
     bottomBarHeightDp: Dp,
     onScrollingChange: (Boolean) -> Unit = {},
     onSongMoreOptions: (com.gurio.gusic.data.lxmusic.LxSong) -> Unit = {},
@@ -2452,7 +2491,6 @@ private fun LxSearchPage(
     onSelectionOptionsClick: () -> Unit = {},
 ) {
     val listState = rememberLazyListState()
-    val searchResultsQueueName = stringResource(R.string.lx_text_search_results)
 
     val pullToRefreshState = rememberPullToRefreshState()
 
@@ -2720,34 +2758,6 @@ private fun LxSearchPage(
             modifier = Modifier.align(Alignment.BottomEnd)
                 .padding(end = 20.dp, bottom = bottomBarHeightDp + MiniPlayerHeight + 14.dp),
         )
-        if (searchState.type == LxMusicViewModel.SearchType.SONG && searchState.results.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 20.dp, bottom = bottomBarHeightDp + MiniPlayerHeight + 14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                FilledTonalIconButton(
-                    onClick = { shuffleAllPlaylist(searchState.results, searchResultsQueueName) },
-                    shape = CircleShape,
-                    colors = IconButtonDefaults.filledTonalIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                    ),
-                    modifier = Modifier.size(48.dp),
-                ) {
-                    Icon(Icons.Rounded.Shuffle, contentDescription = stringResource(R.string.lx_desc_shuffle), modifier = Modifier.size(22.dp))
-                }
-                FilledIconButton(
-                    onClick = { playAllPlaylist(searchState.results, searchResultsQueueName) },
-                    shape = CircleShape,
-                    modifier = Modifier.size(48.dp),
-                ) {
-                    Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(R.string.lx_desc_play_all), modifier = Modifier.size(26.dp))
-                }
-            }
-        }
         LxFloatingSelectionRow(
             visible = isSelectionMode,
             selectedCount = selectedSongIds.size,

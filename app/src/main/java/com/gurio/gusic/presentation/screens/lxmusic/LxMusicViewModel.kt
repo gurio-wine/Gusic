@@ -707,6 +707,10 @@ class LxMusicViewModel @Inject constructor(
 
     private val perSourceModule = mutableMapOf<String, String>()
 
+    /** 各音源榜单缓存：发现页左右滑 pager 的非当前页直接用缓存渲染，切回时先回填避免闪空 */
+    private val _sourceBoardsCache = MutableStateFlow<Map<String, List<LxBoard>>>(emptyMap())
+    val sourceBoardsCache: StateFlow<Map<String, List<LxBoard>>> = _sourceBoardsCache.asStateFlow()
+
     fun selectSource(source: String) {
         if (source == _selectedSource.value) return
         currentLoadJob?.cancel()
@@ -737,7 +741,8 @@ class LxMusicViewModel @Inject constructor(
         _browseState.value = st.copy(
             module = restoredModule,
             moduleSource = source,
-            boards = emptyList(),
+            // 有缓存先回填榜单，避免切源瞬间当前页闪空（后续 force 加载会覆盖）
+            boards = _sourceBoardsCache.value[source].orEmpty(),
             selectedBoard = null,
             boardSongs = emptyList(),
             loadingBoard = false,
@@ -945,7 +950,11 @@ class LxMusicViewModel @Inject constructor(
         val stale = st.moduleSource != source
         if (!force && !stale) {
             // “recommend”（网易混合列表）与“board”同样需要榜单数据，加载守卫口径一致
-            if ((module == "board" || module == "recommend") && st.boards.isNotEmpty()) return
+            if ((module == "board" || module == "recommend") && st.boards.isNotEmpty()) {
+                // 缓存回填路径：补一次预览加载（repository 层命中时无网络开销）
+                startBoardPreviews(st.boards, source)
+                return
+            }
             if (module == "playlist" && st.playlistTags.isNotEmpty()) {
                 if (!playlistListDirty || st.selectedPlaylist != null || st.userPlaylistUid != null) return
                 playlistListDirty = false
@@ -961,6 +970,7 @@ class LxMusicViewModel @Inject constructor(
                 if (module == "recommend") ensureMineHome()
                 val boards = repository.getBoards(source)
                 if (loadEpoch != epoch) return
+                _sourceBoardsCache.value = _sourceBoardsCache.value + (source to boards)
                 _browseState.value = _browseState.value.copy(
                     moduleSource = source,
                     boards = boards,

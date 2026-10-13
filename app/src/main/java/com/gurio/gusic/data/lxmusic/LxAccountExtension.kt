@@ -134,7 +134,7 @@ internal interface LxAccountExtension {
 
     suspend fun txFetchLikedAlbums(): List<LxAlbum>?
 
-    /** tx 关注的歌手（fcg_order_singer_getlist）；未登录/不可用返回 null。 */
+    /** tx 关注的歌手（musicu.fcg RelationList.GetFollowSingerList）；未登录/不可用返回 null。 */
     suspend fun txFetchFollowedArtists(): List<LxArtist>?
 
     suspend fun txFetchUserPlaylists(): List<LxPlaylist>?
@@ -346,7 +346,7 @@ internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExt
     override suspend fun kwFetchUserPlaylists(): List<LxPlaylist>? = kuwoApi.fetchUserPlaylists()
     override suspend fun kwFetchFollowedArtists(): List<LxArtist>? = unavailable.kwFetchFollowedArtists()
     override suspend fun kwFetchLikedAlbums(): List<LxAlbum>? = unavailable.kwFetchLikedAlbums()
-    // 酷我喜欢列表读走 web 端 favorite/musicList（与 userInfo 同族，web cookie 可用）；写操作仍不可用
+    // 酷我喜欢=pl.svc 歌单列表里的 MYFAVORITE 系统歌单（getlistbyuid+getlistinfo）；写操作仍不可用
     override suspend fun kwFetchLikedSongIds(): Set<String>? =
         kuwoApi.fetchLikedSongs()?.map { it.songmid }?.toSet()
     override suspend fun kwFetchLikedSongs(): List<LxSong>? = kuwoApi.fetchLikedSongs()
@@ -435,7 +435,7 @@ internal class LxBuiltinAccountExtension(host: LxMusicRepository) : LxAccountExt
     override suspend fun txQrPoll(type: LxTxQrType, session: String): LxTxQrPoll =
         unavailable.txQrPoll(type, session)
 
-    // kw 歌单详情（歌单广场与用户歌单共用）：web 端 playlist/playListInfo，匿名自造 Secret 对亦可用
+    // kw 歌单详情（歌单广场与用户歌单共用）：pl.svc getlistinfo，带登录态覆盖自建私有歌单
     override suspend fun kwFetchPlaylistSquareSongs(playlistId: String): List<LxSong>? =
         kuwoApi.fetchPlaylistSongs(playlistId)
     override suspend fun kwResolvePlayUrl(songmid: String): PlatformResult? =

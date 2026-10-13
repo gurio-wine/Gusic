@@ -41,7 +41,6 @@ internal class TencentAccountApi(
         private const val PROFILE_URL = "https://c.y.qq.com/rsc/fcgi-bin/fcg_get_profile_homepage.fcg"
         private const val CREATED_DISS_URL = "https://c.y.qq.com/rsc/fcgi-bin/fcg_user_created_diss"
         private const val ORDER_ASSET_URL = "https://c.y.qq.com/fav/fcgi-bin/fcg_get_profile_order_asset.fcg"
-        private const val ORDER_SINGER_URL = "https://c.y.qq.com/rsc/fcgi-bin/fcg_order_singer_getlist.fcg"
         private const val FAV_WRITE_MODULE = "music.musicasset.PlaylistFavWrite"
         private const val USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
@@ -74,6 +73,11 @@ internal class TencentAccountApi(
 
         internal fun normalizeUin(raw: String?): String =
             raw?.filter(Char::isDigit).orEmpty().dropWhile { it == '0' }
+
+        /** 加密 uin（musicu 关注列表 HostUin 参数用）：按 Cookie 多个候选名取值，缺失返回 null。 */
+        internal fun encryptedUin(cookies: Map<String, String>): String? =
+            listOf("euin", "encuin", "encryptUin", "encrypt_uin")
+                .firstNotNullOfOrNull { cookies[it]?.takeIf(String::isNotBlank) }
 
         internal fun musicKey(cookies: Map<String, String>): String = listOf(
             "qm_keyst", "qqmusic_key", "music_key", "p_skey", "skey",
@@ -736,71 +740,64 @@ internal class TencentAccountApi(
     }
 
     /**
-     * 关注的歌手（fcg_order_singer_getlist.fcg）：perpage=30 翻页直到 num；
-     * 字段做大小写多形态兼容（FSINGERNAME/name 等）。未登录/请求失败返回 null。
+     * 拉取收藏（关注）的歌手列表。老接口 fcg_order_singer_getlist.fcg 已收紧
+     * （实测稳定回 code:1000 not login，g_tk 正确也无济于事），现行协议走
+     * musicu.fcg 的 music.concern.RelationList/GetFollowSingerList（FuoEvolve、
+     * simple_sq_music_plus 同款）：HostUin=加密 uin、From 0-based 偏移、Size 分页，
+     * comm 用红心写同款 hybridComm（ct=11 + authst=musickey，免 sign）。
+     * 失败（未登录/网络/服务端拒绝）返回 null；成功无数据返回空列表。
      */
     suspend fun fetchFollowedArtists(): List<LxArtist>? = withContext(Dispatchers.IO) {
         val (cookie, cookies) = loginCookie() ?: return@withContext null
-        val uin = cookieUin(cookies)
+        val euin = encryptedUin(cookies)
         val result = mutableListOf<LxArtist>()
-        var page = 1
-        val perPage = 30
+        val size = 50
         val maxPages = 20
+        var from = 0
         var total = -1
-        while (page <= maxPages) {
-            val url = ORDER_SINGER_URL.toHttpUrl().newBuilder().apply {
-                addQueryParameter("utf8", "1")
-                addQueryParameter("page", page.toString())
-                addQueryParameter("perpage", perPage.toString())
-                addQueryParameter("uin", uin)
-                // g_tk 按登录态实算（匿名硬编码 5381 在带 Cookie 请求时会被服务端拒绝）
-                addQueryParameter("g_tk", legacyGtk(cookies).toString())
-                addQueryParameter("format", "json")
-            }.build()
-            val request = Request.Builder().url(url)
-                .header("User-Agent", USER_AGENT)
-                .header("Referer", "https://y.qq.com/portal/profile.html")
-                .header("Cookie", cookie)
-                .get()
-                .build()
-            val root = runCatching {
-                okHttpClient.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        Timber.w("$TAG: followed artists http %s", response.code)
-                        return@use null
-                    }
-                    runCatching {
-                        JsonParser.parseString(response.body?.string().orEmpty()).asJsonObject
-                    }.getOrNull()
-                }
-            }.getOrElse { e ->
-                Timber.w(e, "$TAG: followed artists request failed")
-                null
-            } ?: return@withContext if (result.isEmpty()) null else result
-
-            // total 用 -1 表示未知（响应缺 num/total 字段时不再误判为 0 导致首页截断），
-            // 未知时依赖“返回页未满 perPage”终止
-            if (total < 0) total = root.intField("num") ?: root.intField("total") ?: -1
-            val list = root.get("list") as? JsonArray ?: JsonArray()
+        while (from / size < maxPages) {
+            val param = JsonObject().apply {
+                if (!euin.isNullOrEmpty()) addProperty("HostUin", euin)
+                addProperty("From", from)
+                addProperty("Size", size)
+            }
+            val block = musicuCall(
+                cookie, "req_0",
+                "music.concern.RelationList", "GetFollowSingerList",
+                param = param, comm = hybridComm(cookie), withSign = false,
+            ) ?: return@withContext if (result.isEmpty()) null else result
+            val code = block.intField("code") ?: -1
+            if (code != 0) {
+                // 1000=未登录/会话无效；打出 code 才能区分服务端拒绝与网络失败
+                Timber.w("$TAG: follow singers musicu code=%s hasEuin=%s", code, euin != null)
+                return@withContext if (result.isEmpty()) null else result
+            }
+            val data = block.get("data") as? JsonObject
+                ?: return@withContext if (result.isEmpty()) null else result
+            if (total < 0) total = data.intField("Total") ?: -1
+            val list = (data.get("List") ?: data.get("list")) as? JsonArray ?: JsonArray()
             if (list.size() == 0) break
             list.mapNotNull { raw ->
                 val obj = raw as? JsonObject ?: return@mapNotNull null
-                // 响应字段存在 FSINGERMID/FSINGERNAME 大写下划线风格，同时兼容 mid/name
-                val mid = obj.str("singermid") ?: obj.str("FSINGERMID") ?: obj.str("mid")
-                val name = obj.str("FSINGERNAME") ?: obj.str("singername")
-                    ?: obj.str("name") ?: ""
+                // 现行接口字段为大写驼峰（MID/Name/AvatarUrl），兼容老字段名
+                val mid = obj.str("MID") ?: obj.str("mid") ?: obj.str("SingerMid")
+                val name = obj.str("Name") ?: obj.str("name") ?: obj.str("SingerName") ?: ""
                 val id = mid?.takeIf(String::isNotBlank)
-                    ?: obj.str("singerid")?.takeIf { it.isNotBlank() && it != "0" }
+                    ?: obj.str("SingerId")?.takeIf { it.isNotBlank() && it != "0" }
                     ?: return@mapNotNull null
                 LxArtist(
                     id = id,
                     name = name,
-                    pic = (obj.str("pic") ?: obj.str("avatar"))?.takeIf(String::isNotBlank),
+                    pic = (obj.str("AvatarUrl") ?: obj.str("avatarUrl")
+                        ?: obj.str("picUrl") ?: obj.str("pic"))?.takeIf(String::isNotBlank),
                 )
             }.let { result += it }
             if (total >= 0 && result.size >= total) break
-            if (list.size() < perPage) break
-            page++
+            if (list.size() < size) break
+            val hasMore = data.get("HasMore")?.takeIf { it.isJsonPrimitive }
+                ?.let { runCatching { it.asBoolean }.getOrNull() } ?: false
+            if (!hasMore) break
+            from += size
         }
         result.distinctBy { it.id }
     }

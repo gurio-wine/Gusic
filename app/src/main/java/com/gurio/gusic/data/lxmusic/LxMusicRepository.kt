@@ -205,7 +205,7 @@ class LxMusicRepository @Inject constructor(
     suspend fun fetchTxLikedAlbums(): List<LxAlbum> =
         accountExtension.txFetchLikedAlbums() ?: emptyList()
 
-    /** tx 关注的歌手（fcg_order_singer_getlist）；未登录/请求失败为 null，UI 走重试态。 */
+    /** tx 关注的歌手（musicu.fcg RelationList.GetFollowSingerList）；未登录/请求失败为 null，UI 走重试态。 */
     suspend fun fetchTxFollowedArtists(): List<LxArtist>? =
         accountExtension.txFetchFollowedArtists()
 
@@ -2157,11 +2157,13 @@ class LxMusicRepository @Inject constructor(
     suspend fun fetchKgLikedSongs(): List<LxSong> =
         accountExtension.kgFetchLikedSongs() ?: emptyList()
 
-    suspend fun fetchKwLikedSongs(): List<LxSong> =
-        accountExtension.kwFetchLikedSongs() ?: emptyList()
+    // null 语义保留（未登录/失败）：fetchPlatformLikedLxSongs 与 fetchUserPlaylistSongsByRef
+    // 依赖 null 区分“加载失败”与“成功但为空”，此前 ?: emptyList() 会把失败吞成空列表
+    suspend fun fetchKwLikedSongs(): List<LxSong>? =
+        accountExtension.kwFetchLikedSongs()
 
-    suspend fun fetchKwUserPlaylistSongs(playlistId: String): List<LxSong> =
-        accountExtension.kwFetchUserPlaylistSongs(playlistId) ?: emptyList()
+    suspend fun fetchKwUserPlaylistSongs(playlistId: String): List<LxSong>? =
+        accountExtension.kwFetchUserPlaylistSongs(playlistId)
 
     fun setTxLikedSongIds(ids: Set<String>) { _txLikedSongIds.value = ids }
 

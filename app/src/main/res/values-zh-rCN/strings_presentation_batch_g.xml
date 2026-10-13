@@ -628,6 +628,18 @@
         <item>移除排行榜上方的用户信息条与退出按钮</item>
         <item>“艺术家”统一改称“歌手”</item>
     </string-array>
+    <!-- Gusic 26.10.13.002：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101302_whats_new">
+        <item>发现页支持左右滑动切换音源平台，顶部动态文本显示当前平台名</item>
+        <item>修复酷我“我喜欢”为空、用户歌单详情加载失败</item>
+        <item>修复 QQ 音乐收藏歌手加载失败</item>
+    </string-array>
+    <!-- Gusic 26.10.13.002：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101302_changes">
+        <item>移除搜索歌曲结果页左下角的随机播放与一键播放按钮</item>
+        <item>切换平台时榜单即时回填（新增每平台榜单缓存），减少闪空</item>
+        <item>酷我在线请求失败不再被静默显示为空列表，错误状态可正确提示</item>
+    </string-array>
     <string-array name="presentation_batch_g_changelog_v26101301_whats_new">
         <item>发现页取消分类标签：搜索框下直接展示榜单内容，网易云推荐内容排在上方</item>
         <item>酷我用户歌单上线：自建与收藏的歌单可以加载了，歌单详情一并可用</item>

@@ -255,7 +255,7 @@ class LibraryCollectionsStateHolder @Inject constructor(
     }
 
     /**
-     * 平台关注歌手：wy 走 /weapi/artist/sublist；tx 走 fcg_order_singer_getlist；
+     * 平台关注歌手：wy 走 /weapi/artist/sublist；tx 走 musicu.fcg 关注列表；
      * kg 走 v4/follow_list；kw 协议不可达返回 null。null 表示失败（照 load_failed 约定）。
      */
     private suspend fun fetchPlatformFollowedArtists(source: String): List<LxArtist>? = when (source) {

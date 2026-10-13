@@ -628,6 +628,18 @@
         <item>移除排行榜上方的使用者資訊條與登出按鈕</item>
         <item>「藝術家」統一改稱「歌手」</item>
     </string-array>
+    <!-- Gusic 26.10.13.002：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101302_whats_new">
+        <item>發現頁支援左右滑動切換音源平台，頂部動態文字顯示當前平台名</item>
+        <item>修復酷我「我喜歡」為空、用戶歌單詳情載入失敗</item>
+        <item>修復 QQ 音樂收藏歌手載入失敗</item>
+    </string-array>
+    <!-- Gusic 26.10.13.002：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101302_changes">
+        <item>移除搜尋歌曲結果頁左下角的隨機播放與一鍵播放按鈕</item>
+        <item>切換平台時榜單即時回填（新增每平台榜單快取），減少閃空</item>
+        <item>酷我線上請求失敗不再被靜默顯示為空清單，錯誤狀態可正確提示</item>
+    </string-array>
     <string-array name="presentation_batch_g_changelog_v26101301_whats_new">
         <item>發現頁取消分類標籤：搜尋框下直接展示榜單內容，網易雲推薦內容排在上方</item>
         <item>酷我使用者歌單上線：自建與收藏的歌單可以載入了，歌單詳情一併可用</item>

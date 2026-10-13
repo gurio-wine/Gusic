@@ -628,6 +628,18 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>The profile strip above Top charts is gone</item>
         <item>Chinese labels now say 歌手 where they used to say 艺术家</item>
     </string-array>
+    <!-- Gusic 26.10.13.002：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101302_whats_new">
+        <item>Discover now swipes left and right to switch platforms, and the header text shows the current platform name</item>
+        <item>Fixed Kuwo liked songs staying empty, and user playlist tracks failing to load</item>
+        <item>Fixed QQ Music followed artists failing to load</item>
+    </string-array>
+    <!-- Gusic 26.10.13.002：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101302_changes">
+        <item>Removed the shuffle and play-all floating buttons from the song search results page</item>
+        <item>Charts backfill instantly from a per-platform cache when switching, cutting blank flashes</item>
+        <item>Kuwo request failures are no longer silently shown as empty lists; errors now surface correctly</item>
+    </string-array>
     <string-array name="presentation_batch_g_changelog_v26101301_whats_new">
         <item>Discover drops the category tabs: chart cards sit right under the search bar, and NetEase recommendations stack above them</item>
         <item>Kuwo user playlists arrive — created and collected lists load with their details</item>

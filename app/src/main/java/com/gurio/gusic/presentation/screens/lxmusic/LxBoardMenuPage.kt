@@ -35,13 +35,16 @@ import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 /**
  * 排行榜菜单内容块：榜单卡按每行两张平铺进浏览态混合列表
  * （发现页已无“推荐/排行榜”分类页签，搜索框下直接展示，网易推荐内容在上、榜单卡在下）。
+ * boards/previews 由调用方传入：发现页 pager 当前页用 browseState，非当前页用每源缓存。
  */
 internal fun LazyListScope.boardMenuItems(
-    browseState: LxMusicViewModel.BrowseState,
+    boards: List<LxBoard>,
+    previews: Map<String, List<LxSong>>,
+    loadingPreviews: Boolean,
     source: String,
     onSelectBoard: (LxBoard) -> Unit,
 ) {
-    browseState.boards.chunked(2).forEachIndexed { rowIndex, rowBoards ->
+    boards.chunked(2).forEachIndexed { rowIndex, rowBoards ->
         item(key = "board_row_$rowIndex") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -51,8 +54,8 @@ internal fun LazyListScope.boardMenuItems(
                     LxBoardCard(
                         board = board,
                         source = source,
-                        preview = browseState.boardPreviews[board.id],
-                        isLoading = browseState.loadingBoardPreviews,
+                        preview = previews[board.id],
+                        isLoading = loadingPreviews,
                         onSelectBoard = onSelectBoard,
                         modifier = Modifier.weight(1f),
                     )
