@@ -372,6 +372,8 @@ class LxMusicViewModel @Inject constructor(
             if (_selectedSource.value == LxSources.NETEASE && neteaseCookieStore.hasCookie()) {
                 _browseState.value = _browseState.value.copy(module = "recommend")
                 ensureMineHome()
+                // 发现页混合列表：推荐之外还要榜单数据
+                startModuleLoad("recommend", _selectedSource.value, force = false)
             } else {
                 startModuleLoad("board", _selectedSource.value, force = false)
             }
@@ -726,7 +728,8 @@ class LxMusicViewModel @Inject constructor(
             "recommend" -> if (source == LxSources.NETEASE) "recommend" else "board"
             // 兼容历史记忆值 "mine"（原“我的”模块已下线）：网易映射到推荐，其他回退排行榜
             "mine" -> if (source == LxSources.NETEASE) "recommend" else "board"
-            null -> "board"
+            // 网易浏览根是混合列表（module=recommend），首次切入选型与其他源的排行榜不同
+            null -> if (source == LxSources.NETEASE) "recommend" else "board"
             // "playlist" 仅作为歌单详情的内部模块值，不作为恢复目标；
             // 兼容历史记忆值（如 "search"/"playlist"），一律回退浏览根模块
             else -> "board"
@@ -789,7 +792,11 @@ class LxMusicViewModel @Inject constructor(
 
         when (restoredModule) {
             "board", "playlist" -> startModuleLoad(restoredModule, source, force = true)
-            "recommend" -> ensureMineHome()
+            // 恢复“推荐”（网易混合列表）：推荐与榜单数据都要加载（boards 已在则内部早退）
+            "recommend" -> {
+                ensureMineHome()
+                startModuleLoad("recommend", source, force = false)
+            }
         }
     }
 
@@ -937,7 +944,8 @@ class LxMusicViewModel @Inject constructor(
         val st = _browseState.value
         val stale = st.moduleSource != source
         if (!force && !stale) {
-            if (module == "board" && st.boards.isNotEmpty()) return
+            // “recommend”（网易混合列表）与“board”同样需要榜单数据，加载守卫口径一致
+            if ((module == "board" || module == "recommend") && st.boards.isNotEmpty()) return
             if (module == "playlist" && st.playlistTags.isNotEmpty()) {
                 if (!playlistListDirty || st.selectedPlaylist != null || st.userPlaylistUid != null) return
                 playlistListDirty = false
@@ -947,7 +955,10 @@ class LxMusicViewModel @Inject constructor(
             }
         }
         when (module) {
-            "board" -> {
+            // 发现页已无分类页签：recommend（网易）与 board 共用混合列表，
+            // 两者都要榜单；recommend 额外确保网易推荐首页数据已加载
+            "board", "recommend" -> {
+                if (module == "recommend") ensureMineHome()
                 val boards = repository.getBoards(source)
                 if (loadEpoch != epoch) return
                 _browseState.value = _browseState.value.copy(
@@ -1035,7 +1046,10 @@ class LxMusicViewModel @Inject constructor(
                 boardPreviewCache["${source}:${board.id}"]?.let { board.id to it }
             }.toMap()
             val cur = _browseState.value
-            if (_selectedSource.value == source && cur.module == "board") {
+            // recommend（网易混合列表）与 board 共用榜单预览，两种模块都允许写快照
+            if (_selectedSource.value == source &&
+                (cur.module == "board" || cur.module == "recommend")
+            ) {
                 _browseState.value = cur.copy(boardPreviews = previews, loadingBoardPreviews = false)
             }
             return
@@ -1079,7 +1093,10 @@ class LxMusicViewModel @Inject constructor(
 
     private fun publishBoardPreview(boardId: String, songs: List<LxSong>, source: String) {
         val cur = _browseState.value
-        if (_selectedSource.value != source || cur.module != "board") return
+        // recommend（网易混合列表）与 board 共用榜单预览，两种模块都允许发布
+        if (_selectedSource.value != source ||
+            (cur.module != "board" && cur.module != "recommend")
+        ) return
         _browseState.value = cur.copy(boardPreviews = cur.boardPreviews + (boardId to songs))
     }
 
@@ -1139,12 +1156,23 @@ class LxMusicViewModel @Inject constructor(
 
     fun back(): Boolean {
         val st = _browseState.value
-        // 排行榜详情返回菜单页，网易音源再返回才回到“推荐”
-        if (st.module == "board" && st.selectedBoard != null) {
+        // 排行榜详情返回列表（不依赖 module 字符串：网易混合列表下打开的详情 module 可能是 recommend）
+        if (st.selectedBoard != null) {
             backToBoardMenu()
             return true
         }
-        // “推荐”模块（网易）：返回先退子页，子页退完交给外层处理
+        // 网易推荐子页（全屏 LxRecommendPage）：返回先退子页，子页退完交给外层处理；
+        // 判定看 mineState.page 而非 module——module 残留值（board）不代表 UI 状态
+        if (st.selectedPlaylist == null &&
+            _selectedSource.value == LxSources.NETEASE &&
+            _mineState.value.page !is MinePage.Home
+        ) {
+            if (mineBackStack.size > 1) {
+                backMinePage()
+                return true
+            }
+            return false
+        }
         if (st.module == "recommend") {
             if (mineBackStack.size > 1) {
                 backMinePage()
@@ -1420,6 +1448,7 @@ class LxMusicViewModel @Inject constructor(
                     }
                     _browseState.value = _browseState.value.copy(module = "recommend", error = null)
                     loadMineHome(force = true)
+                    startModuleLoad("recommend", LxSources.NETEASE, force = false)
                     onResult(true, null)
                 }
                 is NeteaseOfficialApi.ProfileResult.CookieInvalid -> {
@@ -2889,7 +2918,18 @@ class LxMusicViewModel @Inject constructor(
         currentLoadJob?.cancel()
         val epoch = ++loadEpoch
         when {
-            st.module == "recommend" -> refreshMineCurrent()
+            // 网易推荐子页（全屏 LxRecommendPage）下拉：仅刷新当前推荐内容。
+            // 判定看 mineState.page 而非 module——module 残留值不代表 UI 状态
+            source == LxSources.NETEASE && st.module != "search" &&
+                st.selectedPlaylist == null && st.selectedBoard == null &&
+                _mineState.value.page !is MinePage.Home -> refreshMineCurrent()
+            // 网易浏览根（混合列表）：推荐与榜单一起刷新
+            source == LxSources.NETEASE && st.module != "search" &&
+                st.selectedPlaylist == null && st.selectedBoard == null -> {
+                refreshMineCurrent()
+                clearBoardPreviewCache(source)
+                startModuleLoad("recommend", source, force = true)
+            }
             st.selectedPlaylist != null ->
                 currentLoadJob = viewModelScope.launch {
                     loadPlaylistSongsInternal(st.selectedPlaylist, source, epoch)

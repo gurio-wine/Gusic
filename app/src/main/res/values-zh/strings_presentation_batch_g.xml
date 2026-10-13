@@ -628,4 +628,16 @@
         <item>移除排行榜上方的使用者資訊條與登出按鈕</item>
         <item>「藝術家」統一改稱「歌手」</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101301_whats_new">
+        <item>發現頁取消分類標籤：搜尋框下直接展示榜單內容，網易雲推薦內容排在上方</item>
+        <item>酷我使用者歌單上線：自建與收藏的歌單可以載入了，歌單詳情一併可用</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101301_changes">
+        <item>修復酷我「我喜歡」不顯示數量、點開為空：重複的同名 Cookie 導致閘道校驗失敗</item>
+        <item>修復酷狗關注的歌手不顯示（回應欄位解析修正）</item>
+        <item>酷狗歌單下拉重新整理生效，空清單也能下拉重新整理</item>
+        <item>修復 QQ 音樂歌手、專輯搜尋與收藏歌手、收藏專輯載入失敗</item>
+        <item>播放頁頂部的平台標籤與喜歡按鈕移到右側</item>
+        <item>通知欄的喜歡按鈕現在綁定軟體自己的本機喜歡</item>
+    </string-array>
 </resources>

@@ -2121,12 +2121,17 @@ class LxMusicRepository @Inject constructor(
         accountExtension.clearReadCaches()
     }
 
-    suspend fun fetchKgUserPlaylists(): List<LxPlaylist> =
-        accountExtension.kgFetchUserPlaylists() ?: emptyList()
+    /** force=true 先清酷狗云歌单读缓存（含云歌单列表内存缓存），用于进入平台/下拉刷新。 */
+    suspend fun fetchKgUserPlaylists(force: Boolean = false): List<LxPlaylist> {
+        if (force) accountExtension.clearReadCaches()
+        return accountExtension.kgFetchUserPlaylists() ?: emptyList()
+    }
 
-    /** 酷狗收藏的专辑（云歌单列表中区分出的专辑条目）。 */
-    suspend fun fetchKgCollectedAlbums(): List<LxPlaylist> =
-        accountExtension.kgFetchCollectedAlbums() ?: emptyList()
+    /** 酷狗收藏的专辑（云歌单列表中区分出的专辑条目）。force 语义同上。 */
+    suspend fun fetchKgCollectedAlbums(force: Boolean = false): List<LxPlaylist> {
+        if (force) accountExtension.clearReadCaches()
+        return accountExtension.kgFetchCollectedAlbums() ?: emptyList()
+    }
 
     suspend fun fetchKgCloudPlaylistSongs(listid: String): List<LxSong> =
         accountExtension.kgFetchCloudPlaylistSongs(listid) ?: emptyList()
@@ -2749,37 +2754,43 @@ class LxMusicRepository @Inject constructor(
         }.getOrDefault(0L)
     }
 
-    /** musicu 专辑条目（new-JSON：mid/name/singer[]/timePublic）→ LxAlbum。 */
+    /**
+     * musicu 专辑条目 → LxAlbum。DoSearchForQQMusicDesktop 的专辑条目为 App 风格
+     * 大写字段（albumMID/albumName/albumPic/publicTime/singer_list），保留小写兜底。
+     */
     private fun txAlbumFromMusicu(o: com.google.gson.JsonObject): LxAlbum? {
-        val mid = jsonStr(o, "mid") ?: return null
-        val singers = o.getAsJsonArray("singer")
+        val mid = jsonStr(o, "albumMID") ?: jsonStr(o, "mid") ?: return null
+        val singers = (o.getAsJsonArray("singer_list") ?: o.getAsJsonArray("singer"))
             ?.mapNotNull { runCatching { it.asJsonObject }.getOrNull() }.orEmpty()
         val artistName = singers.firstNotNullOfOrNull { jsonStr(it, "name")?.takeIf(String::isNotBlank) }
-        val pic = jsonStr(o, "pic")?.takeIf { it.isNotBlank() }
+        val pic = (jsonStr(o, "albumPic") ?: jsonStr(o, "pic"))?.takeIf { it.isNotBlank() }
             ?: "https://y.gtimg.cn/music/photo_new/T002R300x300M000$mid.jpg"
         return LxAlbum(
             id = mid,
-            name = jsonStr(o, "name").orEmpty(),
+            name = (jsonStr(o, "albumName") ?: jsonStr(o, "name")).orEmpty(),
             pic = if (pic.startsWith("http://")) pic.replace("http://", "https://") else pic,
             artistName = artistName,
-            publishTime = txTimePublicToLong(jsonStr(o, "timePublic")),
+            publishTime = txTimePublicToLong(jsonStr(o, "publicTime") ?: jsonStr(o, "timePublic")),
         )
     }
 
-    // 歌手/专辑搜索同样迁移到 musicu.fcg 桌面搜索（client_search_cp 已下线，实测 500 空响应）
+    // 歌手/专辑搜索同样迁移到 musicu.fcg 桌面搜索（client_search_cp 已下线，实测 500 空响应）。
+    // 注意 search_type 用 App 枚举：0=歌曲/1=歌手/2=专辑（老 client_search_cp 的 8/9 在此
+    // 分别是“用户”与“无效值”，实测 9 的 query 会被服务端直接丢弃）
     suspend fun searchTxArtists(keyword: String, page: Int = 1): Pair<List<LxArtist>, Int> =
         withContext(Dispatchers.IO) {
             runCatching {
-                val data = musicuSearch(9, keyword, page) ?: return@withContext emptyList<LxArtist>() to 0
+                val data = musicuSearch(1, keyword, page) ?: return@withContext emptyList<LxArtist>() to 0
                 val list = data.getAsJsonObject("body")?.getAsJsonObject("singer")
                     ?.getAsJsonArray("list")?.mapNotNull { el ->
                         runCatching {
                             val o = el.asJsonObject
-                            val id = jsonStr(o, "mid") ?: return@runCatching null
+                            val id = jsonStr(o, "singerMID") ?: jsonStr(o, "mid")
+                                ?: return@runCatching null
                             LxArtist(
                                 id = id,
-                                name = jsonStr(o, "name").orEmpty(),
-                                pic = jsonStr(o, "pic")?.takeIf { it.isNotBlank() }
+                                name = (jsonStr(o, "singerName") ?: jsonStr(o, "name")).orEmpty(),
+                                pic = (jsonStr(o, "singerPic") ?: jsonStr(o, "pic"))?.takeIf { it.isNotBlank() }
                                     ?.let { if (it.startsWith("http://")) it.replace("http://", "https://") else it },
                             )
                         }.getOrNull()
@@ -2794,7 +2805,7 @@ class LxMusicRepository @Inject constructor(
     suspend fun searchTxAlbums(keyword: String, page: Int = 1): Pair<List<LxAlbum>, Int> =
         withContext(Dispatchers.IO) {
             runCatching {
-                val data = musicuSearch(8, keyword, page) ?: return@withContext emptyList<LxAlbum>() to 0
+                val data = musicuSearch(2, keyword, page) ?: return@withContext emptyList<LxAlbum>() to 0
                 val list = data.getAsJsonObject("body")?.getAsJsonObject("album")
                     ?.getAsJsonArray("list")
                     ?.mapNotNull { el -> runCatching { txAlbumFromMusicu(el.asJsonObject) }.getOrNull() }
@@ -2852,12 +2863,12 @@ class LxMusicRepository @Inject constructor(
     suspend fun fetchTxArtistAlbums(artistId: String, artistName: String): List<LxAlbum> =
         withContext(Dispatchers.IO) {
             runCatching {
-                val data = musicuSearch(8, artistName, 1) ?: return@withContext emptyList()
+                val data = musicuSearch(2, artistName, 1) ?: return@withContext emptyList()
                 data.getAsJsonObject("body")?.getAsJsonObject("album")?.getAsJsonArray("list")
                     ?.mapNotNull { el ->
                         runCatching {
                             val o = el.asJsonObject
-                            val singers = o.getAsJsonArray("singer")
+                            val singers = (o.getAsJsonArray("singer_list") ?: o.getAsJsonArray("singer"))
                                 ?.mapNotNull { runCatching { it.asJsonObject }.getOrNull() }.orEmpty()
                             val mids = singers.mapNotNull { jsonStr(it, "mid")?.takeIf(String::isNotBlank) }
                             // 优先 singer mid 匹配；响应缺 mid 时按歌手名兜底

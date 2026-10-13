@@ -15,6 +15,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -478,9 +480,11 @@ private fun ListScaffold(
                 }
             ) {
                 if (isEmpty) {
+                    // verticalScroll 建立嵌套滚动链，否则空态没有滚动子组件时下拉刷新手势收不到
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
                             .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -683,9 +687,11 @@ private fun LibraryCollectionDetailSongsContent(
                         }
                     ) {
                         if (songs.isEmpty()) {
+                            // 同上：空态需要可滚动容器才能把下拉手势传给 PullToRefreshBox
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    .verticalScroll(rememberScrollState())
                                     .padding(16.dp),
                                 contentAlignment = Alignment.Center
                             ) {

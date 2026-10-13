@@ -844,7 +844,27 @@ internal fun FullPlayerContent(
                     title = {
                         if (!isOutputConnecting) {
                             AnimatedVisibility(visible = (!isExternalOutputActive)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                // 平台标签与喜欢按钮移至右侧 actions；标题只在本地歌时显示
+                                if (currentSong?.lxMusicSource == null) {
+                                    Text(
+                                        modifier = Modifier.padding(start = 18.dp),
+                                        text = stringResource(R.string.setcat_now_playing),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.labelLargeEmphasized,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    actions = {
+                        if (!isOutputConnecting) {
+                            AnimatedVisibility(visible = (!isExternalOutputActive)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(end = 10.dp),
+                                ) {
                                     val lxSource = currentSong?.lxMusicSource
                                     if (lxSource != null) {
                                         // 在线歌：顶栏显示带品牌色的平台文本标签（与歌曲行一致）
@@ -856,19 +876,9 @@ internal fun FullPlayerContent(
                                             color = LxSources.onBrandColor(lxSource),
                                             maxLines = 1,
                                             modifier = Modifier
-                                                .padding(start = 18.dp)
                                                 .clip(RoundedCornerShape(6.dp))
                                                 .background(LxSources.brandColor(lxSource))
                                                 .padding(horizontal = 8.dp, vertical = 3.dp),
-                                        )
-                                    } else {
-                                        Text(
-                                            modifier = Modifier.padding(start = 18.dp),
-                                            text = stringResource(R.string.setcat_now_playing),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            style = MaterialTheme.typography.labelLargeEmphasized,
-                                            fontWeight = FontWeight.SemiBold
                                         )
                                     }
 
@@ -892,6 +902,7 @@ internal fun FullPlayerContent(
                                             .platformLikeSnapshot.collectAsStateWithLifecycle()
                                         val likeBusyIds by playerViewModel
                                             .neteaseLikeBusyIds.collectAsStateWithLifecycle()
+                                        // likeSnapshot 仅用于订阅集合变化触发重组；状态从命令式缓存现取
                                         val (platformLiked, platformLikeEnabled) = likeSnapshot.let {
                                             playerViewModel.platformLikeStateOf(currentSong)
                                         }

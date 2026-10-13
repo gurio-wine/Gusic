@@ -1,7 +1,9 @@
 package com.gurio.gusic.data.lxmusic.kuwo
 
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.gurio.gusic.data.lxmusic.LxPlaylist
 import com.gurio.gusic.data.lxmusic.LxSong
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -112,6 +114,22 @@ internal class KuwoAccountApi(
         private fun JsonObject.strOf(name: String): String? =
             get(name)?.takeIf { it.isJsonPrimitive }?.let { runCatching { it.asString }.getOrNull() }
                 ?.takeIf(String::isNotBlank)
+
+        /**
+         * 重写 Cookie：剔除全部 [SECRET_COOKIE_NAME] 条目后只追加一条与 Secret 输入
+         * 一致的值。服务端网关按 Cookie 头首条同名 cookie 校验 Secret，多条同名不同值
+         * （WebView 采集拼接出的 host-only 轮换条目 + 登录写入的 domain 条目）会导致
+         * “首条 ≠ Secret 输入”而必然被拒。
+         */
+        internal fun rebuildCookieWithSecret(cookie: String, value: String): String = buildString {
+            cookie.split(';')
+                .filter { part -> part.trim().substringBefore('=').trim() != SECRET_COOKIE_NAME }
+                .forEach { part ->
+                    if (part.isNotBlank()) append("$part;")
+                }
+            if (isNotEmpty()) append(" ")
+            append("$SECRET_COOKIE_NAME=$value")
+        }
     }
 
     /**
@@ -126,9 +144,11 @@ internal class KuwoAccountApi(
 
     /**
      * 为 api/www 族请求补齐 Secret 鉴权：返回完整 Cookie 串与对应 Secret 头。
-     * cookie 里没有 [SECRET_COOKIE_NAME]（或值为空）时自造 32 位随机值并追加进 Cookie
-     * （服务端只校验两者可互解，接受自造对）；已有空值同名条目时先剔除再追加，
-     * 避免出现同名 Cookie 两条导致服务端取值歧义。
+     * cookie 里没有 [SECRET_COOKIE_NAME]（或值为空）时自造 32 位随机值。
+     * 无论是否已有同名条目都重写 Cookie：剔除全部同名条目后只追加一条与 Secret
+     * 输入一致的值——服务端网关按 Cookie 头首条同名 cookie 校验 Secret，WebView
+     * 采集拼接出的多条同名不同值（host-only 轮换条目 + 登录写入的 domain 条目）
+     * 会导致“首条 ≠ Secret 输入”而必然被拒（实测 "The request is illegal!"）。
      */
     private fun secretPair(cookie: String, cookies: Map<String, String>): Pair<String, String> {
         val existing = cookies[SECRET_COOKIE_NAME]?.takeIf(String::isNotBlank)
@@ -136,20 +156,7 @@ internal class KuwoAccountApi(
             val chars = ('A'..'Z') + ('a'..'z') + ('0'..'9')
             repeat(32) { append(chars.random()) }
         }
-        val fullCookie = if (existing != null) {
-            cookie
-        } else {
-            buildString {
-                cookie.split(';')
-                    .filter { part -> part.trim().substringBefore('=').trim() != SECRET_COOKIE_NAME }
-                    .forEach { part ->
-                        if (part.isNotBlank()) append("$part;")
-                    }
-                if (isNotEmpty()) append(" ")
-                append("$SECRET_COOKIE_NAME=$value")
-            }
-        }
-        return fullCookie to buildKuwoSecret(value)
+        return rebuildCookieWithSecret(cookie, value) to buildKuwoSecret(value)
     }
 
     private fun fetchUserInfoApi(cookie: String, cookies: Map<String, String>): Pair<String?, String?>? {
@@ -260,7 +267,133 @@ internal class KuwoAccountApi(
         songs.toList()
     }
 
-    /** favorite/musicList 条目 → LxSong；songid/rid 为必需字段。duration 该接口返回秒，与 LxSong.interval 约定一致（未真机验证）。 */
+    /**
+     * 拉取登录用户的自建/收藏歌单列表（酷我客户端歌单同步服务
+     * nplserver.kuwo.cn/pl.svc?op=getlistbyuid；web 端无此接口，实测该服务
+     * 无需 Secret、https 证书有效，附登录 Cookie 尽力覆盖私有歌单）。
+     * 单请求全量返回；跳过 type=="MYFAVORITE" 的“我喜欢”占位歌单
+     * （其歌曲由 favorite/musicList 单独承载）；未登录返回 null。
+     */
+    suspend fun fetchUserPlaylists(): List<LxPlaylist>? = withContext(Dispatchers.IO) {
+        val cookie = cookieStore.getCookie()?.takeIf(String::isNotBlank) ?: return@withContext null
+        val cookies = parseCookieMap(cookie)
+        val uid = cookies["userid"]?.takeIf(String::isNotBlank) ?: return@withContext null
+        val request = Request.Builder()
+            .url("https://nplserver.kuwo.cn/pl.svc".toHttpUrl().newBuilder()
+                .addQueryParameter("op", "getlistbyuid")
+                .addQueryParameter("bigid", "1")
+                .addQueryParameter("uid", uid)
+                .addQueryParameter("encode", "utf8")
+                .addQueryParameter("pn", "0")
+                .addQueryParameter("rn", "1000")
+                .addQueryParameter("loginUid", uid)
+                .addQueryParameter("loginSid", cookies["sid"].orEmpty())
+                .addQueryParameter("plat", "ar")
+                .addQueryParameter("prod", "kwplayer_ar")
+                .addQueryParameter("newver", "3")
+                .build())
+            .header("User-Agent", USER_AGENT)
+            .header("Cookie", cookie)
+            .header("Referer", "https://www.kuwo.cn/")
+            .get()
+            .build()
+        val root = runCatching {
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Timber.w("$TAG: pl.svc getlistbyuid http %s", response.code)
+                    return@use null
+                }
+                runCatching { JsonParser.parseString(response.body?.string().orEmpty()) }
+                    .getOrNull() as? JsonObject
+            }
+        }.getOrElse { e ->
+            Timber.w(e, "$TAG: pl.svc getlistbyuid request failed")
+            null
+        } ?: return@withContext null
+        if (root.strOf("result") != "ok") {
+            Timber.w("$TAG: pl.svc getlistbyuid result=%s", root.strOf("result"))
+            return@withContext null
+        }
+        // result=ok 即请求成功；plist 缺省（零歌单账号）按空列表处理，避免误报加载失败
+        val plist = root.get("plist") as? JsonArray ?: JsonArray()
+        plist.mapNotNull { raw ->
+            val obj = raw as? JsonObject ?: return@mapNotNull null
+            if (obj.strOf("type") == "MYFAVORITE") return@mapNotNull null
+            val id = obj.strOf("id") ?: return@mapNotNull null
+            LxPlaylist(
+                id = id,
+                name = obj.strOf("title") ?: "",
+                // pic 为 http 明文 CDN 链接，统一升级 https
+                pic = obj.strOf("pic")?.takeIf(String::isNotBlank)?.replaceFirst("http://", "https://"),
+                playCount = obj.longOf("playnum"),
+                trackCount = obj.intOf("musicnum"),
+                creator = null,
+            )
+        }
+    }
+
+    /**
+     * 拉取歌单内歌曲（web 端 playlist/playListInfo，与 favorite/musicList 同族：
+     * Secret+Cookie+Referer+桌面 UA；匿名自造 Secret 对也可过网关，歌单广场详情同样可用）。
+     * pn 1-based 分页直到 data.total（可播放总数，下架歌曲已被服务端剔除）；
+     * 失败返回 null，与“成功但为空”区分。
+     */
+    suspend fun fetchPlaylistSongs(playlistId: String): List<LxSong>? = withContext(Dispatchers.IO) {
+        val cookie = cookieStore.getCookie().orEmpty()
+        val cookies = parseCookieMap(cookie)
+        val (fullCookie, secret) = secretPair(cookie, cookies)
+        val songs = mutableListOf<LxSong>()
+        var total = -1
+        var pn = 1
+        while ((total < 0 || songs.size < total) && pn <= FAVORITE_MAX_PAGES) {
+            val request = Request.Builder()
+                .url("https://www.kuwo.cn/api/www/playlist/playListInfo"
+                    .toHttpUrl().newBuilder()
+                    .addQueryParameter("pid", playlistId)
+                    .addQueryParameter("pn", pn.toString())
+                    .addQueryParameter("rn", FAVORITE_PAGE_SIZE.toString())
+                    .addQueryParameter("httpsStatus", "1")
+                    .addQueryParameter("plat", "web_www")
+                    .addQueryParameter("reqId", java.util.UUID.randomUUID().toString())
+                    .build())
+                .header("User-Agent", USER_AGENT)
+                .header("Cookie", fullCookie)
+                .header("Secret", secret)
+                .header("csrf", cookies["kw_token"].orEmpty())
+                .header("Referer", "https://www.kuwo.cn/")
+                .get()
+                .build()
+            val root = runCatching {
+                okHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        Timber.w("$TAG: playListInfo http %s pn=%s pid=%s", response.code, pn, playlistId)
+                        return@use null
+                    }
+                    runCatching { JsonParser.parseString(response.body?.string().orEmpty()) }
+                        .getOrNull() as? JsonObject
+                }
+            }.getOrElse { e ->
+                Timber.w(e, "$TAG: playListInfo request failed pn=%s pid=%s", pn, playlistId)
+                null
+            } ?: return@withContext null
+            if (root.strOf("code") != "200") {
+                Timber.w("$TAG: playListInfo code=%s success=%s msg=%s pid=%s",
+                    root.strOf("code"), root.strOf("success"), root.strOf("message"), playlistId)
+                return@withContext null
+            }
+            val data = root.get("data") as? JsonObject ?: return@withContext null
+            if (total < 0) total = data.intOf("total") ?: 0
+            val arr = data.get("musicList") as? JsonArray ?: JsonArray()
+            val mapped = arr.mapNotNull { el -> kwLikedSongOf(el as? JsonObject) }
+            if (mapped.isEmpty()) break
+            songs += mapped
+            if (arr.size() < FAVORITE_PAGE_SIZE) break
+            pn++
+        }
+        songs.toList()
+    }
+
+    /** favorite/musicList 与 playListInfo 条目 → LxSong（两接口字段同构）；songid/rid 为必需字段。duration 返回秒，与 LxSong.interval 约定一致（未真机验证）。 */
     private fun kwLikedSongOf(o: JsonObject?): LxSong? {
         o ?: return null
         val rid = o.strOf("rid") ?: o.strOf("songid") ?: o.strOf("songId")

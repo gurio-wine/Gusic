@@ -47,4 +47,33 @@ class KuwoSecretTest {
         }
         assertEquals(value, decoded.toString())
     }
+
+    @Test
+    fun `rebuild cookie keeps single secret entry matching secret input`() {
+        // WebView 多 URL 采集会产生同名多条不同值（host-only 轮换 + 登录写入 domain 条目）
+        val messy = "Hm_Iuvt_cdb524f42f23cer9b268564v7y735ewrq2324=hostOnlyValue; " +
+            "userid=123456; Hm_Iuvt_cdb524f42f23cer9b268564v7y735ewrq2324=loginValue; " +
+            "kw_token=abc"
+        val value = "loginValue"
+        val rebuilt = KuwoAccountApi.rebuildCookieWithSecret(messy, value)
+        // 重写后同名条目只剩一条，且值与 Secret 输入一致（网关取首条恒等于 Secret 输入）
+        val entries = rebuilt.split(";").map { it.trim() }.filter { it.isNotEmpty() }
+        val secretEntries = entries.filter {
+            it.substringBefore('=').trim() == "Hm_Iuvt_cdb524f42f23cer9b268564v7y735ewrq2324"
+        }
+        assertEquals(1, secretEntries.size)
+        assertEquals("Hm_Iuvt_cdb524f42f23cer9b268564v7y735ewrq2324=$value", secretEntries.single())
+        // 其余条目原样保留
+        assertEquals(true, entries.contains("userid=123456"))
+        assertEquals(true, entries.contains("kw_token=abc"))
+    }
+
+    @Test
+    fun `rebuild cookie appends secret entry when absent`() {
+        val cookie = "userid=123456; kw_token=abc"
+        val value = "R2hKxX477spCzEpkjz5zXXDWD2p5FRC7"
+        val rebuilt = KuwoAccountApi.rebuildCookieWithSecret(cookie, value)
+        assertEquals(true, rebuilt.endsWith("Hm_Iuvt_cdb524f42f23cer9b268564v7y735ewrq2324=$value"))
+        assertEquals(true, rebuilt.contains("userid=123456"))
+    }
 }

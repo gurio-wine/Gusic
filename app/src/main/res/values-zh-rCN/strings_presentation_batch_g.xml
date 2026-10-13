@@ -628,4 +628,16 @@
         <item>移除排行榜上方的用户信息条与退出按钮</item>
         <item>“艺术家”统一改称“歌手”</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101301_whats_new">
+        <item>发现页取消分类标签：搜索框下直接展示榜单内容，网易云推荐内容排在上方</item>
+        <item>酷我用户歌单上线：自建与收藏的歌单可以加载了，歌单详情一并可用</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101301_changes">
+        <item>修复酷我“我喜欢”不显示数量、点开为空：重复的同名 Cookie 导致网关校验失败</item>
+        <item>修复酷狗关注的歌手不显示（响应字段解析修正）</item>
+        <item>酷狗歌单下拉刷新生效，空列表也能下拉刷新</item>
+        <item>修复 QQ 音乐歌手、专辑搜索与收藏歌手、收藏专辑加载失败</item>
+        <item>播放页顶部的平台标签与喜欢按钮移到右侧</item>
+        <item>通知栏的喜欢按钮现在绑定软件自己的本地喜欢</item>
+    </string-array>
 </resources>

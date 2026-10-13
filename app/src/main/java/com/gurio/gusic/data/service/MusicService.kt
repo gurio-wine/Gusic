@@ -228,8 +228,6 @@ class MusicService : MediaSessionService() {
     private var currentSongForLike: com.gurio.gusic.data.model.Song? = null
     private var currentSongForLikeJob: Job? = null
 
-    private val notificationLikeBusyIds = mutableSetOf<String>()
-
     private var mediaSession: MediaSession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var keepPlayingInBackground = true
@@ -861,17 +859,6 @@ class MusicService : MediaSessionService() {
         if (mediaSession?.player?.currentMediaItem?.mediaId == song.id) {
             mediaSession?.let { refreshMediaSessionUi(it) }
             requestWidgetFullUpdate(force = true)
-        }
-    }
-
-    private fun isOnlineSongLiked(song: com.gurio.gusic.data.model.Song): Boolean {
-        val trackId = song.lxMusicSongMid ?: return false
-        return when (song.lxMusicSource) {
-            "wy" -> neteaseLikedIds.contains(trackId)
-            "tx" -> txLikedIds.contains(trackId)
-            "kg" -> kgLikedIds.contains(trackId) || (song.lxMusicHash?.let { kgLikedIds.contains(it) } == true)
-            "kw" -> kwLikedIds.contains(trackId)
-            else -> false
         }
     }
 
@@ -2135,10 +2122,7 @@ class MusicService : MediaSessionService() {
 
     fun isSongFavorite(songId: String?): Boolean {
         if (songId == null) return false
-        val onlineSong = currentSongForLike
-        if (onlineSong != null && onlineSong.id == songId && onlineSong.lxMusicSource != null) {
-            return isOnlineSongLiked(onlineSong)
-        }
+        // 通知/widget 喜欢状态统一反映本软件自己的喜欢（Room is_favorite）
         return favoriteSongIds.contains(songId)
     }
 
@@ -2339,11 +2323,8 @@ class MusicService : MediaSessionService() {
         val songId = session.player.currentMediaItem?.mediaId
             ?: return Futures.immediateFuture(SessionResult(SessionError.ERROR_UNKNOWN))
 
-        val onlineSong = currentSongForLike
-        if (onlineSong != null && onlineSong.id == songId && onlineSong.lxMusicSource != null) {
-            return setOnlineSongFavoriteState(session, onlineSong, targetFavoriteState)
-        }
-
+        // 通知喜欢按钮统一绑定本软件自己的喜欢（Room is_favorite，与播放页喜欢按钮一致），
+        // 不再对在线歌分流到平台红心；平台喜欢只在播放页顶栏的平台心操作
         val isCurrentlyFavorite = favoriteSongIds.contains(songId)
         if (isCurrentlyFavorite == targetFavoriteState) {
             refreshMediaSessionUi(session)
@@ -2369,144 +2350,6 @@ class MusicService : MediaSessionService() {
         }
 
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-    }
-
-    /** 通知收藏在线歌：先改本地镜像立即变图标，网络失败再回退。 */
-    private fun applyOnlineLikedMirror(
-        source: String,
-        song: com.gurio.gusic.data.model.Song,
-        trackId: String,
-        liked: Boolean,
-    ) {
-        when (source) {
-            "wy" -> neteaseLikedIds = if (liked) neteaseLikedIds + trackId else neteaseLikedIds - trackId
-            "tx" -> txLikedIds = if (liked) txLikedIds + trackId else txLikedIds - trackId
-            "kg" -> {
-                val hash = song.lxMusicHash
-                kgLikedIds = if (liked) {
-                    kgLikedIds + trackId + listOfNotNull(hash)
-                } else {
-                    kgLikedIds - trackId - listOfNotNull(hash)
-                }
-            }
-            "kw" -> kwLikedIds = if (liked) kwLikedIds + trackId else kwLikedIds - trackId
-        }
-    }
-
-    private fun setOnlineSongFavoriteState(
-        session: MediaSession,
-        song: com.gurio.gusic.data.model.Song,
-        targetFavoriteState: Boolean,
-    ): ListenableFuture<SessionResult> {
-        val source = song.lxMusicSource ?: return Futures.immediateFuture(
-            SessionResult(SessionError.ERROR_UNKNOWN)
-        )
-        val trackId = song.lxMusicSongMid
-            ?: return Futures.immediateFuture(SessionResult(SessionError.ERROR_UNKNOWN))
-
-        if (!notificationLikeBusyIds.add(trackId)) {
-            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-        }
-
-        // 登录检查放在乐观更新之前：未登录直接提示，不动图标
-        val notLoggedInMessage = when (source) {
-            "wy" -> if (!neteaseCookieStore.hasCookie()) "登录网易云后可同步喜欢" else null
-            "tx" -> if (!tencentCookieStore.hasCookie()) "登录 QQ 音乐后可同步喜欢" else null
-            "kg" -> if (!kugouCookieStore.hasAppLogin()) "登录酷狗音乐后可同步喜欢" else null
-            "kw" -> if (!kuwoCookieStore.hasCookie()) "登录酷我音乐后可同步喜欢" else null
-            else -> null
-        }
-        if (notLoggedInMessage != null) {
-            notificationLikeBusyIds.remove(trackId)
-            showNotificationLikeToast(notLoggedInMessage)
-            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-        }
-
-        // 乐观更新：先切换本地镜像并强制刷新，通知红心立即变化；失败再回退
-        val previousLiked = isOnlineSongLiked(song)
-        applyOnlineLikedMirror(source, song, trackId, targetFavoriteState)
-        refreshMediaSessionUi(session, force = true)
-        requestWidgetFullUpdate(force = true)
-
-        serviceScope.launch {
-            try {
-                var txFailureCode: Int? = null
-                val ok = when (source) {
-                    "wy" -> lxMusicRepository.neteaseSetSongLike(trackId, targetFavoriteState)
-                    "tx" -> {
-                        val txSongId = song.lxMusicExtraFields["songId"]
-                        val (resolvedSongId, resolvedType) = if (txSongId != null) {
-                            txSongId to (song.lxMusicExtraFields["songType"]?.toIntOrNull() ?: 0)
-                        } else {
-                            // 榜单、专辑等入口缺数字 songId，先按 songmid 反查
-                            val resolved = lxMusicRepository.txResolveSongLikeInfo(song)
-                            if (resolved == null) {
-                                applyOnlineLikedMirror(source, song, trackId, previousLiked)
-                                refreshMediaSessionUi(session, force = true)
-                                showNotificationLikeToast("缺少歌曲信息，无法收藏")
-                                return@launch
-                            } else {
-                                resolved.first.toString() to resolved.second
-                            }
-                        }
-                        lxMusicRepository.txSetSongLike(resolvedSongId, resolvedType, targetFavoriteState).also { result ->
-                            if (!result.success) txFailureCode = result.code
-                        }.success
-                    }
-                    "kg" -> lxMusicRepository.kgSetSongLike(
-                        songmid = trackId,
-                        hash = song.lxMusicHash,
-                        name = song.title,
-                        singer = song.artist,
-                        albumId = song.lxMusicExtraFields["albumId"],
-                        mixSongId = song.lxMusicExtraFields["mixSongId"],
-                        like = targetFavoriteState,
-                    )
-                    "kw" -> lxMusicRepository.kwSetSongLike(trackId, targetFavoriteState)
-                    else -> false
-                }
-                if (!ok) {
-                    // 执行失败：回退乐观状态并恢复图标
-                    applyOnlineLikedMirror(source, song, trackId, previousLiked)
-                    val codeHint = txFailureCode?.let { "($it)" }.orEmpty()
-                    showNotificationLikeToast(
-                        if (targetFavoriteState) "喜欢失败$codeHint，请稍后重试" else "取消喜欢失败$codeHint，请稍后重试"
-                    )
-                } else {
-                    when (source) {
-                        "tx" -> lxMusicRepository.setTxLikedSongIds(
-                            if (targetFavoriteState) lxMusicRepository.txLikedSongIds.value + trackId
-                            else lxMusicRepository.txLikedSongIds.value - trackId
-                        )
-                        "kg" -> {
-                            val ids = lxMusicRepository.kgLikedSongIds.value
-                            val hash = song.lxMusicHash
-                            lxMusicRepository.setKgLikedSongIds(
-                                if (targetFavoriteState) {
-                                    ids + trackId + listOfNotNull(hash)
-                                } else {
-                                    ids - trackId - listOfNotNull(hash)
-                                }
-                            )
-                        }
-                        "kw" -> lxMusicRepository.setKwLikedSongIds(
-                            if (targetFavoriteState) lxMusicRepository.kwLikedSongIds.value + trackId
-                            else lxMusicRepository.kwLikedSongIds.value - trackId
-                        )
-                    }
-                }
-                refreshMediaSessionUi(session, force = true)
-                requestWidgetFullUpdate(force = true)
-            } finally {
-                notificationLikeBusyIds.remove(trackId)
-            }
-        }
-
-        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-    }
-
-    private fun showNotificationLikeToast(message: String) {
-        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private suspend fun resolveMediaItemsByIds(

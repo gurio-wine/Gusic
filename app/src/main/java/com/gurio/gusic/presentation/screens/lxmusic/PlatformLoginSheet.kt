@@ -112,8 +112,15 @@ private fun PlatformLoginDialog(
         val manager = CookieManager.getInstance()
         manager.flush()
         val cookieUrls = listOf(url, loginUrl, "https://www.$hostMatch", "https://m.$hostMatch").distinct()
+        // 多 URL 采集必然产生同名多条（host-only 与 domain 条目值不同），而部分网关
+        // （如酷我 Secret 校验）按首条同名 cookie 取值——拼接前按名去重（保留后出现值，
+        // 与各平台 cookie 解析的“后者覆盖”语义一致），消除取值歧义
         val cmCookie = cookieUrls.mapNotNull { manager.getCookie(it) }
             .filter { it.isNotBlank() }
+            .flatMap { raw -> raw.split(';') }
+            .filter { part -> part.trim().substringBefore('=').trim().isNotEmpty() }
+            .groupBy { part -> part.trim().substringBefore('=').trim() }
+            .map { (_, parts) -> parts.last().trim() }
             .joinToString("; ")
         if (cmCookie.isBlank()) {
             firstReadyAt = 0L

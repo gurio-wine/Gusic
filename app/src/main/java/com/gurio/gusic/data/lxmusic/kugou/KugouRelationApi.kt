@@ -14,12 +14,14 @@ import timber.log.Timber
 /**
  * 酷狗关注歌手列表（v4/follow_list，relationuser.kugou.com）。
  *
- * 协议要点（与调研规格一致，参照 KugouCloudListApi/KugouAccountApi 的网关签名体系）：
+ * 协议要点（与云歌单/账号信息族对齐的网关签名体系，参照 MakcRe/KuGouMusicApi user_follow.js）：
  * - POST https://gateway.kugou.com/v4/follow_list，头 x-router: relationuser.kugou.com；
- * - query 只带公共参数 + plat=1（与云歌单族不同，token/userid 不进 query，全部放 body）；
+ * - query 带公共参数 + plat=1 + token/userid（同 postCloud/get_my_info，均参与签名）；
+ *   Cookie 头额外带 token/userid/kg_mid/dfid（与登录时持久化的串一致）；
  * - body：{"merge":2,"need_iden_type":1,"ext_params":"k_pic,jumptype,singerid,score",
  *   "userid":<数字>,"type":0,"id_type":0,"p":<RSA NO_PADDING 大写 hex({"clienttime":<秒>,"token":"<token>"})>}；
- * - 响应 data.singerlist[{id,name,img,fansnum}]；error_code==20017 表示登录态失效。
+ * - 响应 data.lists[{singerid,nickname,pic}]（兜底 data.list；字段名兜底 id/userid、
+ *   singername/name、k_pic/imgurl）；error_code==20017 表示登录态失效。
  */
 internal class KugouRelationApi(
     private val okHttpClient: OkHttpClient,
@@ -70,7 +72,8 @@ internal class KugouRelationApi(
             addProperty("p", p)
         }.toString()
 
-        val params = KugouAccountApi.commonParams(mid, clienttimeSec) + mapOf("plat" to "1")
+        val params = KugouAccountApi.commonParams(mid, clienttimeSec) +
+            mapOf("plat" to "1", "token" to token, "userid" to userid)
         val request = Request.Builder()
             .url(
                 KugouAccountApi.buildUrl(
@@ -81,6 +84,8 @@ internal class KugouRelationApi(
             )
             .headers(KugouAccountApi.commonHeaders(mid, clienttimeSec))
             .header("x-router", RELATION_ROUTER)
+            // relationuser 网关同时从 Cookie 取登录票据（与登录持久化串一致，替换公共头的 mid-only Cookie）
+            .header("Cookie", "token=$token; userid=$userid; kg_mid=$mid; dfid=-")
             .post(body.toRequestBody(JSON_MEDIA_TYPE))
             .build()
 
@@ -107,16 +112,19 @@ internal class KugouRelationApi(
             return@withContext null
         }
 
-        val singerList = (root.get("data") as? JsonObject)?.get("singerlist") as? JsonArray
-            ?: JsonArray()
+        // 实际响应为 data.lists（个别版本 data.list）；条目字段按 kugoFlutter/EchoMusic 兜底取值
+        val data = root.get("data") as? JsonObject
+        val singerList = (data?.get("lists") ?: data?.get("list")) as? JsonArray ?: JsonArray()
         singerList.mapNotNull { raw ->
             val obj = raw as? JsonObject ?: return@mapNotNull null
-            val id = obj.strOf("id")?.takeIf(String::isNotBlank) ?: return@mapNotNull null
+            val id = obj.strOf("singerid") ?: obj.strOf("id") ?: obj.strOf("userid")
+            val idOrBlank = id?.takeIf(String::isNotBlank) ?: return@mapNotNull null
             LxArtist(
-                id = id,
-                name = obj.strOf("name") ?: "",
-                // img 可能是 http 明文，统一升级 https 避免明文流量被禁
-                pic = obj.strOf("img")?.takeIf(String::isNotBlank)?.replaceFirst("http://", "https://"),
+                id = idOrBlank,
+                name = obj.strOf("nickname") ?: obj.strOf("singername") ?: obj.strOf("name") ?: "",
+                // 头像可能是 http 明文，统一升级 https 避免明文流量被禁
+                pic = (obj.strOf("pic") ?: obj.strOf("k_pic") ?: obj.strOf("imgurl"))
+                    ?.takeIf(String::isNotBlank)?.replaceFirst("http://", "https://"),
             )
         }
     }

@@ -106,9 +106,9 @@ class LibraryPlaylistsStateHolder @Inject constructor(
                 // 同平台在途加载中时去重，避免连点入口重复发起请求
                 if (_playlistsScope.value == scope && playlistsLoadJob?.isActive == true) return
                 _playlistsScope.value = scope
-                // 进入即刷新：清掉该平台缓存再加载，不命中旧数据
+                // 进入即刷新：清掉该平台缓存再加载，不命中旧数据（酷狗还要清仓库层云歌单缓存）
                 platformPlaylistsCache.remove(scope)
-                loadPlatformPlaylists(scope)
+                loadPlatformPlaylists(scope, force = true)
             }
             // 未知 scope 直接回到一级入口，避免悬空状态
             else -> backToPlaylistsEntries()
@@ -156,7 +156,7 @@ class LibraryPlaylistsStateHolder @Inject constructor(
         }
         val current = _playlistsScope.value ?: return
         platformPlaylistsCache.remove(current)
-        loadPlatformPlaylists(current)
+        loadPlatformPlaylists(current, force = true)
     }
 
     private fun resetPlatformListState() {
@@ -171,11 +171,11 @@ class LibraryPlaylistsStateHolder @Inject constructor(
         _playlistSongsLoading.value = false
     }
 
-    private fun loadPlatformPlaylists(source: String) {
+    private fun loadPlatformPlaylists(source: String, force: Boolean) {
         playlistsLoadJob?.cancel()
         _platformPlaylistsError.value = null
         val cached = platformPlaylistsCache[source]
-        if (cached != null) {
+        if (!force && cached != null) {
             _platformPlaylists.value = cached
             _platformPlaylistsLoading.value = false
             return
@@ -183,7 +183,7 @@ class LibraryPlaylistsStateHolder @Inject constructor(
         _platformPlaylists.value = emptyList()
         _platformPlaylistsLoading.value = true
         playlistsLoadJob = holderScope.launch {
-            val result = runCatching { fetchPlatformUserPlaylists(source) }.getOrNull()
+            val result = runCatching { fetchPlatformUserPlaylists(source, force) }.getOrNull()
             // runCatching 会吞掉取消异常：被取消的加载（切走后立刻重入同平台）不落地任何状态，
             // 否则过期失败结果会短暂覆盖新一次加载的在途 UI
             if (!isActive) return@launch
@@ -205,9 +205,10 @@ class LibraryPlaylistsStateHolder @Inject constructor(
      * 数据链路与 LxMusicViewModel.loadPlatformMineHome 一致：
      * kg/kw/tx 仓库已带前缀或需 tx 加 tx_pl_ 前缀，wy 需先解析 uid。
      */
-    private suspend fun fetchPlatformUserPlaylists(source: String): List<LxPlaylist>? {
+    private suspend fun fetchPlatformUserPlaylists(source: String, force: Boolean): List<LxPlaylist>? {
         val raw = when (source) {
-            LxSources.KUGOU -> lxMusicRepository.fetchKgUserPlaylists()
+            // force 透传给酷狗：进入/下拉刷新时清云歌单内存缓存，否则永远拿到同一份旧列表
+            LxSources.KUGOU -> lxMusicRepository.fetchKgUserPlaylists(force)
             LxSources.KUWO -> lxMusicRepository.fetchKwUserPlaylists()
             // 打开歌单时按 "tx_pl_" 前缀分流到用户歌单接口，缺失前缀会全部落进红心分支
             LxSources.TENCENT -> lxMusicRepository.fetchTxUserPlaylists()

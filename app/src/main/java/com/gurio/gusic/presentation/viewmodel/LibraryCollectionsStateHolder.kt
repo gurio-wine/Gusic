@@ -273,7 +273,8 @@ class LibraryCollectionsStateHolder @Inject constructor(
     private suspend fun fetchPlatformCollectedAlbums(source: String): List<LxAlbum>? = when (source) {
         LxSources.NETEASE -> lxMusicRepository.fetchNeteaseSubAlbums()
         LxSources.TENCENT -> lxMusicRepository.fetchTxLikedAlbums()
-        LxSources.KUGOU -> lxMusicRepository.fetchKgCollectedAlbums().map { playlist ->
+        // force=true：收藏无会话缓存，每次进入/刷新都清酷狗云歌单内存缓存重拉
+        LxSources.KUGOU -> lxMusicRepository.fetchKgCollectedAlbums(force = true).map { playlist ->
             LxAlbum(
                 id = playlist.id,
                 name = playlist.name,

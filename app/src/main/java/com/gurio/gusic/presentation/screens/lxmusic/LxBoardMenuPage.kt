@@ -4,23 +4,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,60 +24,46 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gurio.gusic.R
 import com.gurio.gusic.data.lxmusic.LxBoard
 import com.gurio.gusic.data.lxmusic.LxSong
 import com.gurio.gusic.data.lxmusic.LxSources
-import com.gurio.gusic.presentation.components.MiniPlayerHeight
-import com.gurio.gusic.presentation.screens.ListExtraBottomGap
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
 /**
- * 排行榜菜单页：每行两张榜单卡片，卡片头部为品牌色榜名，下方展示前三首歌曲预览。
+ * 排行榜菜单内容块：榜单卡按每行两张平铺进浏览态混合列表
+ * （发现页已无“推荐/排行榜”分类页签，搜索框下直接展示，网易推荐内容在上、榜单卡在下）。
  */
-@Composable
-fun LxBoardMenuPage(
+internal fun LazyListScope.boardMenuItems(
     browseState: LxMusicViewModel.BrowseState,
     source: String,
-    bottomBarHeightDp: Dp,
     onSelectBoard: (LxBoard) -> Unit,
-    onRefresh: () -> Unit,
 ) {
-    val pullToRefreshState = rememberPullToRefreshState()
-    PullToRefreshBox(
-        isRefreshing = browseState.loadingBoardPreviews,
-        onRefresh = onRefresh,
-        state = pullToRefreshState,
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 12.dp,
-                bottom = bottomBarHeightDp + MiniPlayerHeight + ListExtraBottomGap,
-            ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(browseState.boards, key = { it.id }) { board ->
-                LxBoardCard(
-                    board = board,
-                    source = source,
-                    preview = browseState.boardPreviews[board.id],
-                    isLoading = browseState.loadingBoardPreviews,
-                    onSelectBoard = onSelectBoard,
-                )
+    browseState.boards.chunked(2).forEachIndexed { rowIndex, rowBoards ->
+        item(key = "board_row_$rowIndex") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                rowBoards.forEach { board ->
+                    LxBoardCard(
+                        board = board,
+                        source = source,
+                        preview = browseState.boardPreviews[board.id],
+                        isLoading = browseState.loadingBoardPreviews,
+                        onSelectBoard = onSelectBoard,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                if (rowBoards.size == 1) Spacer(modifier = Modifier.weight(1f))
             }
         }
     }
 }
 
+/** 榜单卡片：头部为品牌色榜名，下方展示前三首歌曲预览。 */
 @Composable
 private fun LxBoardCard(
     board: LxBoard,
@@ -90,6 +71,7 @@ private fun LxBoardCard(
     preview: List<LxSong>?,
     isLoading: Boolean,
     onSelectBoard: (LxBoard) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val brandColor = LxSources.brandColor(source)
     val onBrandColor = LxSources.onBrandColor(source)
@@ -107,7 +89,7 @@ private fun LxBoardCard(
         ),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         elevation = CardDefaults.elevatedCardElevation(0.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(

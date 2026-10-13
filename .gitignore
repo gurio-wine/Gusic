@@ -1,46 +1,39 @@
 *.iml
 .DS_Store
+Thumbs.db
+desktop.ini
 hs_err_pid*.log
+*.hprof
 *.salive
 *.apk
 *.aab
 **.jks
+**.keystore
 
 .idea/
+.vscode/
+
+# 智能体工具本地目录（ZCode/Claude/Cursor；保存的项目内共享工作流按需单独放行）
+.zcode/
+.claude/
+.cursor/
+
+# codebase-memory-mcp 图谱产物（各机重新索引生成）
+.codebase-memory/
 
 .gradle
-.gradle-local/
-.gradle-temp/
 .kotlin/
-/local.properties
 local.properties
 keystore.properties
 
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-/.idea/planningMode.xml
-
 /build
-/apk-out/
 /captures
 .externalNativeBuild
 .cxx
 benchmark-results/
 
-app/build/
-app/release/
-wear/build/
-wear/release/
-shared/build/
-baselineprofile/build/
-
-misc.xml
-markdown.xml
-.vscode/
-
 # Route C: local-only private write implementations (never publish)
 /app/src/main/java/com/gurio/gusic/data/lxmusic/LxPrivateAccountExtension.kt
+
+# 内置授权兜底音源脚本（仅本机构建打包，绝不发布；缺失时应用优雅降级为无内置源）
+/app/src/main/assets/lxmusic/sources/

@@ -529,7 +529,8 @@ internal fun ArtistTabChip(label: String, selected: Boolean, onClick: () -> Unit
 }
 
 
-private fun LazyListScope.mineRecommendSection(
+/** 推荐首页内容块（发现页混合列表与 LxRecommendPage 复用）：推荐入口 + 推荐歌单等。 */
+internal fun LazyListScope.mineRecommendSection(
     state: LxMusicViewModel.MineState,
     viewModel: LxMusicViewModel,
 ) {

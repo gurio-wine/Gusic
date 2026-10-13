@@ -628,4 +628,16 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>The profile strip above Top charts is gone</item>
         <item>Chinese labels now say 歌手 where they used to say 艺术家</item>
     </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101301_whats_new">
+        <item>Discover drops the category tabs: chart cards sit right under the search bar, and NetEase recommendations stack above them</item>
+        <item>Kuwo user playlists arrive — created and collected lists load with their details</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v26101301_changes">
+        <item>Kuwo liked songs show their count and contents again — duplicated same-name cookies were failing the gateway check</item>
+        <item>Kugou followed artists display now that the response fields are read correctly</item>
+        <item>Kugou playlists refresh properly, and empty lists can be pulled to refresh</item>
+        <item>QQ Music artist and album search work again, along with followed artists and liked albums</item>
+        <item>The player page moves the platform badge and like button to the right side</item>
+        <item>The notification&#8217;s like button now toggles the app&#8217;s own local favorite</item>
+    </string-array>
 </resources>

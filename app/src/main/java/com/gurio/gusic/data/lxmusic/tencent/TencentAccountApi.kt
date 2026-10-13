@@ -670,8 +670,8 @@ internal class TencentAccountApi(
      * 再 sin=0&ein=<total> 拉全量。未登录/请求失败返回 null（与“成功但为空”区分）。
      */
     suspend fun fetchLikedAlbums(): List<LxAlbum>? = withContext(Dispatchers.IO) {
-        val (cookie, _) = loginCookie() ?: return@withContext null
-        val uin = cookieUin(parseCookieMap(cookie))
+        val (cookie, cookies) = loginCookie() ?: return@withContext null
+        val uin = cookieUin(cookies)
 
         fun orderAssetCall(sin: Int, ein: Int): JsonObject? {
             val url = ORDER_ASSET_URL.toHttpUrl().newBuilder().apply {
@@ -704,9 +704,11 @@ internal class TencentAccountApi(
             }
         }
 
-        // 第一步：空区间探测 total
+        // 第一步：空区间探测 total。该端点的专辑计数在 data.totalalbum（老字段 total 不存在，
+        // 读不到会误判为 0 而直接返回空列表——jsososo/QQMusicApi /collect/album 同端点同字段）
         val probe = orderAssetCall(sin = 0, ein = 0) ?: return@withContext null
-        val total = ((probe.get("data") as? JsonObject)?.intField("total")) ?: 0
+        val total = ((probe.get("data") as? JsonObject)?.intField("totalalbum"))
+            ?: ((probe.get("data") as? JsonObject)?.intField("total")) ?: 0
         if (total <= 0) return@withContext emptyList()
 
         // 第二步：sin=0&ein=<total> 拉全量（ein 按调研规格取 total）
@@ -751,7 +753,8 @@ internal class TencentAccountApi(
                 addQueryParameter("page", page.toString())
                 addQueryParameter("perpage", perPage.toString())
                 addQueryParameter("uin", uin)
-                addQueryParameter("g_tk", "5381")
+                // g_tk 按登录态实算（匿名硬编码 5381 在带 Cookie 请求时会被服务端拒绝）
+                addQueryParameter("g_tk", legacyGtk(cookies).toString())
                 addQueryParameter("format", "json")
             }.build()
             val request = Request.Builder().url(url)

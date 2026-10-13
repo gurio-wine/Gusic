@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -51,8 +52,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -84,13 +83,11 @@ import com.gurio.gusic.presentation.components.subcomps.SelectionCountPill
 import com.gurio.gusic.data.lxmusic.LxQualities
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.Leaderboard
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Person
@@ -104,7 +101,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -154,10 +150,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.collections.immutable.toImmutableList
 import kotlin.math.abs
@@ -392,10 +385,9 @@ fun LxMusicScreen(
         browseState.module == "playlist" ||
         browseState.selectedPlaylist != null ||
         browseState.isPlaylistSearchMode ||
-        // 榜单详情返回菜单；board 根只有网易可再回“推荐”——
-        // 其他音源根态不启用，让返回键交给外层退出浏览页
-        (browseState.module == "board" &&
-            (browseState.selectedBoard != null || selectedSource == LxSources.NETEASE)) ||
+        // 榜单详情返回列表（不依赖 module：网易混合列表下打开的详情 module 可能是 recommend）
+        browseState.selectedBoard != null ||
+        (browseState.module == "board" && selectedSource == LxSources.NETEASE) ||
         browseState.module == "search"
     val topLayerVisible = playerSheetState == com.gurio.gusic.presentation.viewmodel.PlayerSheetState.EXPANDED ||
         queueSheetVisible || showLoginDialog
@@ -489,48 +481,11 @@ fun LxMusicScreen(
             )
         },
     ) { innerPadding ->
-        // 浏览态页签：网易音源 = 推荐 + 排行榜 两页；其他音源仅排行榜一页
-        // （原“我的”模块已下线，收藏内容由库页“收藏”分类承载）
+        // 浏览态已无“推荐/排行榜”分类页签：搜索框下直接展示内容
+        // （网易 = 推荐内容在上、榜单卡在下，同一滚动列表；其他音源 = 仅榜单卡）
         val recommendTabAvailable = selectedSource == LxSources.NETEASE
-        fun modulePageIndex(module: String): Int = when {
-            module == "recommend" -> 0
-            recommendTabAvailable -> 1
-            else -> 0
-        }
-        fun pageIndexToModule(page: Int): String = when {
-            page == 0 && recommendTabAvailable -> "recommend"
-            else -> "board"
-        }
-
-        val pagerState = rememberPagerState(
-            initialPage = modulePageIndex(browseState.module),
-            pageCount = { if (recommendTabAvailable) 2 else 1 },
-        )
-        val isListScrolling = remember { mutableStateOf(false) }
-        LaunchedEffect(browseState.module, browseState.selectedPlaylist != null, mineAvailable) {
-            isListScrolling.value = false
-            val target = modulePageIndex(browseState.module)
-            if (pagerState.currentPage != target) {
-                pagerState.animateScrollToPage(target)
-            }
-        }
-        LaunchedEffect(pagerState, mineAvailable) {
-            snapshotFlow {
-                Triple(pagerState.currentPage, pagerState.targetPage, pagerState.isScrollInProgress)
-            }
-                .filter { !it.third }
-                .map { it.first }
-                .distinctUntilChanged()
-                .collect { page ->
-                    val target = pageIndexToModule(page)
-                    if (browseState.module != target) viewModel.selectModule(target)
-                }
-        }
-        val indicatorModule by remember(recommendTabAvailable) {
-            derivedStateOf { pageIndexToModule(pagerState.targetPage) }
-        }
         val focusManager = LocalFocusManager.current
-        LaunchedEffect(pagerState.currentPage, selectedSource) {
+        LaunchedEffect(selectedSource) {
             focusManager.clearFocus()
         }
         Box(
@@ -580,8 +535,6 @@ fun LxMusicScreen(
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    val recommendLabel = stringResource(R.string.lx_tab_recommend)
-                    val boardLabel = stringResource(R.string.lx_tab_board)
                     val searchActive = browseState.module == "search"
                     val playlistDetailActive = browseState.module == "playlist" ||
                         browseState.selectedPlaylist != null
@@ -605,7 +558,6 @@ fun LxMusicScreen(
                         Box(modifier = Modifier.fillMaxSize()) {
                             LxPlaylistPage(browseState, viewModel, playerViewModel, playLxSong,
                                 playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
-                                onScrollingChange = { isListScrolling.value = it },
                                 onSongMoreOptions = { lxInfoSong = it },
                                 isSelectionMode = isSelectionMode,
                                 selectedSongIds = selectedSongIds,
@@ -630,7 +582,6 @@ fun LxMusicScreen(
                             Box(modifier = Modifier.fillMaxSize()) {
                                 LxSearchPage(browseState, searchState, viewModel, playerViewModel, playSearchSong,
                                     playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
-                                    onScrollingChange = { isListScrolling.value = it },
                                     onSongMoreOptions = { lxInfoSong = it },
                                     isSelectionMode = isSelectionMode,
                                     selectedSongIds = selectedSongIds,
@@ -644,100 +595,96 @@ fun LxMusicScreen(
                             }
                         }
                     } else {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        if (recommendTabAvailable) {
-                            LxModuleButton(
-                                label = recommendLabel,
-                                icon = Icons.Rounded.AutoAwesome,
-                                selected = indicatorModule == "recommend",
-                                onClick = { viewModel.selectModule("recommend") },
-                                modifier = Modifier.weight(1f),
+                        // 浏览态主体（无“推荐/排行榜”分类页签，内容直接展示）：
+                        // 网易 = 推荐子页全屏 / 榜单详情 / 混合列表（推荐入口在上、榜单卡在下）
+                        // 其他音源 = 榜单详情 / 榜单卡列表
+                        if (recommendTabAvailable && mineState.page !is LxMusicViewModel.MinePage.Home) {
+                            LxRecommendPage(
+                                recommendState = mineState,
+                                viewModel = viewModel,
+                                playerViewModel = playerViewModel,
+                                playLxSong = playLxSong,
+                                playAllPlaylist = playAllPlaylist,
+                                shuffleAllPlaylist = shuffleAllPlaylist,
+                                bottomBarHeightDp = bottomBarHeightDp,
+                                onSongMoreOptions = { lxInfoSong = it },
+                                isSelectionMode = isSelectionMode,
+                                selectedSongIds = selectedSongIds,
+                                onSongLongPress = toggleLxSongSelection,
+                                onSongSelectionToggle = toggleLxSongSelection,
+                                getSelectionIndex = { songId ->
+                                    multiSelectionState.getSelectionIndex(songId)
+                                },
+                                multiSelectionState = multiSelectionState,
+                                onSelectionOptionsClick = { showMultiSelectionSheet = true },
                             )
-                        }
-                        // “排行榜”三字更长，多分一点宽度保证完整显示（单页签时占满整行）
-                        LxModuleButton(boardLabel, Icons.Rounded.Leaderboard,
-                            indicatorModule == "board", { viewModel.selectModule("board") },
-                            Modifier.weight(if (recommendTabAvailable) 1.3f else 1f))
-                    }
-                    Box(modifier = Modifier.fillMaxSize()) {
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier.fillMaxSize(),
-                        userScrollEnabled = pagerState.isScrollInProgress || !isListScrolling.value,
-                        beyondViewportPageCount = 1,
-                        key = { it },
-                        pageSpacing = 0.dp,
-                    ) { page ->
-                        when {
-                            page == 0 && recommendTabAvailable -> {
-                                if (mineAvailable) {
-                                    LxRecommendPage(
-                                        recommendState = mineState,
-                                        viewModel = viewModel,
-                                        playerViewModel = playerViewModel,
-                                        playLxSong = playLxSong,
-                                        playAllPlaylist = playAllPlaylist,
-                                        shuffleAllPlaylist = shuffleAllPlaylist,
-                                        bottomBarHeightDp = bottomBarHeightDp,
-                                        onScrollingChange = { if (pagerState.currentPage == 0) isListScrolling.value = it },
-                                        onSongMoreOptions = { lxInfoSong = it },
-                                        isSelectionMode = isSelectionMode,
-                                        selectedSongIds = selectedSongIds,
-                                        onSongLongPress = toggleLxSongSelection,
-                                        onSongSelectionToggle = toggleLxSongSelection,
-                                        getSelectionIndex = { songId ->
-                                            multiSelectionState.getSelectionIndex(songId)
-                                        },
-                                        multiSelectionState = multiSelectionState,
-                                        onSelectionOptionsClick = { showMultiSelectionSheet = true },
-                                    )
-                                } else {
-                                    // 未登录：居中占位提示，并提供登录入口（复用各平台现有登录弹窗）
-                                    LxMineNotLoggedInPlaceholder(
-                                        platformLabel = platformName(selectedSource),
-                                        onLogin = {
-                                            when (selectedSource) {
-                                                LxSources.TENCENT -> clearAllWebViewSession { showTxWebLoginDialog = true }
-                                                LxSources.KUGOU -> clearAllWebViewSession { showKgLoginDialog = true }
-                                                LxSources.KUWO -> clearAllWebViewSession { showKwLoginDialog = true }
-                                                else -> clearNeteaseWebViewSession { showLoginDialog = true }
+                        } else if (browseState.selectedBoard != null) {
+                            LxBoardPage(browseState, viewModel, playerViewModel, playLxSong,
+                                playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
+                                onSongMoreOptions = { lxInfoSong = it },
+                                isSelectionMode = isSelectionMode,
+                                selectedSongIds = selectedSongIds,
+                                onSongLongPress = toggleLxSongSelection,
+                                onSongSelectionToggle = toggleLxSongSelection,
+                                getSelectionIndex = { songId ->
+                                    multiSelectionState.getSelectionIndex(songId)
+                                },
+                                multiSelectionState = multiSelectionState,
+                                onSelectionOptionsClick = { showMultiSelectionSheet = true })
+                        } else {
+                            // 混合列表：网易登录时推荐入口在上、榜单卡在下；其余音源仅榜单卡
+                            val browseRefreshing = browseState.loadingBoardPreviews ||
+                                (recommendTabAvailable && mineState.loadingHome)
+                            PullToRefreshBox(
+                                isRefreshing = browseRefreshing,
+                                onRefresh = { viewModel.refreshBrowse() },
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(
+                                        start = 12.dp,
+                                        end = 12.dp,
+                                        top = 4.dp,
+                                        bottom = bottomBarHeightDp + MiniPlayerHeight + ListExtraBottomGap,
+                                    ),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    if (recommendTabAvailable) {
+                                        if (mineAvailable) {
+                                            mineRecommendSection(mineState, viewModel)
+                                        } else {
+                                            // 未登录：占位提示并提供登录入口（复用各平台现有登录弹窗）
+                                            item(key = "mine_not_logged_in") {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .heightIn(min = 220.dp),
+                                                    contentAlignment = Alignment.Center,
+                                                ) {
+                                                    LxMineNotLoggedInPlaceholder(
+                                                        platformLabel = platformName(selectedSource),
+                                                        onLogin = {
+                                                            when (selectedSource) {
+                                                                LxSources.TENCENT -> clearAllWebViewSession { showTxWebLoginDialog = true }
+                                                                LxSources.KUGOU -> clearAllWebViewSession { showKgLoginDialog = true }
+                                                                LxSources.KUWO -> clearAllWebViewSession { showKwLoginDialog = true }
+                                                                else -> clearNeteaseWebViewSession { showLoginDialog = true }
+                                                            }
+                                                        },
+                                                    )
+                                                }
                                             }
-                                        },
+                                        }
+                                    }
+                                    boardMenuItems(
+                                        browseState = browseState,
+                                        source = selectedSource,
+                                        onSelectBoard = { viewModel.selectBoard(it) },
                                     )
                                 }
                             }
-                            else -> if (browseState.selectedBoard == null) {
-                                // 排行榜菜单页：榜单卡片网格
-                                LxBoardMenuPage(
-                                    browseState = browseState,
-                                    source = selectedSource,
-                                    bottomBarHeightDp = bottomBarHeightDp,
-                                    onSelectBoard = { viewModel.selectBoard(it) },
-                                    onRefresh = { viewModel.refreshBrowse() },
-                                )
-                            } else {
-                                LxBoardPage(browseState, viewModel, playerViewModel, playLxSong,
-                                    playAllPlaylist, shuffleAllPlaylist, bottomBarHeightDp,
-                                    onScrollingChange = { if (pagerState.currentPage == modulePageIndex("board")) isListScrolling.value = it },
-                                    onSongMoreOptions = { lxInfoSong = it },
-                                    isSelectionMode = isSelectionMode,
-                                    selectedSongIds = selectedSongIds,
-                                    onSongLongPress = toggleLxSongSelection,
-                                    onSongSelectionToggle = toggleLxSongSelection,
-                                    getSelectionIndex = { songId ->
-                                        multiSelectionState.getSelectionIndex(songId)
-                                    },
-                                    multiSelectionState = multiSelectionState,
-                                    onSelectionOptionsClick = { showMultiSelectionSheet = true })
-                            }
                         }
-                    }
-                    }
                     }
                 }
             }
@@ -1215,54 +1162,6 @@ private fun LxSourceTab(
                 style = MaterialTheme.typography.labelLarge,
                 color = contentColor,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            )
-        }
-    }
-}
-
-@Composable
-private fun LxModuleButton(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        color = if (selected)
-            MaterialTheme.colorScheme.primary
-        else
-            MaterialTheme.colorScheme.secondaryContainer,
-        modifier = modifier,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = if (selected)
-                    MaterialTheme.colorScheme.onPrimary
-                else
-                    MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-            Spacer(Modifier.width(4.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = if (selected)
-                    MaterialTheme.colorScheme.onPrimary
-                else
-                    MaterialTheme.colorScheme.onSecondaryContainer,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis,
             )
         }
     }
