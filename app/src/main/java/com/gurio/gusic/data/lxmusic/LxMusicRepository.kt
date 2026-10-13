@@ -2309,7 +2309,11 @@ class LxMusicRepository @Inject constructor(
                 ?.mapNotNull { it.takeIf { e -> e.isJsonObject }?.asJsonObject?.let(::parseNeteaseSongItem) }
         }.getOrNull().orEmpty()
 
-    suspend fun fetchNeteaseHeartbeatSongs(playlistId: String, seedSongId: String): List<LxSong> {
+    suspend fun fetchNeteaseHeartbeatSongs(
+        playlistId: String,
+        seedSongId: String,
+        count: Int = 150,
+    ): List<LxSong> {
         val root = neteaseWeapiOk(
             "/weapi/playmode/intelligence/list",
             mapOf(
@@ -2317,7 +2321,7 @@ class LxMusicRepository @Inject constructor(
                 "songId" to seedSongId,
                 "type" to "fromPlayOne",
                 "startMusicId" to seedSongId,
-                "count" to "150",
+                "count" to count.toString(),
             ),
         ) ?: return emptyList()
         val ids = root.getAsJsonArray("data")?.mapNotNull { el ->
@@ -5008,17 +5012,26 @@ class LxMusicRepository @Inject constructor(
                 LxSources.KUGOU -> fetchKgLikedSongs()
                 LxSources.KUWO -> fetchKwLikedSongs()
                 LxSources.NETEASE -> {
-                    var uid: Long? = neteaseCookieStore.getAccountId().takeIf { it >= 0 }
-                    if (uid == null) {
-                        uid = runCatching { fetchNeteaseLoginProfile() }.getOrNull()?.uid
-                    }
-                    val uidStr = uid?.toString() ?: return@runCatching null
-                    val likedPlaylist = fetchNeteaseMyPlaylists(uidStr)
-                        .firstOrNull { it.specialType == 5 } ?: return@runCatching null
-                    fetchNeteasePlaylistSongs(likedPlaylist.id).first
+                    val likedId = fetchNeteaseLikedPlaylistId() ?: return@runCatching null
+                    fetchNeteasePlaylistSongs(likedId).first
                 }
                 else -> null
             }
+        }.getOrNull()
+    }
+
+    /**
+     * 网易“我喜欢的音乐”歌单 id（specialType==5）。本地 accountId 缺失时尝试 profile 接口补取。
+     * 返回 null 表示未登录或请求失败。
+     */
+    suspend fun fetchNeteaseLikedPlaylistId(): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            var uid: Long? = neteaseCookieStore.getAccountId().takeIf { it >= 0 }
+            if (uid == null) {
+                uid = runCatching { fetchNeteaseLoginProfile() }.getOrNull()?.uid
+            }
+            val uidStr = uid?.toString() ?: return@runCatching null
+            fetchNeteaseMyPlaylists(uidStr).firstOrNull { it.specialType == 5 }?.id
         }.getOrNull()
     }
 

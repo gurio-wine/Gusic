@@ -9,6 +9,8 @@ import kotlinx.coroutines.withContext
 import androidx.compose.animation.core.Animatable
 import androidx.core.content.ContextCompat
 import com.gurio.gusic.data.model.LibraryTabId
+import com.gurio.gusic.data.lxmusic.LxSongMapper
+import com.gurio.gusic.data.lxmusic.LxSources
 import com.gurio.gusic.data.lxmusic.LxWriteOp
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
@@ -92,6 +94,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -117,6 +120,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
 import kotlinx.serialization.json.Json
 import timber.log.Timber
+import kotlin.random.Random
 import java.util.Locale
 import javax.inject.Inject
 import androidx.paging.PagingData
@@ -2223,6 +2227,7 @@ class PlayerViewModel @Inject constructor(
     fun playSongAtPosition(song: Song, startPositionMs: Long) {
         viewModelScope.launch {
             val controller = mediaController ?: return@launch
+            abandonHeartbeatMode()
             val bookmarkStartPositionMs = startPositionMs.coerceAtLeast(0L)
             if (controller.currentMediaItem?.mediaId == song.id) {
                 controller.seekTo(bookmarkStartPositionMs)
@@ -3245,6 +3250,7 @@ class PlayerViewModel @Inject constructor(
 
     fun playExternalUri(uri: Uri) {
         markPendingAutoExpandOnNewPlayback()
+        abandonHeartbeatMode()
         viewModelScope.launch {
             val externalResult = externalMediaStateHolder.buildExternalSongFromUri(uri)
             if (externalResult == null) {
@@ -3447,6 +3453,8 @@ class PlayerViewModel @Inject constructor(
             clearPreparingSongIfMatching()
             return
         }
+        // 心动模式被点播换队列打断：丢弃复原记录
+        abandonHeartbeatMode()
         val effectiveStartSong = songsToPlay.firstOrNull { it.id == startSong.id } ?: songsToPlay.first()
 
         if (playlistId != null && queueName != "None") {
@@ -4801,6 +4809,156 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    // ---- 心动模式（网易，播放页循环模式档位）----
+
+    private class HeartbeatData(
+        val snapshot: List<Song>,             // 歌单 A：进入时的完整队列快照
+        val originalNeteaseIds: Set<String>,  // 歌单 C：A 的网易子集 id 集，离开复原判定用
+        val pendingSeeds: MutableList<Song>,  // 歌单 D：打乱后的种子池剩余（进入后由协程填充）
+    )
+
+    private var heartbeatData: HeartbeatData? = null
+    private var heartbeatJob: Job? = null
+    private val _isHeartbeatMode = MutableStateFlow(false)
+    val isHeartbeatMode: StateFlow<Boolean> = _isHeartbeatMode.asStateFlow()
+
+    /**
+     * 进入心动模式（不暂停播放）：快照当前队列为歌单 A，清空队列保留当前歌 s1，
+     * 后台按种子池逐批拉取 intelligence/list（count 0-5 随机、type=fromPlayOne、
+     * 所在歌单=我喜欢）追加到队尾，队列总数达 150 或种子用尽即停。
+     * 拿不到喜欢歌单（未登录/网络失败）时按 A 原样恢复并退出。
+     */
+    fun enterHeartbeatMode() {
+        if (_isHeartbeatMode.value) return
+        val controller = mediaController ?: return
+        val s1 = playbackStateHolder.stablePlayerState.value.currentSong ?: return
+        if (s1.lxMusicSource != LxSources.NETEASE) return
+        if (s1.lxMusicSongMid.isNullOrBlank()) return
+        val snapshot = _playerUiState.value.currentPlaybackQueue.toList()
+        if (snapshot.none { it.id == s1.id }) return
+        // 心动队列顺序（种子+批次）有语义，关随机
+        if (playbackStateHolder.stablePlayerState.value.isShuffleEnabled) {
+            toggleShuffle()
+        }
+        // 复原记录同步建好（种子池稍后在协程里填充），避免网络空窗期离开时无处复原
+        heartbeatData = HeartbeatData(
+            snapshot = snapshot,
+            originalNeteaseIds = snapshot
+                .filter { it.lxMusicSource == LxSources.NETEASE }
+                .mapTo(HashSet()) { it.id },
+            pendingSeeds = mutableListOf(),
+        )
+        clearQueueExceptCurrent()
+        _isHeartbeatMode.value = true
+        heartbeatJob = viewModelScope.launch {
+            // runCatching 会吞掉取消异常，每个网络调用后都必须重查 isActive
+            val likedId = runCatching { lxMusicRepository.fetchNeteaseLikedPlaylistId() }.getOrNull()
+            if (!isActive) return@launch
+            if (likedId == null) {
+                restoreHeartbeatSnapshot(snapshot, s1)
+                sendToast(context.getString(R.string.lx_error_load_failed_retry))
+                return@launch
+            }
+            val likedCandidates = runCatching { lxMusicRepository.fetchNeteasePlaylistSongs(likedId).first }
+                .onFailure { Timber.w(it, "heartbeat liked songs load failed") }
+                .getOrDefault(emptyList())
+                .map(LxSongMapper::toSong)
+            if (!isActive) return@launch
+            val seedPool = HeartbeatQueuePlanner.buildSeedPool(snapshot, s1.lxMusicSongMid, likedCandidates)
+            heartbeatData?.pendingSeeds?.addAll(seedPool.shuffled())
+            val addedIds = HashSet<String>().apply { add(s1.id) }
+            var firstBatch = true
+            while (isActive) {
+                val total = mediaController?.mediaItemCount ?: break
+                if (total >= HeartbeatQueuePlanner.QUEUE_LIMIT) break
+                // 第一批种子是正在播放的 s1（已在队列中）；之后依次消耗歌单 D
+                val seed: Song = if (firstBatch) s1
+                    else heartbeatData?.pendingSeeds?.removeFirstOrNull() ?: break
+                val count = Random.nextInt(0, 6)
+                val batch = if (count > 0) {
+                    runCatching {
+                        lxMusicRepository.fetchNeteaseHeartbeatSongs(
+                            likedId, seed.lxMusicSongMid.orEmpty(), count,
+                        )
+                    }.onFailure { Timber.w(it, "heartbeat batch load failed") }
+                        .getOrDefault(emptyList())
+                } else {
+                    emptyList()
+                }
+                if (!isActive) return@launch
+                val batchSongs = batch.map(LxSongMapper::toSong)
+                    .filter { it.id != seed.id && it.id !in addedIds }
+                    .distinctBy { it.id }
+                val toAdd = buildList {
+                    // 返回不含种子（或本批 count=0 未请求）时先把种子插进队列
+                    if (seed.id !in addedIds) add(seed)
+                    addAll(batchSongs)
+                }
+                if (toAdd.isNotEmpty()) {
+                    mediaController?.addMediaItems(toAdd.map { buildPlaybackMediaItem(it) })
+                    toAdd.forEach { addedIds += it.id }
+                }
+                firstBatch = false
+            }
+        }
+    }
+
+    /**
+     * 离开心动模式（切到其它循环模式，不暂停播放）：按歌单 A 复原队列。
+     * s2∈C 时 s2 回到 A 原位；否则以 s3（s2 上方最近的 C 中歌曲）为锚，s2 紧插在 A 中 s3 之后。
+     */
+    fun leaveHeartbeatMode() {
+        if (!_isHeartbeatMode.value) return
+        heartbeatJob?.cancel()
+        heartbeatJob = null
+        val data = heartbeatData
+        val s2 = playbackStateHolder.stablePlayerState.value.currentSong
+        if (data != null && s2 != null) {
+            val currentQueue = _playerUiState.value.currentPlaybackQueue.toList()
+            val planned = HeartbeatQueuePlanner.planRestoreLayout(
+                data.snapshot, data.originalNeteaseIds, currentQueue, s2,
+            )
+            if (planned != null) {
+                val (layout, s2Index) = planned
+                mediaController?.setMediaItems(
+                    layout.map { buildPlaybackMediaItem(it) },
+                    s2Index,
+                    mediaController?.currentPosition ?: 0L,
+                )
+            } else {
+                restoreHeartbeatSnapshot(data.snapshot, s2)
+            }
+        }
+        heartbeatData = null
+        _isHeartbeatMode.value = false
+    }
+
+    /** 心动模式被外部播放操作打断（点播新歌/整体换队列）：丢弃复原记录，不再恢复原队列。 */
+    private fun abandonHeartbeatMode() {
+        if (!_isHeartbeatMode.value) return
+        heartbeatJob?.cancel()
+        heartbeatJob = null
+        heartbeatData = null
+        _isHeartbeatMode.value = false
+    }
+
+    /** 进入失败/无法规划时的兜底：按 A 原样恢复，保持 s2 继续播放。 */
+    private fun restoreHeartbeatSnapshot(snapshot: List<Song>, keepPlaying: Song) {
+        val controller = mediaController ?: return
+        val position = controller.currentPosition
+        val base = snapshot.ifEmpty { listOf(keepPlaying) }
+        // 兜底歌不在快照里时插到最前，保证继续播放的是当前这首
+        val finalItems = if (base.none { it.id == keepPlaying.id }) listOf(keepPlaying) + base else base
+        val index = finalItems.indexOfFirst { it.id == keepPlaying.id }.coerceAtLeast(0)
+        controller.setMediaItems(
+            finalItems.map { buildPlaybackMediaItem(it) },
+            index,
+            position,
+        )
+        heartbeatData = null
+        _isHeartbeatMode.value = false
+    }
+
 
     override fun onCleared() {
         val controllerToRelease = mediaController
@@ -5524,6 +5682,7 @@ class PlayerViewModel @Inject constructor(
     fun playSong(song: Song) {
         viewModelScope.launch {
             val controller = mediaController ?: return@launch
+            abandonHeartbeatMode()
             val mediaItem = buildResolvedPlaybackMediaItem(song)
 
             controller.setMediaItem(mediaItem)

@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.008：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101308_whats_new">
+        <item>播放页新增心动循环模式（网易歌曲专属）：不中断当前播放，以当前歌单和“我喜欢”为种子持续生成相似歌曲队列，最多累计 150 首</item>
+        <item>切回其它循环模式时自动按原歌单复原队列，当前歌不中断，进出心动模式播放都不停</item>
+    </string-array>
     <!-- Gusic 26.10.13.007：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101307_whats_new">
         <item>喜好推荐改为多抽几首种子歌合并结果，不再只有寥寥几首</item>

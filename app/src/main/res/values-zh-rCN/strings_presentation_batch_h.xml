@@ -2,5 +2,6 @@
 <resources>
     <string name="presentation_batch_h_artist_example_bullet">♪</string>
     <string name="presentation_batch_h_cd_favorite" translatable="false">收藏</string>
+    <string name="presentation_batch_h_cd_heartbeat_mode" translatable="false">心动模式</string>
     <string name="presentation_batch_h_mashup_speed_multiplier">x%1$.2f</string>
 </resources>

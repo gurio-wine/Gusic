@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.008：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101308_whats_new">
+        <item>The player adds a Heartbeat repeat mode for Netease tracks: it keeps the current song playing, then keeps growing a queue of similar picks seeded from your playlist and Liked Songs, up to 150 tracks</item>
+        <item>Leaving Heartbeat mode restores your original playlist around the song you&#8217;re on — playback never pauses on the way in or out</item>
+    </string-array>
     <!-- Gusic 26.10.13.007：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101307_whats_new">
         <item>Liked-songs recommendations now gather from several seed tracks and merge the results, so the list is no longer stuck at a handful of songs</item>

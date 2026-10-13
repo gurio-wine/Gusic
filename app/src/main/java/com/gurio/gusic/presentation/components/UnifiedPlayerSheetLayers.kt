@@ -189,6 +189,11 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                 val isShuffleEnabledProvider = remember {
                     { latestInfrequentPlayerState.value.isShuffleEnabled }
                 }
+                // 直接读 StateFlow.value 不触发重组，图标档位会滞后；用 State 订阅
+                val heartbeatModeState = playerViewModel.isHeartbeatMode.collectAsStateWithLifecycle()
+                val isHeartbeatModeProvider = remember(playerViewModel) {
+                    { heartbeatModeState.value }
+                }
                 val totalDurationProvider = remember {
                     { latestInfrequentPlayerState.value.totalDuration }
                 }
@@ -308,6 +313,7 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                             playWhenReadyProvider = playWhenReadyProvider,
                             repeatModeProvider = repeatModeProvider,
                             isShuffleEnabledProvider = isShuffleEnabledProvider,
+                            isHeartbeatModeProvider = isHeartbeatModeProvider,
                             totalDurationProvider = totalDurationProvider,
                             lyricsProvider = lyricsProvider,
                             isOutputConnecting = isOutputConnecting,

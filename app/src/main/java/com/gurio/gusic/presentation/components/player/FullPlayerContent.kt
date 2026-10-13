@@ -219,6 +219,7 @@ internal fun FullPlayerContent(
     isFavoriteProvider: () -> Boolean,
     repeatModeProvider: () -> Int,
     isShuffleEnabledProvider: () -> Boolean,
+    isHeartbeatModeProvider: () -> Boolean = { false },
     totalDurationProvider: () -> Long,
     lyricsProvider: () -> Lyrics? = { null },
     favoriteEnabledProvider: () -> Boolean = { true },
@@ -633,12 +634,23 @@ internal fun FullPlayerContent(
         )
     }
 
-    // 三档播放模式：列表循环 → 单曲循环 → 随机循环，循环切换
+    // 四档播放模式：列表循环 → 单曲循环 → 随机循环 → 心动模式，循环切换。
+    // 心动档仅在网易登录且当前播的是网易歌时可达（不可达时保持原三档循环）。
+    val neteaseLoggedIn by lxMusicViewModel.neteaseLoggedIn.collectAsStateWithLifecycle()
+    val heartbeatAvailable = song.lxMusicSource == LxSources.NETEASE && neteaseLoggedIn
     val onCyclePlayMode = {
         when {
-            isShuffleEnabledProvider() -> {
-                onShuffleToggle()
+            isHeartbeatModeProvider() -> {
+                playerViewModel.leaveHeartbeatMode()
                 playerViewModel.setRepeatMode(Player.REPEAT_MODE_ALL)
+            }
+            isShuffleEnabledProvider() -> {
+                if (heartbeatAvailable) {
+                    playerViewModel.enterHeartbeatMode()
+                } else {
+                    onShuffleToggle()
+                    playerViewModel.setRepeatMode(Player.REPEAT_MODE_ALL)
+                }
             }
             repeatModeProvider() == Player.REPEAT_MODE_ONE -> {
                 playerViewModel.setRepeatMode(Player.REPEAT_MODE_ALL)
@@ -669,6 +681,7 @@ internal fun FullPlayerContent(
             isPlayingProvider = isPlayingProvider,
             isShuffleEnabledProvider = isShuffleEnabledProvider,
             repeatModeProvider = repeatModeProvider,
+            isHeartbeatModeProvider = isHeartbeatModeProvider,
             isFavoriteProvider = isFavoriteProvider,
             favoriteEnabledProvider = favoriteEnabledProvider,
             onCyclePlayMode = onCyclePlayMode,
@@ -742,6 +755,7 @@ internal fun FullPlayerContent(
             isPlayingProvider = isPlayingProvider,
             isShuffleEnabledProvider = isShuffleEnabledProvider,
             repeatModeProvider = repeatModeProvider,
+            isHeartbeatModeProvider = isHeartbeatModeProvider,
             isFavoriteProvider = isFavoriteProvider,
             favoriteEnabledProvider = favoriteEnabledProvider,
             onCyclePlayMode = onCyclePlayMode,
@@ -1344,6 +1358,7 @@ private fun FullPlayerSongMetadataSection(
     isPlayingProvider: () -> Boolean = { true },
     isShuffleEnabledProvider: () -> Boolean = { false },
     repeatModeProvider: () -> Int = { Player.REPEAT_MODE_ALL },
+    isHeartbeatModeProvider: () -> Boolean = { false },
     isFavoriteProvider: () -> Boolean = { false },
     favoriteEnabledProvider: () -> Boolean = { true },
     onCyclePlayMode: () -> Unit = {},
@@ -1394,6 +1409,7 @@ private fun FullPlayerSongMetadataSection(
             isPlayingProvider = isPlayingProvider,
             isShuffleEnabledProvider = isShuffleEnabledProvider,
             repeatModeProvider = repeatModeProvider,
+            isHeartbeatModeProvider = isHeartbeatModeProvider,
             isFavoriteProvider = isFavoriteProvider,
             favoriteEnabledProvider = favoriteEnabledProvider,
             onCyclePlayMode = onCyclePlayMode,
@@ -1609,6 +1625,7 @@ private fun SongMetadataDisplaySection(
     isPlayingProvider: () -> Boolean = { true },
     isShuffleEnabledProvider: () -> Boolean = { false },
     repeatModeProvider: () -> Int = { Player.REPEAT_MODE_ALL },
+    isHeartbeatModeProvider: () -> Boolean = { false },
     isFavoriteProvider: () -> Boolean = { false },
     favoriteEnabledProvider: () -> Boolean = { true },
     onCyclePlayMode: () -> Unit = {},
@@ -1694,6 +1711,7 @@ private fun SongMetadataDisplaySection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val playModeIcon = when {
+                    isHeartbeatModeProvider() -> R.drawable.rounded_cardiology_24
                     isShuffleEnabledProvider() -> R.drawable.rounded_shuffle_24
                     repeatModeProvider() == Player.REPEAT_MODE_ONE -> R.drawable.rounded_repeat_one_24
                     else -> R.drawable.rounded_repeat_24
@@ -1708,7 +1726,10 @@ private fun SongMetadataDisplaySection(
                 ) {
                     Icon(
                         painter = painterResource(playModeIcon),
-                        contentDescription = stringResource(R.string.presentation_batch_e_cd_toggle_repeat),
+                        contentDescription = stringResource(
+                            if (isHeartbeatModeProvider()) R.string.presentation_batch_h_cd_heartbeat_mode
+                            else R.string.presentation_batch_e_cd_toggle_repeat
+                        ),
                         tint = chipContentColor
                     )
                 }
@@ -1758,6 +1779,7 @@ private fun SongMetadataDisplaySection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val playModeIcon = when {
+                    isHeartbeatModeProvider() -> R.drawable.rounded_cardiology_24
                     isShuffleEnabledProvider() -> R.drawable.rounded_shuffle_24
                     repeatModeProvider() == Player.REPEAT_MODE_ONE -> R.drawable.rounded_repeat_one_24
                     else -> R.drawable.rounded_repeat_24
@@ -1772,7 +1794,10 @@ private fun SongMetadataDisplaySection(
                 ) {
                     Icon(
                         painter = painterResource(playModeIcon),
-                        contentDescription = stringResource(R.string.presentation_batch_e_cd_toggle_repeat)
+                        contentDescription = stringResource(
+                            if (isHeartbeatModeProvider()) R.string.presentation_batch_h_cd_heartbeat_mode
+                            else R.string.presentation_batch_e_cd_toggle_repeat
+                        )
                     )
                 }
                 FilledIconButton(
