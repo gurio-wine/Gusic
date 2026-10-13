@@ -628,6 +628,18 @@
         <item>移除排行榜上方的用户信息条与退出按钮</item>
         <item>“艺术家”统一改称“歌手”</item>
     </string-array>
+    <!-- Gusic 26.10.13.004：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101304_whats_new">
+        <item>发现页头部新增长短线条页面指示，平台切换按钮行已移除——左右滑动即可切换平台</item>
+        <item>切换平台不再重新加载排行榜预览，访问过的页面即刻完整呈现</item>
+        <item>酷我歌单读取按歌单 ID 位数分流并改走原生客户端协议，超长 ID 不会再错读到他人的歌单</item>
+    </string-array>
+    <!-- Gusic 26.10.13.004：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101304_changes">
+        <item>指示条移至顶栏下方的头部区域，与内容面板分离（与“我的”页一致）</item>
+        <item>顶栏平台名与账号按钮去除点击波纹，平台名旁的下拉箭头已删除</item>
+        <item>酷我登录时补采裸域与 vip1/i 域的会话 Cookie，供原生歌单协议使用</item>
+    </string-array>
     <!-- Gusic 26.10.13.003：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101303_whats_new">
         <item>发现页搜索框下方新增长短线条页面指示，标示当前所在平台</item>

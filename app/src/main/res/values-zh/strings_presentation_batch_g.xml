@@ -628,6 +628,18 @@
         <item>移除排行榜上方的使用者資訊條與登出按鈕</item>
         <item>「藝術家」統一改稱「歌手」</item>
     </string-array>
+    <!-- Gusic 26.10.13.004：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101304_whats_new">
+        <item>發現頁頭部新增長短線條頁面指示，平台切換按鈕列已移除——左右滑動即可切換平台</item>
+        <item>切換平台不再重新載入排行榜預覽，造訪過的頁面即刻完整呈現</item>
+        <item>酷我歌單讀取按歌單 ID 位數分流並改走原生用戶端協定，超長 ID 不會再錯讀到他人的歌單</item>
+    </string-array>
+    <!-- Gusic 26.10.13.004：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101304_changes">
+        <item>指示條移至頂欄下方的頭部區域，與內容面板分離（與「我的」頁一致）</item>
+        <item>頂欄平台名與帳號按鈕去除點擊波紋，平台名旁的下拉箭頭已刪除</item>
+        <item>酷我登入時補採裸域與 vip1/i 域的工作階段 Cookie，供原生歌單協定使用</item>
+    </string-array>
     <!-- Gusic 26.10.13.003：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101303_whats_new">
         <item>發現頁搜尋框下方新增長短線條頁面指示，標示目前所在平台</item>

@@ -628,6 +628,18 @@ These preferences are used when Gusic edits a song’s artist metadata. They do 
         <item>The profile strip above Top charts is gone</item>
         <item>Chinese labels now say 歌手 where they used to say 艺术家</item>
     </string-array>
+    <!-- Gusic 26.10.13.004：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101304_whats_new">
+        <item>Discover header now shows the long/short page indicator bars, and the platform switch button row is gone — swipe to switch platforms</item>
+        <item>Switching platforms no longer reloads the charts previews; already-visited pages appear instantly</item>
+        <item>Kuwo playlist reading now routes by playlist ID size through the native client protocol, so a long ID can no longer silently land on someone else&#8217;s list</item>
+    </string-array>
+    <!-- Gusic 26.10.13.004：部分改动 -->
+    <string-array name="presentation_batch_g_changelog_v26101304_changes">
+        <item>The indicator bar sits in the header area below the top bar, separated from the content panel, matching the Library page</item>
+        <item>Taps on the header platform name and account chip no longer show ripples, and the dropdown arrow beside the platform name is gone</item>
+        <item>Kuwo login now also collects session cookies from the bare domain and the vip1/i hosts for the native playlist protocol</item>
+    </string-array>
     <!-- Gusic 26.10.13.003：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101303_whats_new">
         <item>Discover adds long-and-short indicator bars under the search bar, marking the platform you are on</item>

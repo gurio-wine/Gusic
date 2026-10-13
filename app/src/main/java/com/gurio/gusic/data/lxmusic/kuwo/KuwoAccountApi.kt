@@ -224,7 +224,8 @@ internal class KuwoAccountApi(
                     .addQueryParameter("pn", "0")
                     .addQueryParameter("rn", "1000")
                     .addQueryParameter("loginUid", uid)
-                    .addQueryParameter("loginSid", cookies["sid"].orEmpty())
+                    .addQueryParameter("loginSid", cookies["sid"]?.takeIf(String::isNotBlank)
+                        ?: cookies["websid"].orEmpty())
                     .addQueryParameter("plat", "ar")
                     .addQueryParameter("prod", "kwplayer_ar")
                     .addQueryParameter("newver", "3")
@@ -313,27 +314,46 @@ internal class KuwoAccountApi(
     }
 
     /**
-     * 拉取登录用户歌单内歌曲（自建/收藏/我喜欢，pid 来自 getlistbyuid，为客户端
-     * 体系 64 位 id）。主路 pl3_getlist（官方 Android 客户端协议，TuneWeave 逆向
-     * 同款：sig=0 全量、分页由响应 pagenum 驱动、歌曲数组在 info.musiclist），
-     * 失败时回退 mobilist.kuwo.cn/list.s（收藏歌单族）。未登录/两路皆失败返回 null。
+     * 拉取登录用户歌单内歌曲（自建/收藏/我喜欢，pid 来自 getlistbyuid）。
+     * web/mobilist 族端点全部按 32 位寻址：超 2^32 的 pid 会被取模截断、静默命中
+     * 他人歌单（实测），因此 64 位 pid 只能走原生协议 pl3_getlist（需 uid+sid 会话，
+     * sid 缺失时尝试 websid）；32 位 pid 优先 web 族（匿名即可读公开/老歌单）。
+     * 未登录/无可用会话/两路皆失败返回 null。
      */
     suspend fun fetchUserPlaylistSongs(playlistId: String): List<LxSong>? = withContext(Dispatchers.IO) {
         val cookie = cookieStore.getCookie()?.takeIf(String::isNotBlank) ?: return@withContext null
         val cookies = parseCookieMap(cookie)
         val uid = cookies["userid"]?.takeIf(String::isNotBlank) ?: return@withContext null
-        val sid = cookies["sid"].orEmpty()
-        fetchOwnedPlsSongs(playlistId, uid, sid, cookie)
-            ?: fetchCollectedPlsSongs(playlistId, uid, sid, cookie)
+        // sid 缺失时用 websid（vip1 客户端域写入的会话）；原生协议没有会话必被拒
+        val sid = cookies["sid"]?.takeIf(String::isNotBlank)
+            ?: cookies["websid"]?.takeIf(String::isNotBlank)
+        val widePid = (playlistId.toLongOrNull() ?: 0L) > 0xFFFFFFFFL
+        when {
+            // 32 位 pid：web 族成熟可靠；空结果（含全被 digest 过滤）时若有会话再试原生
+            !widePid -> fetchCollectedPlsSongs(playlistId, uid, sid.orEmpty(), cookie)
+                ?.takeIf { it.isNotEmpty() }
+                ?: sid?.let { fetchOwnedPlsSongs(playlistId, uid, it) }
+            // 64 位 pid：只走原生协议，无会话直接失败（宁缺勿错——web 族会拿错歌单）
+            sid == null -> null
+            else -> fetchOwnedPlsSongs(playlistId, uid, sid)
+        }
     }
 
-    /** pl3_getlist：自建歌单与“我喜欢”的内容读取（鉴权走 query uid/sid + Cookie 头双保险）。 */
+    /**
+     * pl3_getlist：自建歌单与“我喜欢”的内容读取（原生协议，64 位 pid 寻址）。
+     * 按 TuneWeave 逆向构造：query 带 library 基参，Cookie 为原生风格字段而非
+     * web cookie（原生会话不认 web cookie）；dev_id/QIMEI36 无真实设备信息，
+     * 由 uid 派生稳定伪随机值，保证同一账号请求间一致。
+     */
     private suspend fun fetchOwnedPlsSongs(
         playlistId: String,
         uid: String,
         sid: String,
-        cookie: String,
     ): List<LxSong>? = withContext(Dispatchers.IO) {
+        val deviceId = buildNativeDeviceId(uid)
+        val nativeCookie = "user=kw$uid, ct=11, cv=12220, chid=newpcguanwangmobile, " +
+            "QIMEI36=${buildNativeQimei36(uid)}, tmeAppID=kwplayer, " +
+            "loginUid=$uid, loginSid=$sid, appUid=$deviceId, rom=android"
         val songs = mutableListOf<LxSong>()
         var pagenum = -1
         var pn = 0
@@ -346,17 +366,20 @@ internal class KuwoAccountApi(
                     .addQueryParameter("sig", "0")
                     .addQueryParameter("uid", uid)
                     .addQueryParameter("sid", sid)
+                    .addQueryParameter("dev_id", deviceId)
+                    .addQueryParameter("user", "kw$uid")
                     .addQueryParameter("encode", "utf8")
                     .addQueryParameter("plat", "ar")
                     .addQueryParameter("prod", "kwplayer_ar_12.2.2.0")
+                    .addQueryParameter("source", "kwplayer")
+                    .addQueryParameter("corp", "kuwo")
                     .addQueryParameter("loginUid", uid)
                     .addQueryParameter("loginSid", sid)
                     .addQueryParameter("pn", pn.toString())
                     .build())
                 .header("User-Agent", USER_AGENT)
                 .header("Accept", "application/json")
-                .header("Cookie", cookie)
-                .header("Referer", "https://www.kuwo.cn/")
+                .header("Cookie", nativeCookie)
                 .get()
                 .build()
             val root = runCatching {
@@ -392,7 +415,8 @@ internal class KuwoAccountApi(
         songs.toList()
     }
 
-    /** mobilist.kuwo.cn/list.s：收藏（他人）歌单族的内容读取，作为 pl3_getlist 的回退路。 */
+    /** mobilist.kuwo.cn/list.s：web 族端点（32 位 pid 寻址；64 位 pid 会被取模截断、
+     *  静默命中他人歌单，调用方 [fetchUserPlaylistSongs] 已按位数分流，勿直接传入 64 位 pid）。 */
     private suspend fun fetchCollectedPlsSongs(
         playlistId: String,
         uid: String,
@@ -550,6 +574,27 @@ internal class KuwoAccountApi(
             interval = o.longOf("duration") ?: 0L,
             pic = (o.strOf("pic") ?: o.strOf("albumpic") ?: o.strOf("img"))?.takeIf { it.isNotBlank() },
         )
+    }
+
+    /** 原生协议设备参数无真实来源：由 uid 派生稳定伪随机值，保证同一账号请求间一致。 */
+    private fun buildNativeDeviceId(uid: String): String {
+        var seed = uid.hashCode().toLong() and 0xFFFFFFFFL
+        return buildString {
+            repeat(16) {
+                seed = (seed * 1103515245L + 12345L) and 0xFFFFFFFFL
+                append('0' + ((seed ushr 16) % 10L).toInt())
+            }
+        }
+    }
+
+    private fun buildNativeQimei36(uid: String): String {
+        var seed = (uid.hashCode().toLong() and 0xFFFFFFFFL) xor 0x9E3779B9L
+        return buildString {
+            repeat(36) {
+                seed = (seed * 1103515245L + 12345L) and 0xFFFFFFFFL
+                append("0123456789abcdef"[((seed ushr 16) % 16L).toInt()])
+            }
+        }
     }
 
     /** pl.svc 歌名/歌手/专辑字段解码：多重 URL 编码 + 常见 HTML 实体（listen1 用 html_decode、lx 用 decodeName 的等价简化）。 */

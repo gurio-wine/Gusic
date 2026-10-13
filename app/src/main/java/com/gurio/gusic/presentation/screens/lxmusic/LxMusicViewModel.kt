@@ -28,6 +28,7 @@ import com.gurio.gusic.data.preferences.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -711,6 +712,12 @@ class LxMusicViewModel @Inject constructor(
     private val _sourceBoardsCache = MutableStateFlow<Map<String, List<LxBoard>>>(emptyMap())
     val sourceBoardsCache: StateFlow<Map<String, List<LxBoard>>> = _sourceBoardsCache.asStateFlow()
 
+    /** 每源榜单预览缓存：切源与滑到相邻页时直接回填，消除预览清空重载的“刷新感”。 */
+    private val _sourceBoardPreviewsCache =
+        MutableStateFlow<Map<String, Map<String, List<LxSong>>>>(emptyMap())
+    val sourceBoardPreviewsCache: StateFlow<Map<String, Map<String, List<LxSong>>>> =
+        _sourceBoardPreviewsCache.asStateFlow()
+
     fun selectSource(source: String) {
         if (source == _selectedSource.value) return
         currentLoadJob?.cancel()
@@ -743,10 +750,11 @@ class LxMusicViewModel @Inject constructor(
             moduleSource = source,
             // 有缓存先回填榜单，避免切源瞬间当前页闪空（后续 force 加载会覆盖）
             boards = _sourceBoardsCache.value[source].orEmpty(),
+            // 预览同样按源回填：切源瞬间即为完整形态，不闪“无预览”中间态
+            boardPreviews = _sourceBoardPreviewsCache.value[source].orEmpty(),
             selectedBoard = null,
             boardSongs = emptyList(),
             loadingBoard = false,
-            boardPreviews = emptyMap(),
             loadingBoardPreviews = false,
             playlistTags = emptyList(),
             selectedTag = null,
@@ -1056,6 +1064,7 @@ class LxMusicViewModel @Inject constructor(
             val previews = boards.mapNotNull { board ->
                 boardPreviewCache["${source}:${board.id}"]?.let { board.id to it }
             }.toMap()
+            _sourceBoardPreviewsCache.value = _sourceBoardPreviewsCache.value + (source to previews)
             val cur = _browseState.value
             // recommend（网易混合列表）与 board 共用榜单预览，两种模块都允许写快照
             if (_selectedSource.value == source &&
@@ -1085,9 +1094,14 @@ class LxMusicViewModel @Inject constructor(
                                     boardPreviewCache[key] = songs
                                     publishBoardPreview(board.id, songs, source)
                                 } else {
-                                    Timber.w(result.exceptionOrNull(), "board preview failed ${board.id}")
-                                    // 失败不写缓存：状态置空便于显示占位，重进模块时自动重试
-                                    publishBoardPreview(board.id, emptyList(), source)
+                                    val e = result.exceptionOrNull()
+                                    if (e is CancellationException) {
+                                        // 切源取消了在途请求：不算失败，状态与缓存都不落
+                                    } else {
+                                        Timber.w(e, "board preview failed ${board.id}")
+                                        // 失败不写缓存：状态置空便于显示占位，重进模块时自动重试
+                                        publishBoardPreview(board.id, emptyList(), source, persistToCache = false)
+                                    }
                                 }
                             }
                         }
@@ -1102,7 +1116,19 @@ class LxMusicViewModel @Inject constructor(
         }
     }
 
-    private fun publishBoardPreview(boardId: String, songs: List<LxSong>, source: String) {
+    private fun publishBoardPreview(
+        boardId: String,
+        songs: List<LxSong>,
+        source: String,
+        persistToCache: Boolean = true,
+    ) {
+        // 缓存无条件写（跟随源而非当前选中；失败占位不落缓存，避免取消/失败被当成
+        // 真实空预览回填）；状态写入仍受源/模块守卫
+        if (persistToCache) {
+            val cachedPreviews = _sourceBoardPreviewsCache.value[source] ?: emptyMap()
+            _sourceBoardPreviewsCache.value =
+                _sourceBoardPreviewsCache.value + (source to (cachedPreviews + (boardId to songs)))
+        }
         val cur = _browseState.value
         // recommend（网易混合列表）与 board 共用榜单预览，两种模块都允许发布
         if (_selectedSource.value != source ||
@@ -1113,6 +1139,7 @@ class LxMusicViewModel @Inject constructor(
 
     private fun clearBoardPreviewCache(source: String) {
         boardPreviewCache.keys.removeAll { it.startsWith("$source:") }
+        _sourceBoardPreviewsCache.value = _sourceBoardPreviewsCache.value - source
     }
 
     /** 从榜单详情返回菜单页：取消详情加载，保留菜单预览。 */

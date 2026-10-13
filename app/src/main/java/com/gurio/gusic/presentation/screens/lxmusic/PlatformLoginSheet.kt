@@ -70,6 +70,7 @@ private fun PlatformLoginDialog(
     userAgentOverride: String? = null,
     detectByMarkers: Boolean = false,
     autoClickSelector: String? = null,
+    extraCookieUrls: List<String> = emptyList(),
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -111,7 +112,7 @@ private fun PlatformLoginDialog(
 
         val manager = CookieManager.getInstance()
         manager.flush()
-        val cookieUrls = listOf(url, loginUrl, "https://www.$hostMatch", "https://m.$hostMatch").distinct()
+        val cookieUrls = (listOf(url, loginUrl, "https://www.$hostMatch", "https://m.$hostMatch") + extraCookieUrls).distinct()
         // 多 URL 采集必然产生同名多条（host-only 与 domain 条目值不同），而部分网关
         // （如酷我 Secret 校验）按首条同名 cookie 取值——拼接前按名去重（保留后出现值，
         // 与各平台 cookie 解析的“后者覆盖”语义一致），消除取值歧义
@@ -420,6 +421,9 @@ fun KuwoLoginDialog(
         "(KHTML, like Gecko) Chrome/124.0.0 Safari/537.36",
     detectByMarkers = true,
     autoClickSelector = ".reg_text",
+    // 补采裸域与客户端域：vip1.kuwo.cn 写入的 websid 等会话 cookie 是 host-only 不跨子域，
+    // 漏采会导致原生歌单协议（pl3_getlist）无会话可用
+    extraCookieUrls = listOf("https://kuwo.cn/", "https://i.kuwo.cn/", "https://vip1.kuwo.cn/"),
 )
 
 @Composable

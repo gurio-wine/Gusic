@@ -52,7 +52,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -84,7 +83,6 @@ import com.gurio.gusic.presentation.components.subcomps.SelectionCountPill
 import com.gurio.gusic.data.lxmusic.LxQualities
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
@@ -112,7 +110,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp as lerpColor
@@ -157,8 +154,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.launch
 import kotlinx.collections.immutable.toImmutableList
-import kotlin.math.abs
 import com.gurio.gusic.R
+import kotlin.math.abs
 import com.gurio.gusic.data.lxmusic.LxSongMapper
 import com.gurio.gusic.data.lxmusic.LxSources
 import com.gurio.gusic.data.lxmusic.LxWriteOp
@@ -407,12 +404,16 @@ fun LxMusicScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    // 顶栏平台名可点击：打开平台排序/隐藏面板（原 tab 行编辑按钮已移除）
+                    // 顶栏平台名可点击：打开平台排序/隐藏面板（无点击波纹）
+                    val headerInteraction = remember { MutableInteractionSource() }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .clickable { showPlatformOrderSheet = true }
+                            .clickable(
+                                interactionSource = headerInteraction,
+                                indication = null,
+                            ) { showPlatformOrderSheet = true }
                             .padding(horizontal = 4.dp),
                     ) {
                         Text(
@@ -422,7 +423,7 @@ fun LxMusicScreen(
                                     append(' ')
                                 }
                                 withStyle(SpanStyle(fontSize = 18.sp)) {
-                                    // 顶栏动态文本显示当前平台名（随左右滑/顶部 tab 切换）
+                                    // 顶栏动态文本显示当前平台名（随左右滑切换）
                                     append(platformName(selectedSource))
                                 }
                             },
@@ -430,12 +431,6 @@ fun LxMusicScreen(
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.primary,
                             letterSpacing = 1.sp,
-                        )
-                        Icon(
-                            Icons.Rounded.ArrowDropDown,
-                            contentDescription = stringResource(R.string.lx_platform_order_title),
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                            modifier = Modifier.size(20.dp),
                         )
                     }
                 },
@@ -496,6 +491,10 @@ fun LxMusicScreen(
                 .fillMaxSize(),
         ) {
             val sourceBoardsCache by viewModel.sourceBoardsCache.collectAsStateWithLifecycle()
+            val sourceBoardPreviewsCache by viewModel.sourceBoardPreviewsCache.collectAsStateWithLifecycle()
+            val searchActive = browseState.module == "search"
+            val playlistDetailActive = browseState.module == "playlist" ||
+                browseState.selectedPlaylist != null
             // 发现页左右滑 pager（与媒体库页一致的交互）：停稳后切音源；顶部平台 tab 点击滚动 pager。
             // 用 settledPageKey（=音源 id）而非索引映射：平台重排/登录态隐藏导致列表变化时，
             // 旧索引会短暂指向别的源而误触发 selectSource，按 key 读取则不受影响
@@ -528,41 +527,28 @@ fun LxMusicScreen(
                     }
                 }
             }
-            val sourceSelectedIndex = orderedSearchTabs.indexOfFirst { it.first == selectedSource }
-            val sourceTabsListState = rememberLazyListState()
-            LaunchedEffect(sourceSelectedIndex) {
-                if (sourceSelectedIndex >= 0) {
-                    sourceTabsListState.animateScrollToItem(sourceSelectedIndex)
-                }
-            }
-            androidx.compose.foundation.lazy.LazyRow(
-                state = sourceTabsListState,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            // 头部页面指示条（与我的页同款）：属于头部区域（TopAppBar 下、内容面板上），
+            // 不与搜索框/榜单内容同层。平台 tab 行已移除：切换靠左右滑，定位靠指示条，
+            // 重排/隐藏入口在顶栏平台名
+            if (!playlistDetailActive && !searchActive &&
+                browseState.selectedBoard == null &&
+                !(recommendTabAvailable && mineState.page !is LxMusicViewModel.MinePage.Home)
             ) {
-                itemsIndexed(orderedSearchTabs, key = { _, it -> it.first }) { index, (src, _) ->
-                    LxSourceTab(
-                        label = platformName(src),
-                        selected = src == selectedSource,
-                        index = index,
-                        selectedIndex = sourceSelectedIndex,
-                        onClick = { scope.launch { browsePagerState.animateScrollToPage(index) } },
-                    )
-                }
+                LxBrowsePagerIndicator(
+                    currentIndex = browsePagerState.currentPage,
+                    pageCount = orderedSearchTabs.size,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 8.dp),
+                )
             }
             Surface(
                 modifier = Modifier.fillMaxSize()
-                    .padding(top = 68.dp),
+                    .padding(top = 22.dp),
                 color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    val searchActive = browseState.module == "search"
-                    val playlistDetailActive = browseState.module == "playlist" ||
-                        browseState.selectedPlaylist != null
                     // 常驻搜索框：浏览态提交搜索进入搜索态，搜索态左侧变为返回按钮
                     LxDockedSearchBar(
                         query = searchState.keyword,
@@ -578,18 +564,6 @@ fun LxMusicScreen(
                         onLeadingBack = { viewModel.back() },
                         enableInnerBox = false,
                     )
-                    // 指示条只在浏览根 pager 可见时显示（榜单详情/网易推荐子页不含 pager）
-                    if (!playlistDetailActive && !searchActive &&
-                        browseState.selectedBoard == null &&
-                        !(recommendTabAvailable && mineState.page !is LxMusicViewModel.MinePage.Home)
-                    ) {
-                        // 浏览态：页面指示条（与媒体库页同款长短线条），同时拉开榜单内容与搜索框的间距
-                        LxBrowsePagerIndicator(
-                            currentIndex = browsePagerState.currentPage,
-                            pageCount = orderedSearchTabs.size,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-                        )
-                    }
                     if (playlistDetailActive) {
                         // 歌单详情模式（含搜索直开）：隐藏模块行与 pager
                         Box(modifier = Modifier.fillMaxSize()) {
@@ -731,7 +705,8 @@ fun LxMusicScreen(
                                         }
                                         boardMenuItems(
                                             boards = pageBoards,
-                                            previews = if (isCurrentSource) browseState.boardPreviews else emptyMap(),
+                                            previews = if (isCurrentSource) browseState.boardPreviews
+                                        else sourceBoardPreviewsCache[pageSource].orEmpty(),
                                             loadingPreviews = isCurrentSource && browseState.loadingBoardPreviews,
                                             source = pageSource,
                                             onSelectBoard = { board ->
@@ -1175,98 +1150,6 @@ private fun LxBrowsePagerIndicator(
     }
 }
 
-@Composable
-private fun LxSourceTab(
-    label: String,
-    selected: Boolean,
-    index: Int,
-    selectedIndex: Int,
-    onClick: () -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
-) {
-    val hapticFeedback = LocalHapticFeedback.current
-    val scale = remember { Animatable(1f) }
-    val offsetX = remember { Animatable(0f) }
-    var hasAnimatedSelectionChange by remember { mutableStateOf(false) }
-    val animationSpec = tween<Float>(durationMillis = 250, easing = FastOutSlowInEasing)
-
-    val backgroundColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.surface,
-        animationSpec = tween(durationMillis = 200),
-        label = "LxSourceTabBg"
-    )
-    val contentColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.onPrimary
-        else MaterialTheme.colorScheme.onSurface,
-        animationSpec = tween(durationMillis = 200),
-        label = "LxSourceTabContent"
-    )
-
-    LaunchedEffect(selectedIndex) {
-        if (!hasAnimatedSelectionChange) {
-            hasAnimatedSelectionChange = true
-            scale.snapTo(1f)
-            offsetX.snapTo(0f)
-            return@LaunchedEffect
-        }
-        if (selected) {
-            scale.animateTo(1.05f, animationSpec)
-            scale.animateTo(1f, animationSpec)
-        } else {
-            scale.snapTo(1f)
-        }
-        if (!selected) {
-            val distance = index - selectedIndex
-            if (abs(distance) == 1) {
-                val direction = if (distance > 0) 1 else -1
-                val offsetValue = 12f * direction
-                offsetX.animateTo(offsetValue, animationSpec)
-                offsetX.animateTo(0f, animationSpec)
-            } else {
-                offsetX.snapTo(0f)
-            }
-        } else {
-            offsetX.snapTo(0f)
-        }
-    }
-
-    Surface(
-        onClick = {
-            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            onClick()
-        },
-        shape = RoundedCornerShape(22.dp),
-        color = backgroundColor,
-        modifier = Modifier
-            .widthIn(min = 64.dp)
-            .graphicsLayer {
-            scaleX = scale.value
-            translationX = offsetX.value
-            transformOrigin = TransformOrigin.Center
-        },
-    ) {
-        if (icon != null && label.isEmpty()) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-                    .size(20.dp),
-            )
-        } else {
-            Text(
-                text = label,
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = contentColor,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            )
-        }
-    }
-}
-
 // “我的”页未登录占位：提示当前平台未登录，并提供登录入口（复用现有平台登录弹窗）
 @Composable
 private fun LxMineNotLoggedInPlaceholder(
@@ -1316,11 +1199,16 @@ private fun LxAccountChip(
     notLoggedInText: String,
     onClick: () -> Unit,
 ) {
+    val chipInteraction = remember { MutableInteractionSource() }
     Row(
         modifier = Modifier
             .padding(end = 14.dp)
             .clip(RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick)
+            .clickable(
+                interactionSource = chipInteraction,
+                indication = null,
+                onClick = onClick,
+            )
             .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
