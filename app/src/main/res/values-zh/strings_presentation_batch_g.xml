@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.007：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101307_whats_new">
+        <item>喜好推薦改為多抽幾首種子歌合併結果，不再只有寥寥幾首</item>
+    </string-array>
     <!-- Gusic 26.10.13.006：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101306_whats_new">
         <item>酷我登入改為僅簡訊驗證碼方式，同時簽發讀取自建大歌單所需的原生工作階段</item>

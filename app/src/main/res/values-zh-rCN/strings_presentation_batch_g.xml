@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.007：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101307_whats_new">
+        <item>喜好推荐改为多抽几首种子歌合并结果，不再只有寥寥几首</item>
+    </string-array>
     <!-- Gusic 26.10.13.006：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101306_whats_new">
         <item>酷我登录改为仅短信验证码方式，同时签发读取自建大歌单所需的原生会话</item>

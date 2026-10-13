@@ -2982,9 +2982,10 @@ class LxMusicViewModel @Inject constructor(
                     null -> emptyList<LxSong>() to context.getString(R.string.lx_error_load_failed_retry)
                 }
             } else {
-                runCatching { mineSongsLoader(page).invoke() }
+                val res = runCatching { mineSongsLoader(page).invoke() }
                     .onFailure { Timber.w(it, "mine songs load failed: ${page.kind}/${page.title}") }
-                    .getOrDefault(emptyList()) to null
+                res.getOrElse { emptyList() } to
+                    if (res.isFailure) context.getString(R.string.lx_error_load_failed_retry) else null
             }
             val songs = loaded.first
             val loadError = loaded.second
@@ -3033,12 +3034,33 @@ class LxMusicViewModel @Inject constructor(
             }
         })
         "roaming" -> ({
-            val liked = _mineState.value.likedPlaylist()
-            val seed = liked?.let {
-                runCatching { repository.fetchNeteasePlaylistSongs(it.id).first }
-                    .getOrDefault(emptyList()).randomOrNull()?.songmid
+            val likedSongs = _mineState.value.likedPlaylist()?.let {
+                // 抓取失败直接抛给外层落"加载失败"文案，避免误报"暂无内容"
+                repository.fetchNeteasePlaylistSongs(it.id).first
+            }.orEmpty()
+            val likedIds = likedSongs.mapNotNull { it.songmid.takeIf(String::isNotBlank) }.toHashSet()
+            // 单首种子的相似歌曲池通常只有几首，多抽几个种子并行拉取、合并去重并排除已喜欢的歌，才凑得满一批
+            val seeds = likedIds.shuffled().take(ROAMING_SEED_COUNT)
+            if (seeds.isEmpty()) {
+                emptyList()
+            } else {
+                coroutineScope {
+                    val batches = seeds.map { seed ->
+                        async {
+                            runCatching { repository.fetchNeteaseSimilarSongs(seed) }
+                                .onFailure {
+                                    if (it is CancellationException) throw it
+                                    Timber.w(it, "roaming seed load failed")
+                                }
+                                .getOrDefault(emptyList())
+                        }
+                    }.awaitAll()
+                    val seen = likedIds.toMutableSet()
+                    batches.flatten()
+                        .filter { s -> s.songmid.isNotBlank() && seen.add(s.songmid) }
+                        .shuffled()
+                }
             }
-            if (seed != null) repository.fetchNeteaseSimilarSongs(seed) else emptyList()
         })
         "playlist" -> ({
             // 推荐页签为网易专属内容，歌单引用一律为网易裸 id
@@ -3051,6 +3073,9 @@ class LxMusicViewModel @Inject constructor(
     private val artistSongsPageSize = 30
 
     private val playlistSongsPageSize = 100
+
+    /** 喜好推荐（roaming）并行种子数：单种子相似池只有几首，抽 6 个种子合并去重凑满一批。 */
+    private val ROAMING_SEED_COUNT = 6
 
     private var lastMineBackAtMs = 0L
 

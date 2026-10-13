@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.007：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v26101307_whats_new">
+        <item>Liked-songs recommendations now gather from several seed tracks and merge the results, so the list is no longer stuck at a handful of songs</item>
+    </string-array>
     <!-- Gusic 26.10.13.006：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101306_whats_new">
         <item>Kuwo login is now SMS verification only, and it signs the native session that reads your own playlists</item>
