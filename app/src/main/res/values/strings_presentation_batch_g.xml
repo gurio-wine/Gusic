@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.012：修复 -->
+    <string-array name="presentation_batch_g_changelog_v26101312_changes">
+        <item>The notification&#8217;s repeat-mode button now shows the same cardiology icon as the player while Heartbeat mode is active, instead of a generic heart</item>
+    </string-array>
     <!-- Gusic 26.10.13.011：修复 -->
     <string-array name="presentation_batch_g_changelog_v26101311_changes">
         <item>Heartbeat queue cap now actually holds: the server ignores the per-batch count request and returns full pages, so batches are trimmed locally to the requested 0-5 tracks — the queue now stops within a few tracks of 150 instead of running to 200</item>

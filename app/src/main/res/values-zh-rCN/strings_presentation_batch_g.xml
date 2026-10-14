@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.012：修复 -->
+    <string-array name="presentation_batch_g_changelog_v26101312_changes">
+        <item>通知的循环模式按钮在心动模式下改为与播放页相同的心电图图标，不再用通用心形</item>
+    </string-array>
     <!-- Gusic 26.10.13.011：修复 -->
     <string-array name="presentation_batch_g_changelog_v26101311_changes">
         <item>心动队列上限这次真正管住了：服务端不遵守每批数量参数、整页返回，现在在本地把每批裁剪到请求的 0-5 首，队列会在 150 附近几首内停下，不再冲到 200</item>

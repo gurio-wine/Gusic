@@ -2498,6 +2498,13 @@ class MusicService : MediaSessionService() {
                     else R.string.presentation_batch_e_cd_toggle_repeat
                 )
             )
+            .apply {
+                // 自定义通知 Provider 渲染 action 时直接读 iconResId，
+                // 心动态用播放页同款心电图图标（预设 Icon 仅作系统侧兜底语义）
+                if (isHeartbeatMode) {
+                    setCustomIconResId(R.drawable.rounded_cardiology_notification)
+                }
+            }
             .setSessionCommand(SessionCommand(MusicNotificationProvider.CUSTOM_COMMAND_CYCLE_PLAY_MODE, Bundle.EMPTY))
             .setSlots(CommandButton.SLOT_BACK)
             .build()
