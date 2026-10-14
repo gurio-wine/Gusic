@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.013：优化 -->
+    <string-array name="presentation_batch_g_changelog_v261013013_changes">
+        <item>心动模式生成队列的下载量大幅下降：每批在查询歌曲详情前，先把整页推荐裁剪到请求的 0-5 首，并提前排除已入队和种子池中的歌曲</item>
+    </string-array>
     <!-- Gusic 26.10.13.012：修复 -->
     <string-array name="presentation_batch_g_changelog_v26101312_changes">
         <item>通知的循环模式按钮在心动模式下改为与播放页相同的心电图图标，不再用通用心形</item>

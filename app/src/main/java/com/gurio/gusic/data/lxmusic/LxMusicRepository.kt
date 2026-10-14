@@ -2313,6 +2313,7 @@ class LxMusicRepository @Inject constructor(
         playlistId: String,
         seedSongId: String,
         count: Int = 150,
+        excludeIds: Set<String> = emptySet(),
     ): List<LxSong> {
         val root = neteaseWeapiOk(
             "/weapi/playmode/intelligence/list",
@@ -2334,7 +2335,14 @@ class LxMusicRepository @Inject constructor(
             }.getOrNull()
         }.orEmpty()
         if (ids.isEmpty()) return emptyList()
-        return fetchNeteaseSongsByIdsV3(ids)
+        // 服务端不遵守 count（整页返回）：先按上层传入的排除集过滤再本地裁剪，
+        // 只对最多 count 首查详情，避免整页详情响应的下载量
+        val selectedIds = ids.asSequence()
+            .filterNot { it in excludeIds }
+            .take(count.coerceAtLeast(0))
+            .toList()
+        if (selectedIds.isEmpty()) return emptyList()
+        return fetchNeteaseSongsByIdsV3(selectedIds)
     }
 
     suspend fun fetchNeteaseSimilarSongs(songId: String): List<LxSong> {

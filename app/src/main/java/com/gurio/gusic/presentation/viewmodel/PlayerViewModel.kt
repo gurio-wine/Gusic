@@ -4903,6 +4903,9 @@ class PlayerViewModel @Inject constructor(
             // 种子提前占位，轮到它们做种子时被去重跳过，队列节奏变成大段纯推荐
             val seedPoolIds = seedPool.map { it.id }.toHashSet()
             val addedIds = HashSet<String>().apply { add(s1.id) }
+            // 接口层预过滤用网易原始 id（Song.id 是哈希 unified id，空间不同）
+            val seedPoolMids = seedPool.mapNotNull { it.lxMusicSongMid }.toHashSet()
+            val addedMids = HashSet<String>().apply { s1.lxMusicSongMid?.let { add(it) } }
             // 队列上限用本地计数判断：controller 的 timeline 是异步生效的，
             // 网络先返回时会读到清空前的大数导致误判已满
             var queuedTotal = 1
@@ -4917,6 +4920,11 @@ class PlayerViewModel @Inject constructor(
                     runCatching {
                         lxMusicRepository.fetchNeteaseHeartbeatSongs(
                             likedId, seed.lxMusicSongMid.orEmpty(), count,
+                            excludeIds = buildSet {
+                                addAll(addedMids)
+                                addAll(seedPoolMids)
+                                seed.lxMusicSongMid?.let(::add)
+                            },
                         )
                     }.onFailure { Timber.w(it, "heartbeat batch load failed") }
                         .getOrDefault(emptyList())
@@ -4938,7 +4946,10 @@ class PlayerViewModel @Inject constructor(
                 if (toAdd.isNotEmpty()) {
                     mediaController?.addMediaItems(toAdd.map { buildPlaybackMediaItem(it) })
                     queuedTotal += toAdd.size
-                    toAdd.forEach { addedIds += it.id }
+                    toAdd.forEach {
+                        addedIds += it.id
+                        it.lxMusicSongMid?.let { mid -> addedMids += mid }
+                    }
                     // 等本批真正落位再生成下一批：addMediaItems 在服务端是异步解析的，
                     // 连续提交的多批完成顺序不保证，会变成"谁先解析完谁先入队"，
                     // 打乱"种子→本批推荐→下一种子"的结构

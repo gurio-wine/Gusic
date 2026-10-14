@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.013：优化 -->
+    <string-array name="presentation_batch_g_changelog_v261013013_changes">
+        <item>Heartbeat mode now builds its queue with far less data: each batch trims the full recommendation page to just the requested 0-5 tracks and drops anything already queued or reserved as a seed before fetching song details</item>
+    </string-array>
     <!-- Gusic 26.10.13.012：修复 -->
     <string-array name="presentation_batch_g_changelog_v26101312_changes">
         <item>The notification&#8217;s repeat-mode button now shows the same cardiology icon as the player while Heartbeat mode is active, instead of a generic heart</item>
