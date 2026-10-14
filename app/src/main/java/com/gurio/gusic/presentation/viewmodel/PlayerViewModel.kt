@@ -4892,7 +4892,13 @@ class PlayerViewModel @Inject constructor(
                 sendToast(context.getString(R.string.lx_error_load_failed_retry))
                 return@launch
             }
-            val likedCandidates = runCatching { lxMusicRepository.fetchNeteasePlaylistSongs(likedId).first }
+            // 轻量采样：只拉 trackIds 后随机抽 LIKED_SAMPLE_SIZE 首查详情，
+            // 不再全量下载"我喜欢"歌单的完整元数据
+            val likedCandidates = runCatching {
+                lxMusicRepository.fetchNeteaseRandomPlaylistSongs(
+                    likedId, HeartbeatQueuePlanner.LIKED_SAMPLE_SIZE,
+                )
+            }
                 .onFailure { Timber.w(it, "heartbeat liked songs load failed") }
                 .getOrDefault(emptyList())
                 .map(LxSongMapper::toSong)
@@ -4910,6 +4916,8 @@ class PlayerViewModel @Inject constructor(
             // 网络先返回时会读到清空前的大数导致误判已满
             var queuedTotal = 1
             var firstBatch = true
+            // 落位等待超时：正常 500ms 足够，慢设备超时一次后升到 2s 防乱序
+            var settleTimeoutMs = 500L
             while (isActive) {
                 if (queuedTotal >= HeartbeatQueuePlanner.QUEUE_LIMIT) break
                 // 第一批种子是正在播放的 s1（已在队列中）；之后依次消耗歌单 D
@@ -4954,11 +4962,14 @@ class PlayerViewModel @Inject constructor(
                     // 连续提交的多批完成顺序不保证，会变成"谁先解析完谁先入队"，
                     // 打乱"种子→本批推荐→下一种子"的结构
                     val expectedCount = queuedTotal
-                    withTimeoutOrNull(2_000L) {
+                    // 解析落位是本地库查询，正常几十毫秒内完成；慢设备首次超时后
+                    // 恢复 2s 兜底，避免连续两批竞态乱序
+                    val settled = withTimeoutOrNull(settleTimeoutMs) {
                         while ((mediaController?.mediaItemCount ?: 0) < expectedCount) {
-                            delay(50)
+                            delay(25)
                         }
                     }
+                    if (settled == null) settleTimeoutMs = 2_000L
                 }
                 firstBatch = false
             }

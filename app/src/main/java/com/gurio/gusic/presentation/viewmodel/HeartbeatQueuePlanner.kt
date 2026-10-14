@@ -15,6 +15,9 @@ internal object HeartbeatQueuePlanner {
     /** 种子池（歌单 B）的补足目标数量。 */
     const val SEED_POOL_TARGET = 5
 
+    /** 心动进入时从"我喜欢"歌单随机采样的候选数量（补足缺口 ×3 余量防去重损耗）。 */
+    const val LIKED_SAMPLE_SIZE = 15
+
     /**
      * 歌单 B = 快照 A 的网易子集；不足 [SEED_POOL_TARGET] 时从"我喜欢"歌单的候选里
      * 随机补足（按 songmid 去重，排除当前播放的歌）。喜欢歌单也凑不够时有多少取多少。

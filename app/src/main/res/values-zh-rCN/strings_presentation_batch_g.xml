@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.014：优化 -->
+    <string-array name="presentation_batch_g_changelog_v261013014_changes">
+        <item>心动模式生成队列的流量进一步下降：我喜欢歌单改为按 id 随机采样，不再整单下载；每批直接复用推荐页自带的歌曲详情，省去逐批的第二次请求，入队速度也更快</item>
+    </string-array>
     <!-- Gusic 26.10.13.013：优化 -->
     <string-array name="presentation_batch_g_changelog_v261013013_changes">
         <item>心动模式生成队列的下载量大幅下降：每批在查询歌曲详情前，先把整页推荐裁剪到请求的 0-5 首，并提前排除已入队和种子池中的歌曲</item>

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.10.13.014：优化 -->
+    <string-array name="presentation_batch_g_changelog_v261013014_changes">
+        <item>Heartbeat mode pulls far less data while filling the queue: Liked Songs are sampled by id instead of downloading the whole playlist, and each batch reuses the recommendation page itself for song details instead of a second request per batch, which also speeds up queue building</item>
+    </string-array>
     <!-- Gusic 26.10.13.013：优化 -->
     <string-array name="presentation_batch_g_changelog_v261013013_changes">
         <item>Heartbeat mode now builds its queue with far less data: each batch trims the full recommendation page to just the requested 0-5 tracks and drops anything already queued or reserved as a seed before fetching song details</item>

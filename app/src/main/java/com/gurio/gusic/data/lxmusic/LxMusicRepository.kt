@@ -1763,6 +1763,36 @@ class LxMusicRepository @Inject constructor(
         )
     }
 
+    /**
+     * 心动模式种子池补足专用：v6 歌单详情只带 trackIds（n=0，不拉全量 tracks 元数据），
+     * 从全集中随机抽 [sampleSize] 首再查详情，避免整歌单完整元数据的下载量。
+     * 失败返回空列表（调用方按无补足候选处理）。
+     */
+    suspend fun fetchNeteaseRandomPlaylistSongs(playlistId: String, sampleSize: Int): List<LxSong> = withContext(Dispatchers.IO) {
+        runCatching {
+            val url = "https://music.163.com/api/v6/playlist/detail?id=$playlistId&n=0"
+            val cookie = neteaseCookieStore.getCookie()?.takeIf { it.isNotBlank() }
+                ?: "os=pc; appver=2.5.2.197409"
+            val req = Request.Builder().url(url)
+                .header("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36")
+                .header("Referer", "https://music.163.com/")
+                .header("Cookie", cookie)
+                .get()
+                .build()
+            okHttpClient.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) return@runCatching emptyList<LxSong>()
+                val trackIds = JsonParser.parseString(resp.body?.string().orEmpty())
+                    .asJsonObject.getAsJsonObject("playlist")
+                    ?.getAsJsonArray("trackIds")
+                    ?.mapNotNull { el -> el.asJsonObject.get("id")?.takeIf { it.isJsonPrimitive }?.asString }
+                    .orEmpty()
+                val sampled = trackIds.shuffled().take(sampleSize.coerceAtLeast(0))
+                if (sampled.isEmpty()) emptyList() else fetchNeteaseSongsByIds(sampled)
+            }
+        }.onFailure { Timber.w(it, "fetchNeteaseRandomPlaylistSongs failed id=$playlistId") }
+            .getOrDefault(emptyList())
+    }
+
     private suspend fun fetchNeteasePlaylistSongsV6(playlistId: String, page: Int = 1, pageSize: Int = Int.MAX_VALUE): Pair<List<LxSong>, Boolean> {
         val cached = neteasePlaylistDetailCache?.takeIf { it.playlistId == playlistId }
         val trackIds: List<String>
@@ -2327,22 +2357,37 @@ class LxMusicRepository @Inject constructor(
                 "count" to count,
             ),
         ) ?: return emptyList()
-        val ids = root.getAsJsonArray("data")?.mapNotNull { el ->
+        val items = root.getAsJsonArray("data")?.mapNotNull { el ->
             runCatching {
                 val obj = el.asJsonObject
-                val item = obj.getAsJsonObject("item") ?: obj.getAsJsonObject("songInfo")
-                item?.get("id")?.takeIf { it.isJsonPrimitive }?.asString
+                obj.getAsJsonObject("item") ?: obj.getAsJsonObject("songInfo")
             }.getOrNull()
         }.orEmpty()
-        if (ids.isEmpty()) return emptyList()
-        // 服务端不遵守 count（整页返回）：先按上层传入的排除集过滤再本地裁剪，
-        // 只对最多 count 首查详情，避免整页详情响应的下载量
-        val selectedIds = ids.asSequence()
-            .filterNot { it in excludeIds }
+        if (items.isEmpty()) return emptyList()
+        // 服务端不遵守 count（整页返回）：先按上层传入的排除集过滤再本地裁剪
+        val selected = items
+            .filterNot { item -> jsonStr(item, "id")?.let { it in excludeIds } == true }
             .take(count.coerceAtLeast(0))
-            .toList()
-        if (selectedIds.isEmpty()) return emptyList()
-        return fetchNeteaseSongsByIdsV3(selectedIds)
+        if (selected.isEmpty()) return emptyList()
+        // item/songInfo 本身就是完整歌曲对象：能解析出歌名+封面的直接用，
+        // 每批省掉一次 v3 详情往返；缺字段的才批量补查详情
+        val directByMid = HashMap<String, LxSong>()
+        val fetchIds = ArrayList<String>()
+        selected.forEach { item ->
+            val id = jsonStr(item, "id") ?: return@forEach
+            val song = runCatching { parseNeteaseSongItem(item) }.getOrNull()
+            if (song != null && song.name.isNotBlank() && !song.pic.isNullOrBlank()) {
+                directByMid[id] = song
+            } else {
+                fetchIds.add(id)
+            }
+        }
+        val fetchedByMid = if (fetchIds.isEmpty()) emptyMap()
+        else fetchNeteaseSongsByIdsV3(fetchIds).associateBy { it.songmid }
+        // 保持 intelligence/list 页内推荐顺序
+        return selected.mapNotNull { item ->
+            jsonStr(item, "id")?.let { id -> directByMid[id] ?: fetchedByMid[id] }
+        }
     }
 
     suspend fun fetchNeteaseSimilarSongs(songId: String): List<LxSong> {
