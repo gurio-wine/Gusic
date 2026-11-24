@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.11.24：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v261124000_whats_new">
+        <item>In-app updates: when a new version is available, download and install it right inside the app instead of going through the browser. Downloads fall back to mirrors automatically, and the package signature is verified against the installed version before installing</item>
+        <item>New App updates page in Settings with a manual update check and an auto-check switch</item>
+    </string-array>
+    <!-- Gusic 26.11.24：其他改动 -->
+    <string-array name="presentation_batch_g_changelog_v261124000_changes">
+        <item>Update checks are more reliable: when the GitHub API is rate-limited or unreachable, the app falls back to mirrors and the release page redirect</item>
+        <item>The source repository is now public: https://github.com/gurio-wine/Gusic</item>
+    </string-array>
     <!-- Gusic 26.10.13.014：优化 -->
     <string-array name="presentation_batch_g_changelog_v261013014_changes">
         <item>Heartbeat mode pulls far less data while filling the queue: Liked Songs are sampled by id instead of downloading the whole playlist, and each batch reuses the recommendation page itself for song details instead of a second request per batch, which also speeds up queue building</item>

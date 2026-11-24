@@ -73,5 +73,9 @@ sealed class Screen(val route: String) {
             if (highlightKey != null) "device_capabilities?highlightKey=$highlightKey" else "device_capabilities"
     }
     object CloudDownloads : Screen("cloud_downloads")
+    object Updates : Screen("updates?highlightKey={highlightKey}") {
+        fun createRoute(highlightKey: String? = null) =
+            if (highlightKey != null) "updates?highlightKey=$highlightKey" else "updates"
+    }
 
 }

@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.11.24：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v261124000_whats_new">
+        <item>新增應用內更新：發現新版本後可直接在應用內下載並安裝，不必再開瀏覽器；下載會自動嘗試鏡像，安裝前會校驗簽章與目前安裝的版本一致</item>
+        <item>設定新增「應用更新」頁：可手動檢查更新，並可開關「自動檢查更新」</item>
+    </string-array>
+    <!-- Gusic 26.11.24：其他變更 -->
+    <string-array name="presentation_batch_g_changelog_v261124000_changes">
+        <item>更新檢查更可靠：GitHub 接口被限流或無法直連時，自動改走鏡像和發布頁跳轉</item>
+        <item>原始碼倉庫已公開：https://github.com/gurio-wine/Gusic</item>
+    </string-array>
     <!-- Gusic 26.10.13.007：新增功能 -->
     <string-array name="presentation_batch_g_changelog_v26101307_whats_new">
         <item>喜好推薦改為多抽幾首種子歌合併結果，不再只有寥寥幾首</item>

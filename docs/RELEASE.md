@@ -25,6 +25,7 @@ For every public release:
 2. Set `APP_VERSION_CODE` to `YYMMDD * 2000 + MOD` (`MOD=000` when omitted) and verify it is greater than the last published code.
 3. Move the relevant `CHANGELOG.md` entries from `Unreleased` to the release version.
 4. Tag the release as `v<APP_VERSION_NAME>`, for example `v26.10.08.001`.
+5. Upload the renamed arm64 APK to the release (see Publishing for the exact asset name).
 
 ## APK Naming
 
@@ -96,6 +97,10 @@ Install the release candidate and verify:
 2. Create a tag: `git tag v<APP_VERSION_NAME>`.
 3. Push the tag: `git push origin v<APP_VERSION_NAME>`.
 4. Create a GitHub release from the tag.
+5. Upload the arm64 APK to the release with the exact asset name `gusic-v8a-v<APP_VERSION_NAME>.apk`, stripping the brackets from the local Gradle output name `gusic-v8a-[v<APP_VERSION_NAME>].apk` before uploading, and do not mark a stable release as pre-release.
+
+The in-app updater uses GitHub Releases as its update source: it reads the latest stable release (pre-releases excluded), and when it can only resolve the version through redirects it builds the download URL from the asset name above, so in-app updates depend on this asset naming and on stable releases not being marked as pre-release.
+
 External publication is a separate approval step: do not upload, publish, or distribute an artifact outside the repository until the authorized release owner has given explicit approval for that publication.
 
 ## Store Metadata

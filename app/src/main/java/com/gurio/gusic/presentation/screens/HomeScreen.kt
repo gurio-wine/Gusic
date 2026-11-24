@@ -81,11 +81,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.gurio.gusic.R
-import android.content.Intent
-import androidx.core.net.toUri
 import com.gurio.gusic.data.model.Song
 import com.gurio.gusic.data.preferences.CollagePattern
 import com.gurio.gusic.presentation.components.AlbumArtCollage
+import com.gurio.gusic.presentation.components.AppUpdateDialog
 import com.gurio.gusic.presentation.components.BetaInfoBottomSheet
 import com.gurio.gusic.presentation.components.ChangelogBottomSheet
 import com.gurio.gusic.presentation.components.DailyMixSection
@@ -109,6 +108,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import com.gurio.gusic.ui.theme.ShapeCache
@@ -235,14 +235,18 @@ fun HomeScreen(
     var showOptionsBottomSheet by remember { mutableStateOf(false) }
     var showChangelogBottomSheet by remember { mutableStateOf(false) }
     var showBetaInfoBottomSheet by remember { mutableStateOf(false) }
-    var showUpdateDialog by remember { mutableStateOf(false) }
+    var showUpdateDialog by rememberSaveable { mutableStateOf(false) }
     val appUpdateViewModel: AppUpdateViewModel = hiltViewModel()
     val updateInfo by appUpdateViewModel.updateInfo.collectAsStateWithLifecycle()
     val appVersionName = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
             .getOrNull() ?: "0.0.0"
     }
-    LaunchedEffect(Unit) { appUpdateViewModel.checkForUpdates(appVersionName) }
+    LaunchedEffect(Unit) {
+        if (settingsViewModel.autoCheckUpdatesFlow.first()) {
+            appUpdateViewModel.checkForUpdates(appVersionName)
+        }
+    }
     val sheetState = rememberModalSheetState()
     val betaSheetState = rememberModalSheetState()
     val scope = rememberCoroutineScope()
@@ -524,55 +528,10 @@ fun HomeScreen(
         }
     }
     if (showUpdateDialog) {
-        updateInfo?.let { update ->
-            AlertDialog(
-                onDismissRequest = {
-                    showUpdateDialog = false
-                    appUpdateViewModel.dismissUpdate()
-                },
-                title = {
-                    Text(stringResource(R.string.update_available_title, update.latestVersion))
-                },
-                text = {
-                    update.releaseNotes?.takeIf { it.isNotBlank() }?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 10,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showUpdateDialog = false
-                            appUpdateViewModel.dismissUpdate()
-                            runCatching {
-                                context.startActivity(
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        update.downloadUrl.toUri()
-                                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                )
-                            }
-                        }
-                    ) {
-                        Text(stringResource(R.string.update_available_download))
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = {
-                            showUpdateDialog = false
-                            appUpdateViewModel.dismissUpdate()
-                        }
-                    ) {
-                        Text(stringResource(R.string.update_available_later))
-                    }
-                },
-            )
-        }
+        AppUpdateDialog(
+            viewModel = appUpdateViewModel,
+            onDismiss = { showUpdateDialog = false }
+        )
     }
 }
 

@@ -14,6 +14,7 @@ Network features are optional and user-controlled:
 - LRCLIB lyric lookup is used only when online lyrics are enabled.
 - Deezer artist artwork lookup is used only when online artist images are enabled.
 - LX Music online sources: the app provides a built-in source slot (not shown in the source list); builders may place their own default source into it, and it serves online search/playback only while no user source is enabled. Users can additionally import and enable lx-music-compatible source scripts or sign in to supported platforms. Search and playback requests are sent to the third-party platform's public APIs through the active source. Platform cookies are stored locally and may be injected into user-provided source scripts; only use scripts you trust.
+- Update checks query the GitHub Releases API (`api.github.com`, or via the `gh-proxy.com` mirror) for the latest version number, release notes, and package information, and in-app updates download the package from GitHub Releases (or via the `ghfast.top` or `gh-proxy.com` mirrors). This check is enabled by default and the automatic check can be turned off in Settings; the requests contain no user data (only a plain version query). The "install unknown apps" permission (`REQUEST_INSTALL_PACKAGES`) is used only to install Gusic's own updates.
 
 Server credentials and preferences are stored locally. The app does not sell or share user data.
 

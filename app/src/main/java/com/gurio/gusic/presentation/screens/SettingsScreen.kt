@@ -43,6 +43,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -278,7 +279,7 @@ fun SettingsScreen(
                         it != SettingsCategory.DEVICE_CAPABILITIES
                     }
 
-                    val totalItems = mainCategories.size + 3
+                    val totalItems = mainCategories.size + 4
                     fun shapeFor(index: Int) =
                         when {
                             totalItems == 1 -> RoundedCornerShape(24.dp)
@@ -309,6 +310,19 @@ fun SettingsScreen(
                         }
                         itemIndex++
                     }
+
+                    ExpressiveNavigationItem(
+                        title = stringResource(R.string.update_settings_title),
+                        subtitle = stringResource(R.string.update_settings_subtitle),
+                        icon = Icons.Rounded.SystemUpdate,
+                        colors = getUpdatesColors(isDark),
+                        onClick = { navController.navigateSafely(Screen.Updates.createRoute()) },
+                        shape = shapeFor(itemIndex)
+                    )
+                    if (itemIndex < totalItems - 1) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                    }
+                    itemIndex++
 
                     ExpressiveNavigationItem(
                         title = stringResource(R.string.cloud_downloads_title),
@@ -591,6 +605,12 @@ private fun getDownloadsColors(isDark: Boolean): Pair<Color, Color> = if (isDark
     Color(0xFF174A5A) to Color(0xFFB6EAFB)
 } else {
     Color(0xFFC2E7FF) to Color(0xFF004A77)
+}
+
+private fun getUpdatesColors(isDark: Boolean): Pair<Color, Color> = if (isDark) {
+    Color(0xFF1D4B3C) to Color(0xFFB9F0D4)
+} else {
+    Color(0xFFC5EFCF) to Color(0xFF003923)
 }
 
 @Composable

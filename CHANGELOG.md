@@ -2,6 +2,18 @@
 
 All notable changes to Gusic will be documented in this file.
 
+## [26.11.24] - 2026-11-24
+
+### Added
+- In-app update system: checks GitHub Releases for the latest stable version, downloads the `arm64-v8a` package in-app with mirror fallback, verifies the signing certificate, and installs it via the system installer.
+- Settings → App updates page with a manual update check and an auto-check switch.
+
+### Changed
+- Update checks no longer depend solely on the rate-limited GitHub API: mirror API and release redirect fallbacks are used.
+- The repository switched from private to public.
+
+---
+
 ## [26.10.08.001] - 2026-10-08
 
 ### Changed

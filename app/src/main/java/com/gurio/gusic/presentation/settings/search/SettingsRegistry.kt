@@ -610,6 +610,36 @@ object SettingsRegistry {
                 keywordsStatic = listOf("performance", "diagnostics", "lag", "stall", "report", "beta", "debug")
             ),
 
+            // --- APP UPDATES ---
+            SettingSpec(
+                id = "updates_check",
+                itemKey = "item_updates_check",
+                titleRes = R.string.update_check_button,
+                subtitleRes = R.string.update_settings_subtitle,
+                category = SettingsCategory.ABOUT,
+                subscreenRoute = Screen.Updates.createRoute(),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf(
+                    "update", "updates", "upgrade", "version", "release", "apk",
+                    "install", "download", "更新", "升级", "版本", "安装包"
+                )
+            ),
+            SettingSpec(
+                id = "updates_auto_check",
+                itemKey = "item_updates_auto_check",
+                titleRes = R.string.update_auto_check_title,
+                subtitleRes = R.string.update_auto_check_subtitle,
+                category = SettingsCategory.ABOUT,
+                subscreenRoute = Screen.Updates.createRoute(),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf(
+                    "auto check", "automatic", "startup", "open app", "update",
+                    "自动", "自动检查", "打开应用", "更新"
+                ),
+                getValue = { it.autoCheckUpdates },
+                onToggle = { viewModel, checked -> viewModel.setAutoCheckUpdates(checked) }
+            ),
+
             // --- ABOUT ---
             SettingSpec(
                 id = "about_app",

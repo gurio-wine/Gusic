@@ -1,35 +1,43 @@
 package com.gurio.gusic.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.gurio.gusic.data.update.AppUpdateChecker
 import com.gurio.gusic.data.update.AppUpdateInfo
+import com.gurio.gusic.data.update.UpdateDownloadState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
+/**
+ * [AppUpdateStateHolder] 的薄封装：状态都住在单例里，
+ * 所以首页和设置里的更新页各拿一份本 ViewModel 时看到的仍是同一份数据。
+ */
 @HiltViewModel
 class AppUpdateViewModel @Inject constructor(
-    private val updateChecker: AppUpdateChecker,
+    private val stateHolder: AppUpdateStateHolder,
 ) : ViewModel() {
 
-    private val _updateInfo = MutableStateFlow<AppUpdateInfo?>(null)
-    val updateInfo: StateFlow<AppUpdateInfo?> = _updateInfo.asStateFlow()
+    val updateInfo: StateFlow<AppUpdateInfo?> = stateHolder.updateInfo
+    val checkState: StateFlow<UpdateCheckState> = stateHolder.checkState
+    val downloadState: StateFlow<UpdateDownloadState?> = stateHolder.downloadState
 
-    private var checking = false
+    fun checkForUpdates(
+        currentVersion: String,
+        force: Boolean = false,
+        minIntervalMillis: Long = AppUpdateStateHolder.MIN_CHECK_INTERVAL_MILLIS,
+    ) = stateHolder.checkForUpdates(currentVersion, force, minIntervalMillis)
 
-    fun checkForUpdates(currentVersion: String) {
-        if (checking) return
-        checking = true
-        viewModelScope.launch {
-            _updateInfo.value = updateChecker.checkForUpdate(currentVersion)
-        }
-    }
+    fun startDownload(info: AppUpdateInfo) = stateHolder.startDownload(info)
 
-    fun dismissUpdate() {
-        _updateInfo.value = null
-    }
+    fun cancelDownload() = stateHolder.cancelDownload()
+
+    fun closeDownloadResult() = stateHolder.closeDownloadResult()
+
+    fun dismissUpdate() = stateHolder.dismissUpdate()
+
+    fun canRequestPackageInstalls(): Boolean = stateHolder.canRequestPackageInstalls()
+
+    fun unknownSourcesIntent() = stateHolder.unknownSourcesIntent()
+
+    fun installUpdate(file: File): Boolean = stateHolder.installUpdate(file)
 }

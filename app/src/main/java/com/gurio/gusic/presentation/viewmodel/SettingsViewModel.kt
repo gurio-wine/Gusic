@@ -110,7 +110,8 @@ data class SettingsUiState(
     val minSongDuration: Int = 10000,
     val minTracksPerAlbum: Int = 1,
     val replayGainEnabled: Boolean = false,
-    val replayGainUseAlbumGain: Boolean = false
+    val replayGainUseAlbumGain: Boolean = false,
+    val autoCheckUpdates: Boolean = true
 )
 
 data class FailedSongInfo(
@@ -185,6 +186,10 @@ class SettingsViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    /** 首页自动检查更新用的开关（直接透传 DataStore，首次读取即为持久化值）。 */
+    val autoCheckUpdatesFlow
+        get() = userPreferencesRepository.autoCheckUpdatesFlow
     private val pcmFloatOutputSupported = HiFiCapabilityChecker.isSupported()
 
     private val fileExplorerStateHolder = FileExplorerStateHolder(userPreferencesRepository, viewModelScope, context)
@@ -467,6 +472,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.replayGainUseAlbumGainFlow.collect { useAlbum ->
                 _uiState.update { it.copy(replayGainUseAlbumGain = useAlbum) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.autoCheckUpdatesFlow.collect { enabled ->
+                _uiState.update { it.copy(autoCheckUpdates = enabled) }
             }
         }
     }
@@ -851,6 +862,12 @@ class SettingsViewModel @Inject constructor(
     fun setReplayGainEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setReplayGainEnabled(enabled)
+        }
+    }
+
+    fun setAutoCheckUpdates(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setAutoCheckUpdates(enabled)
         }
     }
 

@@ -92,6 +92,7 @@ Gurio Wine 在此维护 Gusic 当前的代码、功能与发行；历史来源�
 | MusicBrainz | 按需匹配元数据并补充标识符 | 仅在请求时 |
 | LRCLIB | 当缺少本地或内嵌歌词时联网搜索歌词 | 开启 |
 | Deezer | 获取缺失的艺术家图片并缓存到本地 | 关闭 |
+| GitHub Releases | 检查并下载应用更新 | 开启（可在“设置 → 应用更新”关闭自动检查） |
 
 LRCLIB 和 Deezer 部分默认开启，也可以之后在设置中对应的开关项（在线歌词 / 艺术家图片）开启/关闭。
 
@@ -106,6 +107,8 @@ https://github.com/gurio-wine/Gusic/releases
 ```
 
 安装正式版时，下载 `arm64-v8a` APK 并安装，适用于绝大多数现代 Android 设备。
+
+应用内会检查 GitHub Releases 的新版本，发现后可在应用内直接下载并安装（仅 `arm64-v8a` 包，需授予“安装未知应用”权限；下载会自动尝试镜像）；其它 ABI 或 debug 构建请到发布页手动下载。
 
 ## 项目来源与署名
 

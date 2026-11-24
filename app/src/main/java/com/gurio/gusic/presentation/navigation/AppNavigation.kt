@@ -50,6 +50,7 @@ import com.gurio.gusic.presentation.screens.NavBarCornerRadiusScreen
 import com.gurio.gusic.presentation.screens.PaletteStyleSettingsScreen
 import com.gurio.gusic.presentation.screens.PlaylistDetailScreen
 import com.gurio.gusic.presentation.screens.RecentlyPlayedScreen
+import com.gurio.gusic.presentation.screens.UpdatesScreen
 
 import com.gurio.gusic.presentation.screens.AboutScreen
 import com.gurio.gusic.presentation.screens.SearchScreen
@@ -589,6 +590,21 @@ fun AppNavigation(
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     CloudDownloadsScreen(onBack = { navController.popBackStack() })
+                }
+            }
+            composable(
+                route = Screen.Updates.route,
+                arguments = listOf(navArgument("highlightKey") { type = NavType.StringType; nullable = true; defaultValue = null }),
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) { backStackEntry ->
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    UpdatesScreen(
+                        onBack = { navController.popBackStack() },
+                        highlightKey = backStackEntry.arguments?.getString("highlightKey")
+                    )
                 }
             }
         }

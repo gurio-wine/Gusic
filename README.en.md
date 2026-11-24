@@ -92,6 +92,7 @@ The "LX Music" tab lets you search and play music from online platforms through 
 | MusicBrainz | On-demand metadata matching and identifier enrichment | Only when requested |
 | LRCLIB | Search online lyrics when local or embedded lyrics are missing | ON |
 | Deezer | Fetch missing artist artwork and cache it locally | OFF |
+| GitHub Releases | Check for and download app updates | ON (auto-check can be disabled in Settings → App updates) |
 
 LRCLIB and Deezer are partially enabled by default and can be toggled later from their respective switches in Settings.
 
@@ -104,6 +105,8 @@ https://github.com/gurio-wine/Gusic/releases
 ```
 
 To install a release, download the `arm64-v8a` APK and install it; it fits most modern Android devices.
+
+The app checks GitHub Releases for new versions in-app; when one is found, it can be downloaded and installed directly from within the app (`arm64-v8a` package only, requires granting the "install unknown apps" permission; downloads automatically try mirrors). For other ABIs or debug builds, download manually from the releases page.
 
 ## Project Origin & Attribution
 

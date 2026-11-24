@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Gusic 26.11.24：新增功能 -->
+    <string-array name="presentation_batch_g_changelog_v261124000_whats_new">
+        <item>新增应用内更新：发现新版本后可直接在应用内下载并安装，不用再去浏览器；下载会自动尝试镜像，安装前会校验签名与当前已安装版本一致</item>
+        <item>设置新增“应用更新”页：可手动检查更新，并可开关“自动检查更新”</item>
+    </string-array>
+    <!-- Gusic 26.11.24：其他改动 -->
+    <string-array name="presentation_batch_g_changelog_v261124000_changes">
+        <item>更新检查更可靠：GitHub 接口被限流或无法直连时，自动改走镜像和发布页跳转</item>
+        <item>源码仓库已公开：https://github.com/gurio-wine/Gusic</item>
+    </string-array>
     <!-- Gusic 26.10.13.014：优化 -->
     <string-array name="presentation_batch_g_changelog_v261013014_changes">
         <item>心动模式生成队列的流量进一步下降：我喜欢歌单改为按 id 随机采样，不再整单下载；每批直接复用推荐页自带的歌曲详情，省去逐批的第二次请求，入队速度也更快</item>

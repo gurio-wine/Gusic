@@ -249,6 +249,8 @@ constructor(
         val LX_MUSIC_ACTIVE_SCRIPT = stringPreferencesKey("lx_music_active_script")
         val LX_MUSIC_DISABLED_SCRIPTS = stringSetPreferencesKey("lx_music_disabled_scripts")
         val LX_MUSIC_PREFERRED_QUALITY = stringPreferencesKey("lx_music_preferred_quality")
+
+        val AUTO_CHECK_UPDATES = booleanPreferencesKey("auto_check_updates")
     }
 
     val appRebrandDialogShownFlow: Flow<Boolean> =
@@ -1995,6 +1997,17 @@ constructor(
         dataStore.edit {
             it.remove(PreferencesKeys.LAST_PLAYLIST_ID)
             it.remove(PreferencesKeys.LAST_PLAYLIST_NAME)
+        }
+    }
+
+    val autoCheckUpdatesFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.AUTO_CHECK_UPDATES] ?: true
+        }
+
+    suspend fun setAutoCheckUpdates(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AUTO_CHECK_UPDATES] = enabled
         }
     }
 }
