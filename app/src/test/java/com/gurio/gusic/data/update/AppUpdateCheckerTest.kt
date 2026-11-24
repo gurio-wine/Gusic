@@ -131,4 +131,12 @@ class AppUpdateCheckerTest {
         assertEquals("gusic-v26.11.24.apk", updateApkFileName("v26.11.24"))
         assertEquals("gusic-v26.11.24_rc_1.apk", updateApkFileName("v26.11.24 rc/1"))
     }
+
+    @Test
+    fun `slow start is flagged only past the time window and below the byte threshold`() {
+        assertFalse(isSlowStart(elapsedMillis = 5_000, downloadedBytes = 1))
+        assertFalse(isSlowStart(elapsedMillis = SLOW_START_WINDOW_MILLIS, downloadedBytes = 0))
+        assertTrue(isSlowStart(elapsedMillis = SLOW_START_WINDOW_MILLIS + 1, downloadedBytes = SLOW_START_MIN_BYTES - 1))
+        assertFalse(isSlowStart(elapsedMillis = 60_000, downloadedBytes = SLOW_START_MIN_BYTES))
+    }
 }

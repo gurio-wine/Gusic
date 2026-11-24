@@ -3,6 +3,7 @@ package com.gurio.gusic.data.update
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.pm.SigningInfo
+import android.os.SystemClock
 import android.util.Base64
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -40,6 +41,13 @@ internal fun updateApkFileName(tag: String): String {
     return "gusic-$safeTag.apk"
 }
 
+internal const val SLOW_START_WINDOW_MILLIS = 12_000L
+internal const val SLOW_START_MIN_BYTES = 256L * 1024
+
+/** 直连“起步太慢”的判定：时间窗口过了还没收到这么多字节，就换下一个候选。 */
+internal fun isSlowStart(elapsedMillis: Long, downloadedBytes: Long): Boolean =
+    elapsedMillis > SLOW_START_WINDOW_MILLIS && downloadedBytes < SLOW_START_MIN_BYTES
+
 /**
  * 下载发布包到缓存目录并校验签名。
  * 失败抛 [UpdateDownloadException]；协程取消时抛 [CancellationException]，半成品文件会被删除。
@@ -49,7 +57,7 @@ class AppUpdateDownloader @Inject constructor(
     @ApplicationContext private val context: Context,
     baseClient: OkHttpClient,
 ) {
-    // 走镜像时链路可能很慢，读超时放宽，避免中途断流就整个重下
+    // 比全站共用的 8 秒宽松一些：走镜像时中途偶尔停顿不该让整个包从头重下
     private val client = baseClient.newBuilder()
         .readTimeout(DOWNLOAD_READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .build()
@@ -103,16 +111,20 @@ class AppUpdateDownloader @Inject constructor(
         return verifySignatureMatches(file)
     }
 
-    private fun downloadCandidates(apkUrl: String?): List<String> {
+    private class Candidate(val url: String, val abortIfSlowStart: Boolean)
+
+    private fun downloadCandidates(apkUrl: String?): List<Candidate> {
         if (apkUrl.isNullOrBlank()) return emptyList()
-        return linkedSetOf(
-            apkUrl,
-            "$MIRROR_GHFAST_PREFIX$apkUrl",
-            "$MIRROR_GHPROXY_PREFIX$apkUrl",
-        ).toList()
+        // 直连在国内常常连得上但极慢：第一个候选起步太慢就换镜像；镜像都不行时，再不限速地试一次直连
+        return listOf(
+            Candidate(apkUrl, abortIfSlowStart = true),
+            Candidate("$MIRROR_GHPROXY_PREFIX$apkUrl", abortIfSlowStart = false),
+            Candidate("$MIRROR_GHFAST_PREFIX$apkUrl", abortIfSlowStart = false),
+            Candidate(apkUrl, abortIfSlowStart = false),
+        )
     }
 
-    /** 依次尝试直连和各镜像，任一候选成功即返回；全部失败抛 [UpdateDownloadFailure.Network]。 */
+    /** 依次尝试各候选，任一成功即返回；全部失败抛 [UpdateDownloadFailure.Network]。 */
     private suspend fun copyFromCandidates(
         info: AppUpdateInfo,
         part: File,
@@ -120,15 +132,15 @@ class AppUpdateDownloader @Inject constructor(
     ) {
         val candidates = downloadCandidates(info.apkUrl)
         if (candidates.isEmpty()) throw UpdateDownloadException(UpdateDownloadFailure.Network)
-        for (url in candidates) {
+        for (candidate in candidates) {
             part.delete()
             val copied = try {
-                copyFromCandidate(url, part, onProgress)
+                copyFromCandidate(candidate, part, onProgress)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
                 currentCoroutineContext().ensureActive()
-                Timber.d(e, "AppUpdateDownloader: candidate failed: %s", url)
+                Timber.d(e, "AppUpdateDownloader: candidate failed: %s", candidate.url)
                 false
             }
             if (copied) return
@@ -137,13 +149,14 @@ class AppUpdateDownloader @Inject constructor(
         throw UpdateDownloadException(UpdateDownloadFailure.Network)
     }
 
-    /** 返回 false 表示该候选没给出可用的安装包（非 2xx、HTML 页面或非 ZIP 内容）。 */
+    /** 返回 false 表示该候选没给出可用的安装包（非 2xx、HTML 页面、非 ZIP 内容或起步太慢）。 */
     private suspend fun copyFromCandidate(
-        url: String,
+        candidate: Candidate,
         part: File,
         onProgress: (Long, Long?) -> Unit,
     ): Boolean {
-        val call = client.newCall(Request.Builder().url(url).build())
+        val call = client.newCall(Request.Builder().url(candidate.url).build())
+        val startedAt = SystemClock.elapsedRealtime()
         return coroutineScope {
             // OkHttp 的阻塞读不响应协程取消：挂一个随作用域一起被取消的看守，负责掐断连接
             val cancelWatcher = launch(start = CoroutineStart.UNDISPATCHED) {
@@ -159,7 +172,7 @@ class AppUpdateDownloader @Inject constructor(
                     if (response.header("Content-Type")?.contains("text/html", ignoreCase = true) == true) {
                         return@use false
                     }
-                    copyBodyToFile(response, part, onProgress)
+                    copyBodyToFile(response, part, onProgress, startedAt, candidate.abortIfSlowStart)
                 }
             } finally {
                 cancelWatcher.cancel()
@@ -171,6 +184,8 @@ class AppUpdateDownloader @Inject constructor(
         response: okhttp3.Response,
         part: File,
         onProgress: (Long, Long?) -> Unit,
+        startedAt: Long,
+        abortIfSlowStart: Boolean,
     ): Boolean {
         val body = response.body
         val total = body.contentLength().takeIf { it > 0 }
@@ -198,6 +213,9 @@ class AppUpdateDownloader @Inject constructor(
                         throw UpdateDownloadException(UpdateDownloadFailure.Storage, e)
                     }
                     downloaded += read
+                    if (abortIfSlowStart && isSlowStart(SystemClock.elapsedRealtime() - startedAt, downloaded)) {
+                        return false
+                    }
                     if (total == null) {
                         if (lastEmittedBytes == -1L || downloaded - lastEmittedBytes >= PROGRESS_STEP_BYTES) {
                             lastEmittedBytes = downloaded
@@ -252,7 +270,7 @@ class AppUpdateDownloader @Inject constructor(
         const val PART_SUFFIX = ".part"
         const val BUFFER_SIZE_BYTES = 64 * 1024
         const val PROGRESS_STEP_BYTES = 512 * 1024
-        const val DOWNLOAD_READ_TIMEOUT_SECONDS = 60L
+        const val DOWNLOAD_READ_TIMEOUT_SECONDS = 30L
         const val MIRROR_GHFAST_PREFIX = "https://ghfast.top/"
         const val MIRROR_GHPROXY_PREFIX = "https://gh-proxy.com/"
         val APK_MAGIC = byteArrayOf('P'.code.toByte(), 'K'.code.toByte(), 0x03, 0x04)
