@@ -1,6 +1,6 @@
 # 项目概览
 
-Gusic 是基于公开源仓库 MiNoMinoaa/PixelPlayerOLX 的 Android 音乐播放器，默认以本地播放与离线使用为核心。应用提供内置音源槽位（构建者可自行置入默认音源，仅在未启用用户音源时生效）；用户可另行导入兼容 lx-music-mobile 的音源脚本，属可选功能。该仓库是独立的私有副本，Git `upstream` 应指向 `https://github.com/MiNoMinoaa/PixelPlayerOLX.git`，不应将 PixelPlayerOSS 配置为本项目 upstream。
+Gusic 是基于公开源仓库 MiNoMinoaa/PixelPlayerOLX 的 Android 音乐播放器，默认以本地播放与离线使用为核心。应用提供内置音源槽位（构建者可自行置入默认音源，仅在未启用用户音源时生效）；用户可另行导入兼容 lx-music-mobile 的音源脚本，属可选功能。该仓库是独立的公开副本，Git `upstream` 应指向 `https://github.com/MiNoMinoaa/PixelPlayerOLX.git`，不应将 PixelPlayerOSS 配置为本项目 upstream。
 
 ## 开发约定
 
